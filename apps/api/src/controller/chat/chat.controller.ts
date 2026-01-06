@@ -1,0 +1,83 @@
+import { Body, Controller, Post, Req, UseGuards, UsePipes } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ChatService } from '../../app/chat/chat.service';
+import { ZodValidationPipe } from '../../common/zod-validation.pipe';
+import {
+  EndSessionSchema,
+  SelectOptionSchema,
+  SendMessageSchema,
+  SetModeSchema,
+  StartSessionSchema,
+} from './dto/chat.request';
+import type {
+  ChatResponse,
+  EndSessionResponse,
+  SelectOptionResponse,
+  StartSessionResponse,
+} from './dto/chat.response';
+
+@Controller('chat')
+@UseGuards(AuthGuard('jwt'))
+export class ChatController {
+  constructor(private chatService: ChatService) {}
+
+  @Post('start')
+  @UsePipes(new ZodValidationPipe(StartSessionSchema))
+  async startSession(
+    @Req() req: any,
+    @Body() dto: { category: string },
+  ): Promise<StartSessionResponse> {
+    const result = await this.chatService.startSession(
+      req.user.userId,
+      dto.category,
+    );
+    return {
+      sessionId: result.sessionId.toString(),
+      question: result.question,
+      options: result.options,
+      canProceedToResponse: result.canProceedToResponse,
+    };
+  }
+
+  @Post('select')
+  @UsePipes(new ZodValidationPipe(SelectOptionSchema))
+  async selectOption(
+    @Body() dto: { sessionId: string; selectedOption: string },
+  ): Promise<SelectOptionResponse> {
+    const result = await this.chatService.selectOption(
+      dto.sessionId,
+      dto.selectedOption,
+    );
+    return {
+      sessionId: result.sessionId.toString(),
+      question: (result as any).question,
+      options: (result as any).options,
+      canProceedToResponse: result.canProceedToResponse,
+      responseModes: result.responseModes,
+    };
+  }
+
+  @Post('mode')
+  @UsePipes(new ZodValidationPipe(SetModeSchema))
+  async setMode(
+    @Body() dto: { sessionId: string; mode: 'comfort' | 'organize' | 'validate' | 'direction' },
+  ): Promise<ChatResponse> {
+    return this.chatService.setMode(dto.sessionId, dto.mode);
+  }
+
+  @Post('message')
+  @UsePipes(new ZodValidationPipe(SendMessageSchema))
+  async sendMessage(
+    @Body() dto: { sessionId: string; message?: string },
+  ): Promise<ChatResponse> {
+    return this.chatService.generateResponse(dto.sessionId, dto.message);
+  }
+
+  @Post('end')
+  @UsePipes(new ZodValidationPipe(EndSessionSchema))
+  async endSession(
+    @Body() dto: { sessionId: string },
+  ): Promise<EndSessionResponse> {
+    return this.chatService.endSession(dto.sessionId);
+  }
+}
