@@ -1,0 +1,14 @@
+{
+  "name": "to-high",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@to-high/api",
+    "build:api": "npm run build --workspace=@to-high/api",
+    "test:api": "npm run test --workspace=@to-high/api"
+  }
+}
