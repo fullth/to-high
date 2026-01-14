@@ -1,6 +1,7 @@
 {
   "name": "to-high",
   "version": "1.0.0",
+  "description": "To high; 위로 - AI 기반 심리 상담 서비스",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -9,6 +10,8 @@
   "scripts": {
     "dev:api": "npm run dev --workspace=@to-high/api",
     "build:api": "npm run build --workspace=@to-high/api",
-    "test:api": "npm run test --workspace=@to-high/api"
+    "test:api": "npm run test --workspace=@to-high/api",
+    "dev:web": "npm run dev --workspace=@to-high/web",
+    "build:web": "npm run build --workspace=@to-high/web"
   }
 }
