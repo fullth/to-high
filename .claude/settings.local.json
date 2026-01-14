@@ -7,7 +7,11 @@
       "Bash(docker-compose up:*)",
       "Bash(open:*)",
       "Bash(docker logs:*)",
-      "Bash(docker system:*)"
+      "Bash(docker system:*)",
+      "Bash(npm run test:api:*)",
+      "Bash(cat:*)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(git add:*)"
     ]
   }
 }
