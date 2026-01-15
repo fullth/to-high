@@ -9,6 +9,10 @@ build/
 .env
 .env.local
 .env.*.local
+.env.development
+.env.production
+*.pem
+*.key
 
 # IDE
 .idea/

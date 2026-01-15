@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:api": "npm run dev --workspace=@to-high/api",
+    "dev:api": "npm run start:dev --workspace=@to-high/api",
     "build:api": "npm run build --workspace=@to-high/api",
     "test:api": "npm run test --workspace=@to-high/api",
     "dev:web": "npm run dev --workspace=@to-high/web",

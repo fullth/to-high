@@ -27,21 +27,48 @@ AI 기반 감정 상담 서비스
 ### 다음 작업 (우선순위 순)
 
 #### Frontend 상담 플로우
-- [ ] 채팅 페이지 (`/chat/[sessionId]`) - 선택지 UI
-- [ ] 모드 선택 화면 - 4가지 응답 모드 카드
-- [ ] AI 응답 표시 화면
-- [ ] 세션 종료 및 요약 화면
+- [x] 채팅 페이지 (`/chat/[sessionId]`) - 선택지 UI
+- [x] 모드 선택 화면 - 4가지 응답 모드 카드
+- [x] AI 응답 표시 화면
+- [x] 세션 종료 및 요약 화면
 
 #### 인증 연동
-- [ ] Google 로그인 버튼 활성화
-- [ ] OAuth 콜백 페이지 (`/auth/callback`)
-- [ ] JWT 저장 및 관리
-- [ ] 인증 상태 Context
+- [x] Google 로그인 버튼 (UI 완료, OAuth 클라이언트 설정 필요)
+- [x] OAuth 콜백 페이지 (`/auth/callback`)
+- [x] JWT 저장 및 관리
+- [x] 인증 상태 Context
+- [ ] Google Cloud Console에서 OAuth 클라이언트 생성 (아래 가이드 참조)
 
 #### Backend 개선
-- [ ] OAuth 콜백에서 프론트엔드로 JWT 전달 방식 구현
+- [x] OAuth 콜백에서 프론트엔드로 JWT 전달 (리다이렉트 방식)
 - [ ] `GET /sessions` - 세션 목록 조회 API
 - [ ] `GET /sessions/:id` - 세션 상세 조회 API
+
+---
+
+## Google OAuth 설정 가이드
+
+Google 로그인을 활성화하려면 다음 단계를 따르세요:
+
+1. [Google Cloud Console](https://console.cloud.google.com/) 접속
+2. 프로젝트 생성 또는 선택
+3. **API 및 서비스 > OAuth 동의 화면** 설정
+   - 사용자 유형: 외부
+   - 앱 이름, 이메일 등 필수 정보 입력
+4. **API 및 서비스 > 사용자 인증 정보** 이동
+5. **+ 사용자 인증 정보 만들기 > OAuth 클라이언트 ID** 클릭
+6. 애플리케이션 유형: **웹 애플리케이션**
+7. 승인된 리디렉션 URI 추가:
+   ```
+   http://localhost:3000/auth/google/callback
+   ```
+8. **만들기** 클릭 후 클라이언트 ID와 보안 비밀번호 복사
+9. `apps/api/.env` 파일에 값 입력:
+   ```
+   GOOGLE_CLIENT_ID=복사한_클라이언트_ID
+   GOOGLE_CLIENT_SECRET=복사한_보안_비밀번호
+   ```
+10. API 서버 재시작
 
 ---
 
