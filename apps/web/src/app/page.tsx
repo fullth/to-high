@@ -3,20 +3,35 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
+import { startSession } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 const categories = [
-  { id: "work", label: "직장", description: "업무, 상사, 동료 관계" },
-  { id: "relationship", label: "인간관계", description: "친구, 가족, 연인" },
   { id: "self", label: "나 자신", description: "자존감, 불안, 우울" },
   { id: "future", label: "미래", description: "진로, 목표, 불확실함" },
+  { id: "work", label: "직장", description: "업무, 상사, 동료 관계" },
+  { id: "relationship", label: "인간관계", description: "친구, 가족, 연인" },
 ];
 
 export default function Home() {
-  const { user, isLoading, login, logout } = useAuth();
+  const router = useRouter();
+  const { user, token, isLoading, login, logout } = useAuth();
+  const [isStarting, setIsStarting] = useState(false);
 
-  const handleCategorySelect = (categoryId: string) => {
-    console.log("Selected category:", categoryId);
-    // TODO: 세션 시작 API 호출 후 채팅 페이지로 이동
+  const handleCategorySelect = async (categoryId: string) => {
+    setIsStarting(true);
+    try {
+      const res = await startSession(categoryId, token || undefined);
+      const params = new URLSearchParams({
+        question: res.question,
+        options: JSON.stringify(res.options),
+      });
+      router.push(`/chat/${res.sessionId}?${params.toString()}`);
+    } catch (err) {
+      console.error(err);
+      setIsStarting(false);
+    }
   };
 
   return (
@@ -40,7 +55,7 @@ export default function Home() {
             {categories.map((category) => (
               <Card
                 key={category.id}
-                className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+                className={`cursor-pointer transition-all hover:border-primary/50 hover:shadow-md ${isStarting ? "opacity-50 pointer-events-none" : ""}`}
                 onClick={() => handleCategorySelect(category.id)}
               >
                 <CardHeader className="p-4">
