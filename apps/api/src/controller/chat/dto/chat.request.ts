@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const StartSessionSchema = z.object({
-  category: z.string().min(1),
+  category: z.enum(['self', 'future', 'work', 'relationship']),
 });
 export type StartSessionRequest = z.infer<typeof StartSessionSchema>;
 
@@ -13,7 +13,14 @@ export type SelectOptionRequest = z.infer<typeof SelectOptionSchema>;
 
 export const SetModeSchema = z.object({
   sessionId: z.string().min(1),
-  mode: z.enum(['comfort', 'organize', 'validate', 'direction']),
+  mode: z.enum([
+    'comfort',
+    'organize',
+    'validate',
+    'direction',
+    'listen',
+    'similar',
+  ]),
 });
 export type SetModeRequest = z.infer<typeof SetModeSchema>;
 

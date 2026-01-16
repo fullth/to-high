@@ -18,8 +18,13 @@ export class SessionDocument extends Document {
   @Prop()
   category: string;
 
-  @Prop({ enum: ['comfort', 'organize', 'validate', 'direction'] })
+  @Prop({
+    enum: ['comfort', 'organize', 'validate', 'direction', 'listen', 'similar'],
+  })
   responseMode: string;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const SessionSchema = SchemaFactory.createForClass(SessionDocument);
