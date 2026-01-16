@@ -24,6 +24,7 @@ function ChatContent() {
   const [summary, setSummary] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
+  const [crisisMessage, setCrisisMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const q = searchParams.get("question");
@@ -40,6 +41,10 @@ function ChatContent() {
       setIsLoading(true);
       try {
         const res = await selectOption(sessionId, selected, token || undefined);
+
+        if (res.isCrisis && res.crisisMessage) {
+          setCrisisMessage(res.crisisMessage);
+        }
 
         if (res.canProceedToResponse && res.responseModes) {
           setPhase("mode");
@@ -138,6 +143,20 @@ function ChatContent() {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-background to-muted/30">
         <div className="max-w-md w-full space-y-6">
+          {crisisMessage && (
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader className="p-4">
+                <CardTitle className="text-lg text-red-800 flex items-center gap-2">
+                  <span>🆘</span>
+                  <span>도움이 필요하신가요?</span>
+                </CardTitle>
+                <CardDescription className="text-red-700 whitespace-pre-wrap">
+                  {crisisMessage}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+
           <div className="text-center space-y-2">
             <h2 className="text-xl font-semibold">어떤 도움이 필요하세요?</h2>
             <p className="text-muted-foreground text-sm">
@@ -153,7 +172,10 @@ function ChatContent() {
                 onClick={() => handleSelectMode(rm.mode)}
               >
                 <CardHeader className="p-4">
-                  <CardTitle className="text-lg">{rm.label}</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span>{rm.emoji}</span>
+                    <span>{rm.label}</span>
+                  </CardTitle>
                   <CardDescription>{rm.description}</CardDescription>
                 </CardHeader>
               </Card>

@@ -69,8 +69,29 @@ export class SessionRepository {
         userId: new Types.ObjectId(userId),
         status: 'completed',
       })
+      .select('summary category createdAt responseMode')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+  }
+
+  async getRecentSummaries(
+    userId: string,
+    limit = 3,
+  ): Promise<{ summary: string; category: string; createdAt: Date }[]> {
+    const sessions = await this.sessionModel
+      .find({
+        userId: new Types.ObjectId(userId),
+        status: 'completed',
+        summary: { $exists: true, $ne: '' },
+      })
       .select('summary category createdAt')
       .sort({ createdAt: -1 })
       .limit(limit);
+
+    return sessions.map((s) => ({
+      summary: s.summary,
+      category: s.category,
+      createdAt: s.createdAt,
+    }));
   }
 }

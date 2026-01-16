@@ -2,6 +2,7 @@ import { Body, Controller, Post, Req, UseGuards, UsePipes } from '@nestjs/common
 import { ChatService } from '../../app/chat/chat.service';
 import { OptionalJwtAuthGuard } from '../../common/optional-jwt.guard';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe';
+import { Category, ResponseMode } from '../../types/session';
 import {
   EndSessionSchema,
   SelectOptionSchema,
@@ -25,7 +26,7 @@ export class ChatController {
   @UsePipes(new ZodValidationPipe(StartSessionSchema))
   async startSession(
     @Req() req: any,
-    @Body() dto: { category: string },
+    @Body() dto: { category: Category },
   ): Promise<StartSessionResponse> {
     const userId = req.user?.userId || 'anonymous';
     const result = await this.chatService.startSession(
@@ -61,7 +62,7 @@ export class ChatController {
   @Post('mode')
   @UsePipes(new ZodValidationPipe(SetModeSchema))
   async setMode(
-    @Body() dto: { sessionId: string; mode: 'comfort' | 'organize' | 'validate' | 'direction' },
+    @Body() dto: { sessionId: string; mode: ResponseMode },
   ): Promise<ChatResponse> {
     return this.chatService.setMode(dto.sessionId, dto.mode);
   }

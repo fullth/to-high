@@ -1,9 +1,20 @@
 export type ChatPhase = "selecting" | "mode" | "chatting" | "ended";
 
+export type ResponseMode =
+  | "comfort"
+  | "organize"
+  | "validate"
+  | "direction"
+  | "listen"
+  | "similar";
+
+export type Category = "self" | "future" | "work" | "relationship";
+
 export interface ResponseModeOption {
-  mode: string;
+  mode: ResponseMode;
   label: string;
   description: string;
+  emoji: string;
 }
 
 export interface ChatState {
