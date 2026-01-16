@@ -11,7 +11,11 @@
       "Bash(npm run test:api:*)",
       "Bash(cat:*)",
       "Bash(npm run test:e2e:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run dev:api:*)",
+      "Bash(xargs grep:*)",
+      "Bash(git ls-files:*)"
     ]
   }
 }

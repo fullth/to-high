@@ -1,6 +1,14 @@
 import { Types } from 'mongoose';
 
-export type ResponseMode = 'comfort' | 'organize' | 'validate' | 'direction';
+export type ResponseMode =
+  | 'comfort'
+  | 'organize'
+  | 'validate'
+  | 'direction'
+  | 'listen'
+  | 'similar';
+
+export type Category = 'self' | 'future' | 'work' | 'relationship';
 export type SessionStatus = 'active' | 'completed';
 
 export interface Session {
@@ -9,7 +17,7 @@ export interface Session {
   context: string[];
   status: SessionStatus;
   summary?: string;
-  category: string;
+  category: Category;
   responseMode?: ResponseMode;
   createdAt: Date;
   updatedAt: Date;
