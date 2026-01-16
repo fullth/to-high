@@ -15,7 +15,22 @@
       "Bash(git commit:*)",
       "Bash(npm run dev:api:*)",
       "Bash(xargs grep:*)",
-      "Bash(git ls-files:*)"
+      "Bash(git ls-files:*)",
+      "Bash(npm run lint:*)",
+      "Bash(cd apps/api && npm run lint:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '📝 파일 수정 감지됨. 검증하려면: /check 또는 /pipeline'"
+          }
+        ]
+      }
     ]
   }
 }
