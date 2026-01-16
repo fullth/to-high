@@ -12,8 +12,9 @@ export class SessionRepository {
   ) {}
 
   async create(userId: string, category: string): Promise<SessionDocument> {
+    const isValidObjectId = Types.ObjectId.isValid(userId) && userId !== 'anonymous';
     return this.sessionModel.create({
-      userId: new Types.ObjectId(userId),
+      userId: isValidObjectId ? new Types.ObjectId(userId) : new Types.ObjectId(),
       context: [`카테고리: ${category}`],
       category,
     });

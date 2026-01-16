@@ -17,7 +17,11 @@
       "Bash(xargs grep:*)",
       "Bash(git ls-files:*)",
       "Bash(npm run lint:*)",
-      "Bash(cd apps/api && npm run lint:*)"
+      "Bash(cd apps/api && npm run lint:*)",
+      "Bash(curl:*)",
+      "Bash(pgrep:*)",
+      "Bash(brew services start:*)",
+      "Bash(mongod:*)"
     ]
   },
   "hooks": {

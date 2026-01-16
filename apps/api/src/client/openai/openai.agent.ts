@@ -53,6 +53,117 @@ const INITIAL_QUESTIONS: Record<Category, GenerateOptionsResult> = {
   },
 };
 
+const FOLLOWUP_QUESTIONS: Record<Category, GenerateOptionsResult[]> = {
+  self: [
+    {
+      question: '그런 생각이 언제부터 드셨나요?',
+      options: ['최근 며칠', '몇 주 전부터', '꽤 오래됐어', '잘 모르겠어'],
+      canProceedToResponse: false,
+    },
+    {
+      question: '그 감정이 일상에 어떤 영향을 주고 있나요?',
+      options: [
+        '일에 집중이 안 돼',
+        '사람 만나기 싫어',
+        '잠을 잘 못 자',
+        '그냥 무기력해',
+      ],
+      canProceedToResponse: false,
+    },
+    {
+      question: '혹시 더 이야기하고 싶은 게 있으신가요?',
+      options: [
+        '더 얘기하고 싶어',
+        '이 정도면 충분해',
+        '뭘 말해야 할지 모르겠어',
+        '직접 입력할게',
+      ],
+      canProceedToResponse: true,
+    },
+  ],
+  future: [
+    {
+      question: '그 고민이 생긴 계기가 있나요?',
+      options: [
+        '주변과 비교하게 돼서',
+        '결정해야 할 게 있어서',
+        '뚜렷한 계기는 없어',
+        '말하기 어려워',
+      ],
+      canProceedToResponse: false,
+    },
+    {
+      question: '지금 가장 걱정되는 건 뭔가요?',
+      options: [
+        '실패할까봐',
+        '후회할까봐',
+        '시간이 없는 것 같아',
+        '뭐가 걱정인지 모르겠어',
+      ],
+      canProceedToResponse: false,
+    },
+    {
+      question: '더 나누고 싶은 이야기가 있으신가요?',
+      options: [
+        '더 얘기할게',
+        '충분히 말한 것 같아',
+        '정리가 안 돼',
+        '직접 입력할게',
+      ],
+      canProceedToResponse: true,
+    },
+  ],
+  work: [
+    {
+      question: '그 상황이 얼마나 지속되고 있나요?',
+      options: ['최근 시작됐어', '몇 달 됐어', '꽤 오래됐어', '반복돼'],
+      canProceedToResponse: false,
+    },
+    {
+      question: '그래서 지금 어떤 기분이세요?',
+      options: ['화가 나', '지쳤어', '억울해', '공허해'],
+      canProceedToResponse: false,
+    },
+    {
+      question: '더 하고 싶은 이야기가 있나요?',
+      options: [
+        '더 말하고 싶어',
+        '이 정도면 돼',
+        '말해도 달라질 게 없을 것 같아',
+        '직접 입력할게',
+      ],
+      canProceedToResponse: true,
+    },
+  ],
+  relationship: [
+    {
+      question: '그 관계에서 어떤 점이 힘드신가요?',
+      options: [
+        '이해받지 못하는 느낌',
+        '갈등이 있어',
+        '멀어진 것 같아',
+        '말하기 어려워',
+      ],
+      canProceedToResponse: false,
+    },
+    {
+      question: '그래서 어떤 마음이 드세요?',
+      options: ['서운해', '외로워', '답답해', '화가 나'],
+      canProceedToResponse: false,
+    },
+    {
+      question: '더 나누고 싶은 이야기가 있으신가요?',
+      options: [
+        '더 얘기할게',
+        '이 정도면 충분해',
+        '정리가 안 돼',
+        '직접 입력할게',
+      ],
+      canProceedToResponse: true,
+    },
+  ],
+};
+
 const QUESTION_DEPTH_GUIDE = `
 질문 깊이 가이드:
 - 1-2번째 응답: 상황 파악 (무엇이, 언제, 누구와)
@@ -65,11 +176,23 @@ const QUESTION_DEPTH_GUIDE = `
 @Injectable()
 export class OpenAIAgent {
   private openai: OpenAI;
+  private hasApiKey: boolean;
 
   constructor(private configService: ConfigService) {
+    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
+    this.hasApiKey = !!apiKey && apiKey.length > 0;
     this.openai = new OpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
+      apiKey: apiKey || 'dummy-key',
     });
+  }
+
+  private getFollowupQuestion(
+    category: Category,
+    contextCount: number,
+  ): GenerateOptionsResult {
+    const questions = FOLLOWUP_QUESTIONS[category];
+    const index = Math.min(contextCount - 1, questions.length - 1);
+    return questions[index];
   }
 
   async generateOptions(
@@ -81,8 +204,13 @@ export class OpenAIAgent {
       return INITIAL_QUESTIONS[category];
     }
 
-    const categoryContext = category ? CATEGORY_CONTEXTS[category] : '';
     const contextCount = context.length;
+
+    if (!this.hasApiKey && category) {
+      return this.getFollowupQuestion(category, contextCount);
+    }
+
+    const categoryContext = category ? CATEGORY_CONTEXTS[category] : '';
 
     const systemPrompt = `당신은 내담자 중심 상담(Person-Centered Therapy) 원칙을 따르는 상담 도우미입니다.
 
@@ -210,6 +338,10 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 주의: 실제 사례가 아닌 일반화된 경험 공유`,
     };
 
+    if (!this.hasApiKey) {
+      return this.getFallbackResponse(mode, context);
+    }
+
     const systemPrompt = `당신은 따뜻하고 전문적인 심리 상담사입니다.
 
 상담 원칙:
@@ -239,7 +371,30 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     return response.choices[0].message.content || '';
   }
 
+  private getFallbackResponse(mode: ResponseMode, context: string[]): string {
+    const fallbacks: Record<ResponseMode, string> = {
+      comfort:
+        '말씀해주셔서 감사해요. 그런 상황에서 그렇게 느끼시는 건 정말 자연스러운 거예요. 혼자 감당하느라 많이 힘드셨을 거예요. 지금 이 순간, 당신의 감정은 충분히 이해받을 자격이 있어요.',
+      listen:
+        '네, 듣고 있어요. 더 이야기해주셔도 괜찮아요. 천천히, 편하게 말씀해주세요.',
+      organize:
+        '지금 상황을 정리해보면, 여러 가지가 복잡하게 얽혀있는 것 같아요. 하나씩 풀어가면서 마음을 정리해보는 건 어떨까요?',
+      validate:
+        '그 상황에서 그렇게 느끼시는 건 아주 자연스러운 반응이에요. 많은 분들이 비슷한 상황에서 같은 감정을 느끼세요. 당신의 감정은 전혀 이상하지 않아요.',
+      direction:
+        '지금 많이 힘드시죠. 오늘 하루, 딱 하나만 해보는 건 어떨까요? 잠깐 창문을 열고 바깥 공기를 마셔보세요. 작은 것부터 천천히요.',
+      similar:
+        '비슷한 고민을 하시는 분들이 정말 많아요. 어떤 분은 같은 상황에서 "나만 이런 줄 알았는데..."라고 하셨어요. 혼자만의 고민이 아니에요.',
+    };
+    return fallbacks[mode];
+  }
+
   async summarizeSession(context: string[]): Promise<string> {
+    if (!this.hasApiKey) {
+      const keywords = context.slice(0, 3).join(', ');
+      return `상담 주제: ${keywords}`;
+    }
+
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [

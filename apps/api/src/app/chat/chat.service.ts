@@ -17,36 +17,41 @@ export class ChatService {
   async startSession(userId: string, category: Category) {
     let previousContext: string | undefined;
 
-    if (userId !== 'anonymous') {
-      const recentSummaries =
-        await this.sessionRepository.getRecentSummaries(userId);
-      if (recentSummaries.length > 0) {
-        previousContext = recentSummaries
-          .map((s) => `[이전 상담: ${s.category}] ${s.summary}`)
-          .join('\n');
+    try {
+      if (userId !== 'anonymous') {
+        const recentSummaries =
+          await this.sessionRepository.getRecentSummaries(userId);
+        if (recentSummaries.length > 0) {
+          previousContext = recentSummaries
+            .map((s) => `[이전 상담: ${s.category}] ${s.summary}`)
+            .join('\n');
+        }
       }
-    }
 
-    const session = await this.sessionService.create(userId, category);
+      const session = await this.sessionService.create(userId, category);
 
-    if (previousContext) {
-      await this.sessionService.addContext(
-        session._id.toString(),
-        `[이전 상담 기록]\n${previousContext}`,
+      if (previousContext) {
+        await this.sessionService.addContext(
+          session._id.toString(),
+          `[이전 상담 기록]\n${previousContext}`,
+        );
+      }
+
+      const options = await this.openaiAgent.generateOptions(
+        session.context,
+        'initial',
+        category,
       );
+
+      return {
+        sessionId: session._id,
+        hasHistory: !!previousContext,
+        ...options,
+      };
+    } catch (error) {
+      console.error('startSession error:', error);
+      throw error;
     }
-
-    const options = await this.openaiAgent.generateOptions(
-      session.context,
-      'initial',
-      category,
-    );
-
-    return {
-      sessionId: session._id,
-      hasHistory: !!previousContext,
-      ...options,
-    };
   }
 
   async selectOption(sessionId: string, selectedOption: string) {
