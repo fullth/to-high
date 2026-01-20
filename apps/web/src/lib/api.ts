@@ -40,13 +40,33 @@ export function startSession(category: string, token?: string) {
   });
 }
 
+// 직접 입력으로 세션 시작
+export function startSessionWithText(initialText: string, token?: string) {
+  return fetchApi<StartSessionResponse>("/chat/start", {
+    method: "POST",
+    body: JSON.stringify({ initialText }),
+    token,
+  });
+}
+
 // 선택지 선택
 export interface SelectOptionResponse {
   sessionId: string;
   question?: string;
   options?: string[];
   canProceedToResponse?: boolean;
-  responseModes?: { mode: string; label: string; description: string }[];
+  responseModes?: ResponseModeOption[];
+  isCrisis?: boolean;
+  crisisLevel?: string;
+  crisisMessage?: string;
+  contextSummary?: string;
+}
+
+interface ResponseModeOption {
+  mode: "comfort" | "organize" | "validate" | "direction" | "listen" | "similar";
+  label: string;
+  description: string;
+  emoji: string;
 }
 
 export function selectOption(sessionId: string, selectedOption: string, token?: string) {
@@ -57,9 +77,14 @@ export function selectOption(sessionId: string, selectedOption: string, token?: 
   });
 }
 
+// 채팅 응답
+export interface ChatResponse {
+  response: string;
+}
+
 // 응답 모드 설정
 export function setResponseMode(sessionId: string, mode: string, token?: string) {
-  return fetchApi<{ success: boolean }>("/chat/mode", {
+  return fetchApi<ChatResponse>("/chat/mode", {
     method: "POST",
     body: JSON.stringify({ sessionId, mode }),
     token,
@@ -67,10 +92,6 @@ export function setResponseMode(sessionId: string, mode: string, token?: string)
 }
 
 // 메시지 전송 (AI 응답 받기)
-export interface ChatResponse {
-  response: string;
-}
-
 export function sendMessage(sessionId: string, message?: string, token?: string) {
   return fetchApi<ChatResponse>("/chat/message", {
     method: "POST",
@@ -105,4 +126,122 @@ export function getMe(token: string) {
 // Google OAuth URL
 export function getGoogleAuthUrl() {
   return `${API_BASE_URL}/auth/google`;
+}
+
+// 스트리밍 방식 응답 모드 설정
+export async function setResponseModeStream(
+  sessionId: string,
+  mode: string,
+  token?: string,
+  onChunk?: (chunk: string) => void
+): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/chat/mode/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ sessionId, mode }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let fullContent = "";
+
+  if (!reader) {
+    throw new Error("Response body is not readable");
+  }
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const text = decoder.decode(value, { stream: true });
+    const lines = text.split("\n");
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.content) {
+            fullContent += data.content;
+            onChunk?.(data.content);
+          }
+          if (data.done) {
+            return fullContent;
+          }
+          if (data.error) {
+            throw new Error(data.error);
+          }
+        } catch (e) {
+          // JSON parse error, skip
+        }
+      }
+    }
+  }
+
+  return fullContent;
+}
+
+// 스트리밍 방식 메시지 전송
+export async function sendMessageStream(
+  sessionId: string,
+  message: string,
+  token?: string,
+  onChunk?: (chunk: string) => void
+): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/chat/message/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ sessionId, message }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let fullContent = "";
+
+  if (!reader) {
+    throw new Error("Response body is not readable");
+  }
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const text = decoder.decode(value, { stream: true });
+    const lines = text.split("\n");
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.content) {
+            fullContent += data.content;
+            onChunk?.(data.content);
+          }
+          if (data.done) {
+            return fullContent;
+          }
+          if (data.error) {
+            throw new Error(data.error);
+          }
+        } catch (e) {
+          // JSON parse error, skip
+        }
+      }
+    }
+  }
+
+  return fullContent;
 }

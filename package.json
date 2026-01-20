@@ -8,10 +8,15 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "npm run kill && concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "kill": "lsof -ti:3000,3001 | xargs kill -9 2>/dev/null || true",
     "dev:api": "npm run start:dev --workspace=@to-high/api",
     "build:api": "npm run build --workspace=@to-high/api",
     "test:api": "npm run test --workspace=@to-high/api",
     "dev:web": "npm run dev --workspace=@to-high/web",
     "build:web": "npm run build --workspace=@to-high/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
