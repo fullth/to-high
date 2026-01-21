@@ -22,7 +22,17 @@
       "Bash(pgrep:*)",
       "Bash(brew services start:*)",
       "Bash(mongod:*)",
-      "Bash(npm run build:web:*)"
+      "Bash(npm run build:web:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth status:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(while read hash msg)",
+      "Bash(do git show --format=\"%b\" $hash)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(git filter-branch:*)"
     ]
   },
   "hooks": {
