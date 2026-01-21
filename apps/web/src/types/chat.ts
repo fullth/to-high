@@ -8,6 +8,8 @@ export type ResponseMode =
   | "listen"
   | "similar";
 
+export type CounselorType = "T" | "F" | "deep";
+
 export type Category = "self" | "future" | "work" | "relationship";
 
 export interface ResponseModeOption {

@@ -19,6 +19,11 @@ export class SessionDocument extends Document {
   category: string;
 
   @Prop({
+    enum: ['T', 'F', 'deep'],
+  })
+  counselorType: string;
+
+  @Prop({
     enum: ['comfort', 'organize', 'validate', 'direction', 'listen', 'similar'],
   })
   responseMode: string;

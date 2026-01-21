@@ -5,4 +5,5 @@ export interface TokenResponse {
 export interface UserResponse {
   userId: string;
   email: string;
+  name?: string;
 }

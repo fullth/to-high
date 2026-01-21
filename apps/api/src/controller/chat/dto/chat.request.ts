@@ -4,6 +4,7 @@ export const StartSessionSchema = z
   .object({
     category: z.enum(['self', 'future', 'work', 'relationship', 'love', 'daily']).optional(),
     initialText: z.string().min(1).optional(),
+    counselorType: z.enum(['T', 'F', 'deep']).optional(),
   })
   .refine((data) => data.category || data.initialText, {
     message: 'category 또는 initialText 중 하나는 필수입니다',
