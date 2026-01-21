@@ -51,7 +51,7 @@ export function Logo({ size = "md", showText = true }: LogoProps) {
       {/* 텍스트 */}
       {showText && (
         <span className={`font-bold text-foreground/90 ${text}`}>
-          To high; <span className="text-primary">위로</span>
+          <span className="text-primary">위로 - AI 기반 심리 상담</span>
         </span>
       )}
     </div>

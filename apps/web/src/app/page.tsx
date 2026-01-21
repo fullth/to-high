@@ -422,9 +422,12 @@ export default function Home() {
         {/* 메인 콘텐츠 */}
         <div className="flex-1 flex flex-col items-center justify-start sm:justify-center p-4 sm:p-6 pt-4">
           <div className="max-w-lg w-full space-y-4 sm:space-y-8">
-            <div className="text-center space-y-1 sm:space-y-3">
-              <p className="text-base sm:text-lg text-muted-foreground">
+            <div className="text-center space-y-2 sm:space-y-3">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 오늘 하루 어땠어요?
+              </p>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                요즘 마음에 걸리는 게 있다면 얘기해줄래요?
               </p>
               {isLoading && (
                 <p className="text-sm text-primary animate-pulse">귀 기울여 듣는 중...</p>
@@ -432,9 +435,6 @@ export default function Home() {
             </div>
 
             <div className="space-y-3 sm:space-y-4">
-              <p className="text-center text-sm sm:text-base text-muted-foreground">
-                요즘 마음에 걸리는 게 있다면 얘기해줄래요?
-              </p>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {categories.map((category) => (
                   <button
