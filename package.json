@@ -1,7 +1,7 @@
 {
   "name": "to-high",
   "version": "1.0.0",
-  "description": "To high; 위로 - AI 기반 심리 상담 서비스",
+  "description": "위로(TO-HIGH): AI 기반 심리 상담 서비스",
   "private": true,
   "workspaces": [
     "apps/*",

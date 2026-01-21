@@ -263,7 +263,7 @@ function ChatContent() {
               value={supplementInput}
               onChange={(e) => setSupplementInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
-              placeholder="직접 이야기하기..."
+              placeholder="마음이 괜찮다면, 직접 얘기해주셔도 좋아요"
               className="flex-1 px-4 h-12 text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
               disabled={isLoading}
             />
