@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
 import { RESPONSE_MODE_OPTIONS } from '../../types/chat';
 import { Category, ResponseMode } from '../../types/session';
 import { SessionService } from '../session/session.service';
+
+// 토큰 낭비 방지 제한
+const MAX_INPUT_LENGTH = 500; // 최대 입력 길이
+const MAX_CONTEXT_COUNT = 30; // 세션당 최대 대화 턴 수
+const MAX_CHAT_MESSAGES = 20; // 채팅 모드 최대 메시지 수
 
 @Injectable()
 export class ChatService {
@@ -14,11 +19,30 @@ export class ChatService {
     private openaiAgent: OpenAIAgent,
   ) {}
 
+  // 입력 길이 검증
+  private validateInput(input: string): void {
+    if (input.length > MAX_INPUT_LENGTH) {
+      throw new BadRequestException(`입력이 너무 깁니다. ${MAX_INPUT_LENGTH}자 이내로 작성해주세요.`);
+    }
+  }
+
+  // 세션 대화 수 검증
+  private validateContextCount(contextCount: number): void {
+    if (contextCount >= MAX_CONTEXT_COUNT) {
+      throw new BadRequestException('세션 대화 한도에 도달했습니다. 새 상담을 시작해주세요.');
+    }
+  }
+
   async startSession(
     userId: string,
     category?: Category,
     initialText?: string,
   ) {
+    // 입력 검증
+    if (initialText) {
+      this.validateInput(initialText);
+    }
+
     let previousContext: string | undefined;
 
     try {
@@ -90,8 +114,14 @@ export class ChatService {
   }
 
   async selectOption(sessionId: string, selectedOption: string) {
+    // 입력 검증
+    this.validateInput(selectedOption);
+
     const session = await this.sessionService.findById(sessionId);
     if (!session) throw new NotFoundException('Session not found');
+
+    // 대화 수 검증
+    this.validateContextCount(session.context.length);
 
     const crisisResult = detectCrisis(selectedOption);
     if (crisisResult.isCrisis) {
@@ -175,8 +205,19 @@ export class ChatService {
   }
 
   async generateResponse(sessionId: string, userMessage?: string) {
+    // 입력 검증
+    if (userMessage) {
+      this.validateInput(userMessage);
+    }
+
     const session = await this.sessionService.findById(sessionId);
     if (!session) throw new NotFoundException('Session not found');
+
+    // 채팅 모드에서 메시지 수 제한
+    const chatMessageCount = session.context.filter((c: string) => c.startsWith('나:')).length;
+    if (chatMessageCount >= MAX_CHAT_MESSAGES) {
+      throw new BadRequestException('대화 한도에 도달했습니다. 상담을 마무리해주세요.');
+    }
 
     if (userMessage) {
       const crisisResult = detectCrisis(userMessage);
@@ -235,8 +276,19 @@ export class ChatService {
    * 스트리밍 방식으로 응답 생성
    */
   async *generateResponseStream(sessionId: string, userMessage?: string) {
+    // 입력 검증
+    if (userMessage) {
+      this.validateInput(userMessage);
+    }
+
     const session = await this.sessionService.findById(sessionId);
     if (!session) throw new NotFoundException('Session not found');
+
+    // 채팅 모드에서 메시지 수 제한
+    const chatMessageCount = session.context.filter((c: string) => c.startsWith('나:')).length;
+    if (chatMessageCount >= MAX_CHAT_MESSAGES) {
+      throw new BadRequestException('대화 한도에 도달했습니다. 상담을 마무리해주세요.');
+    }
 
     if (userMessage) {
       const crisisResult = detectCrisis(userMessage);
