@@ -1,20 +1,6 @@
-# 위로 - AI 기반 심리 상담 서비스
+# 위로(TO-HIGH): AI 기반 심리 상담 서비스
 
 > 점진적 상호작용으로 마음의 문을 여는 AI 상담 서비스
-
----
-
-## 새 세션 시작 시 필독
-
-**Claude Code 새 세션에서 이 프로젝트를 이어서 작업할 때:**
-
-1. 이 README를 먼저 읽어 전체 구조 파악
-2. [`apps/api/README.md`](./apps/api/README.md) - **백엔드 진행 상황, TODO, API 명세**
-3. [`apps/web/README.md`](./apps/web/README.md) - 프론트엔드 기본 정보
-
-> `apps/api/README.md`에 프로젝트 전체 진행 상황과 다음 작업 목록이 정리되어 있습니다.
-
----
 
 복잡한 감정을 처음부터 말로 표현하기 어려울 때, 간단한 선택지로 시작해 자연스럽게 마음을 열 수 있도록 돕습니다.
 
@@ -129,3 +115,15 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 - 저작자표시 필수
 - 비영리 목적만 허용
 - 변경 금지
+
+---
+
+## Claude Code를 활용할 때
+
+새 세션에서 이 프로젝트를 이어서 작업할 때:
+
+1. 이 README를 먼저 읽어 전체 구조 파악
+2. [`apps/api/README.md`](./apps/api/README.md) - **백엔드 진행 상황, TODO, API 명세**
+3. [`apps/web/README.md`](./apps/web/README.md) - 프론트엔드 기본 정보
+
+> `apps/api/README.md`에 프로젝트 전체 진행 상황과 다음 작업 목록이 정리되어 있습니다.
