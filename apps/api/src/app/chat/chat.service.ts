@@ -137,6 +137,12 @@ export class ChatService {
       };
     }
 
+    // 공감 코멘트 생성
+    const empathyComment = await this.openaiAgent.generateEmpathyComment(
+      selectedOption,
+      session.context,
+    );
+
     await this.sessionService.addContext(sessionId, selectedOption);
 
     const updatedSession = await this.sessionService.findById(sessionId);
@@ -150,6 +156,7 @@ export class ChatService {
     if (options.canProceedToResponse) {
       return {
         sessionId,
+        empathyComment,
         canProceedToResponse: true,
         responseModes: RESPONSE_MODE_OPTIONS,
       };
@@ -157,6 +164,7 @@ export class ChatService {
 
     return {
       sessionId,
+      empathyComment,
       ...options,
     };
   }

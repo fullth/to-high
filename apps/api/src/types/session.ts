@@ -8,7 +8,7 @@ export type ResponseMode =
   | 'listen'
   | 'similar';
 
-export type Category = 'self' | 'future' | 'work' | 'relationship' | 'direct';
+export type Category = 'self' | 'future' | 'work' | 'relationship' | 'love' | 'daily' | 'other' | 'direct';
 export type SessionStatus = 'active' | 'completed';
 
 export interface Session {

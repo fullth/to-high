@@ -7,7 +7,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
-  app.enableCors();
+
+  // CORS 설정 - 프로덕션과 개발 환경 분리
+  const allowedOrigins = process.env.FRONTEND_URL
+    ? [process.env.FRONTEND_URL, 'http://localhost:3001']
+    : ['http://localhost:3001'];
+
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+  });
 
   // Swagger 설정
   const config = new DocumentBuilder()
