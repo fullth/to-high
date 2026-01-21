@@ -60,6 +60,7 @@ export interface SelectOptionResponse {
   crisisLevel?: string;
   crisisMessage?: string;
   contextSummary?: string;
+  empathyComment?: string;
 }
 
 interface ResponseModeOption {

@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { endSession, selectOption, setResponseModeStream, sendMessageStream } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseModeOption } from "@/types/chat";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 function ChatContent() {
   const params = useParams();
@@ -26,16 +26,39 @@ function ChatContent() {
   const [inputMessage, setInputMessage] = useState("");
   const [crisisMessage, setCrisisMessage] = useState<string | null>(null);
   const [supplementInput, setSupplementInput] = useState("");
-  const [contextSummary, setContextSummary] = useState<string | null>(null);
   const [streamingContent, setStreamingContent] = useState<string>("");
+
+  // 선택 히스토리를 저장 (대화 형태로 보여주기 위함)
+  const [selectionHistory, setSelectionHistory] = useState<Array<{
+    type: "user" | "assistant";
+    content: string;
+    isQuestion?: boolean;
+    options?: string[];
+  }>>([]);
+
+  // 스크롤 자동 이동을 위한 ref
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // 대화 내용이 변경되면 스크롤 이동
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [selectionHistory, messages, streamingContent]);
 
   useEffect(() => {
     const q = searchParams.get("question");
     const opts = searchParams.get("options");
 
     if (q && opts) {
+      const parsedOptions = JSON.parse(opts);
       setQuestion(q);
-      setOptions(JSON.parse(opts));
+      setOptions(parsedOptions);
+      // 초기 질문을 히스토리에 추가
+      setSelectionHistory([{
+        type: "assistant",
+        content: q,
+        isQuestion: true,
+        options: parsedOptions,
+      }]);
     }
   }, [searchParams]);
 
@@ -43,7 +66,13 @@ function ChatContent() {
     async (selected: string) => {
       setIsLoading(true);
       setSupplementInput("");
-      setContextSummary(null);
+
+      // 사용자 선택을 히스토리에 추가
+      setSelectionHistory(prev => [...prev, {
+        type: "user",
+        content: selected,
+      }]);
+
       try {
         const res = await selectOption(sessionId, selected, token || undefined);
 
@@ -51,16 +80,47 @@ function ChatContent() {
           setCrisisMessage(res.crisisMessage);
         }
 
+        // 히스토리에 AI 응답 추가
+        const newHistoryItems: Array<{
+          type: "user" | "assistant";
+          content: string;
+          isQuestion?: boolean;
+          options?: string[];
+        }> = [];
+
+        // 공감 코멘트가 있으면 추가
+        if (res.empathyComment) {
+          newHistoryItems.push({
+            type: "assistant",
+            content: res.empathyComment,
+          });
+        }
+
+        // 컨텍스트 요약이 있으면 추가
         if (res.contextSummary) {
-          setContextSummary(res.contextSummary);
+          newHistoryItems.push({
+            type: "assistant",
+            content: res.contextSummary,
+          });
         }
 
         if (res.canProceedToResponse && res.responseModes) {
           setPhase("mode");
           setResponseModes(res.responseModes);
         } else if (res.question && res.options) {
+          // 다음 질문을 히스토리에 추가
+          newHistoryItems.push({
+            type: "assistant",
+            content: res.question,
+            isQuestion: true,
+            options: res.options,
+          });
           setQuestion(res.question);
           setOptions(res.options);
+        }
+
+        if (newHistoryItems.length > 0) {
+          setSelectionHistory(prev => [...prev, ...newHistoryItems]);
         }
       } catch (err) {
         console.error(err);
@@ -149,22 +209,39 @@ function ChatContent() {
   if (phase === "selecting") {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-background via-background to-secondary/20">
-        <div className="max-w-lg w-full space-y-8">
-          {/* 컨텍스트 요약 (말하기 어려워요 선택 시) */}
-          {contextSummary && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader className="p-4">
-                <CardDescription className="text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                  {contextSummary}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          )}
+        <div className="max-w-lg w-full space-y-6">
+          {/* 대화 히스토리 */}
+          <div className="space-y-4 max-h-[40vh] overflow-auto">
+            {selectionHistory.map((item, idx) => (
+              <div
+                key={idx}
+                className={`flex ${item.type === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                    item.type === "user"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary/50 text-foreground/90"
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{item.content}</p>
+                </div>
+              </div>
+            ))}
 
-          <div className="text-center space-y-2">
-            <p className="text-lg font-medium text-foreground/90">{question}</p>
+            {/* 로딩 표시 */}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-secondary/50 rounded-2xl px-4 py-3">
+                  <p className="text-sm text-muted-foreground">귀 기울여 듣는 중...</p>
+                </div>
+              </div>
+            )}
+            {/* 스크롤 위치 마커 */}
+            <div ref={chatEndRef} />
           </div>
 
+          {/* 옵션 버튼들 */}
           <div className="grid gap-3">
             {options.map((option, idx) => (
               <Button
@@ -179,7 +256,7 @@ function ChatContent() {
             ))}
           </div>
 
-          {/* 직접 입력 - 홈과 동일한 스타일 */}
+          {/* 직접 입력 */}
           <div className="flex gap-3 items-stretch">
             <input
               type="text"
@@ -198,10 +275,6 @@ function ChatContent() {
               전송
             </Button>
           </div>
-
-          {isLoading && (
-            <p className="text-center text-muted-foreground text-sm">생각 중...</p>
-          )}
 
           {/* 홈으로 돌아가기 */}
           <div className="pt-4">
@@ -235,9 +308,9 @@ function ChatContent() {
           )}
 
           <div className="text-center space-y-2">
-            <h2 className="text-xl font-medium text-foreground/90">어떤 도움이 필요하세요?</h2>
+            <h2 className="text-xl font-medium text-foreground/90">어떻게 이야기할까요?</h2>
             <p className="text-muted-foreground text-sm">
-              상황을 충분히 파악했어요. 원하는 방식을 선택해주세요.
+              이야기 잘 들었어요. 어떤 방식이 좋을까요?
             </p>
           </div>
 
@@ -260,7 +333,7 @@ function ChatContent() {
           </div>
 
           {isLoading && (
-            <p className="text-center text-muted-foreground text-sm">준비 중...</p>
+            <p className="text-center text-muted-foreground text-sm">귀 기울여 듣는 중...</p>
           )}
         </div>
       </main>
@@ -271,9 +344,9 @@ function ChatContent() {
     return (
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/10">
         <header className="border-b border-border/50 p-4 flex justify-between items-center bg-background/80 backdrop-blur-sm">
-          <h1 className="font-medium text-foreground/90">상담 중</h1>
+          <h1 className="font-medium text-foreground/90">이야기 중</h1>
           <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
-            상담 종료
+            여기까지
           </Button>
         </header>
 
@@ -309,7 +382,7 @@ function ChatContent() {
           {isLoading && !streamingContent && (
             <div className="flex justify-start">
               <div className="bg-secondary/50 rounded-2xl px-4 py-3">
-                <p className="text-sm text-muted-foreground">입력 중...</p>
+                <p className="text-sm text-muted-foreground">귀 기울여 듣는 중...</p>
               </div>
             </div>
           )}
@@ -340,19 +413,19 @@ function ChatContent() {
       <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-background via-background to-secondary/20">
         <div className="max-w-md w-full space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-xl font-medium text-foreground/90">상담이 종료되었습니다</h2>
-            <p className="text-muted-foreground text-sm">오늘 이야기 나눠주셔서 감사해요.</p>
+            <h2 className="text-xl font-medium text-foreground/90">오늘 이야기는 여기까지</h2>
+            <p className="text-muted-foreground text-sm">이야기 나눠줘서 고마워요. 언제든 다시 와요.</p>
           </div>
 
           <Card className="border-primary/20 bg-card/80">
             <CardHeader>
-              <CardTitle className="text-base font-medium">요약</CardTitle>
+              <CardTitle className="text-base font-medium">오늘 나눈 이야기</CardTitle>
               <CardDescription className="whitespace-pre-wrap text-foreground/80 leading-relaxed">{summary}</CardDescription>
             </CardHeader>
           </Card>
 
           <Button className="w-full transition-all" onClick={() => router.push("/")}>
-            홈으로 돌아가기
+            다시 이야기하기
           </Button>
         </div>
       </main>

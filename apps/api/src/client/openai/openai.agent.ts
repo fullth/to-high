@@ -11,191 +11,28 @@ const CATEGORY_CONTEXTS: Record<Category, string> = {
 탐색 방향: 구체적 고민 영역, 현재 상황, 원하는 방향, 장애물`,
   work: `주제: 직장 관련 고민 (업무, 상사, 동료, 번아웃)
 탐색 방향: 구체적 상황, 관계 역학, 감정 상태, 원하는 변화`,
-  relationship: `주제: 인간관계 고민 (친구, 가족, 연인)
+  relationship: `주제: 인간관계 고민 (친구, 가족, 지인)
 탐색 방향: 관계 유형, 갈등 상황, 감정, 기대와 현실의 차이`,
+  love: `주제: 연애 고민 (썸, 연인, 짝사랑, 이별)
+탐색 방향: 현재 상태, 상대방과의 관계, 감정, 고민되는 부분`,
+  daily: `주제: 일상적인 지침과 피로 (무기력, 스트레스, 일상 피로)
+탐색 방향: 피로의 원인, 일상 패턴, 에너지 수준, 작은 기쁨 찾기`,
+  other: `주제: 말로 표현하기 어려운 고민 (혼란, 막연함, 복합적 감정)
+탐색 방향: 현재 느끼는 감정, 가장 불편한 것, 원하는 것`,
   direct: `주제: 사용자가 직접 입력한 고민 (자유 형식)
 탐색 방향: 사용자가 입력한 내용을 기반으로 핵심 감정과 상황 파악, 필요한 부분 추가 탐색`,
 };
 
-const INITIAL_QUESTIONS: Record<Category, GenerateOptionsResult> = {
-  self: {
-    question: '요즘 나 자신에 대해 어떤 생각이 드시나요?',
-    options: [
-      '뭔가 부족한 것 같아',
-      '불안하고 걱정이 많아',
-      '의욕이 없고 무기력해',
-      '나를 잘 모르겠어',
-    ],
-    canProceedToResponse: false,
-  },
-  future: {
-    question: '미래에 대해 어떤 부분이 가장 마음에 걸리세요?',
-    options: [
-      '뭘 해야 할지 모르겠어',
-      '선택을 못하겠어',
-      '불안하고 막막해',
-      '목표가 없는 것 같아',
-    ],
-    canProceedToResponse: false,
-  },
-  work: {
-    question: '직장에서 요즘 어떤 점이 힘드세요?',
-    options: [
-      '업무가 너무 많아',
-      '사람들과의 관계가 힘들어',
-      '의미를 못 느끼겠어',
-      '지쳐서 그만두고 싶어',
-    ],
-    canProceedToResponse: false,
-  },
-  relationship: {
-    question: '어떤 관계에서 힘드신 건가요?',
-    options: ['가족', '친구', '연인', '직장 동료'],
-    canProceedToResponse: false,
-  },
-  direct: {
-    question: '말씀해주셔서 감사해요. 조금 더 여쭤봐도 될까요?',
-    options: [
-      '네, 더 말해볼게요',
-      '일단 이 정도만요',
-      '뭘 말해야 할지 모르겠어요',
-      '다른 이야기 할게요',
-    ],
-    canProceedToResponse: false,
-  },
-};
-
-const FOLLOWUP_QUESTIONS: Record<Category, GenerateOptionsResult[]> = {
-  self: [
-    {
-      question: '그런 생각이 언제부터 드셨나요?',
-      options: ['최근 며칠', '몇 주 전부터', '꽤 오래됐어', '잘 모르겠어'],
-      canProceedToResponse: false,
-    },
-    {
-      question: '그 감정이 일상에 어떤 영향을 주고 있나요?',
-      options: [
-        '일에 집중이 안 돼',
-        '사람 만나기 싫어',
-        '잠을 잘 못 자',
-        '그냥 무기력해',
-      ],
-      canProceedToResponse: false,
-    },
-    {
-      question: '혹시 더 이야기하고 싶은 게 있으신가요?',
-      options: [
-        '더 얘기하고 싶어',
-        '이 정도면 충분해',
-        '뭘 말해야 할지 모르겠어',
-        '직접 입력할게',
-      ],
-      canProceedToResponse: true,
-    },
-  ],
-  future: [
-    {
-      question: '그 고민이 생긴 계기가 있나요?',
-      options: [
-        '주변과 비교하게 돼서',
-        '결정해야 할 게 있어서',
-        '뚜렷한 계기는 없어',
-        '말하기 어려워',
-      ],
-      canProceedToResponse: false,
-    },
-    {
-      question: '지금 가장 걱정되는 건 뭔가요?',
-      options: [
-        '실패할까봐',
-        '후회할까봐',
-        '시간이 없는 것 같아',
-        '뭐가 걱정인지 모르겠어',
-      ],
-      canProceedToResponse: false,
-    },
-    {
-      question: '더 나누고 싶은 이야기가 있으신가요?',
-      options: [
-        '더 얘기할게',
-        '충분히 말한 것 같아',
-        '정리가 안 돼',
-        '직접 입력할게',
-      ],
-      canProceedToResponse: true,
-    },
-  ],
-  work: [
-    {
-      question: '그 상황이 얼마나 지속되고 있나요?',
-      options: ['최근 시작됐어', '몇 달 됐어', '꽤 오래됐어', '반복돼'],
-      canProceedToResponse: false,
-    },
-    {
-      question: '그래서 지금 어떤 기분이세요?',
-      options: ['화가 나', '지쳤어', '억울해', '공허해'],
-      canProceedToResponse: false,
-    },
-    {
-      question: '더 하고 싶은 이야기가 있나요?',
-      options: [
-        '더 말하고 싶어',
-        '이 정도면 돼',
-        '말해도 달라질 게 없을 것 같아',
-        '직접 입력할게',
-      ],
-      canProceedToResponse: true,
-    },
-  ],
-  relationship: [
-    {
-      question: '그 관계에서 어떤 점이 힘드신가요?',
-      options: [
-        '이해받지 못하는 느낌',
-        '갈등이 있어',
-        '멀어진 것 같아',
-        '말하기 어려워',
-      ],
-      canProceedToResponse: false,
-    },
-    {
-      question: '그래서 어떤 마음이 드세요?',
-      options: ['서운해', '외로워', '답답해', '화가 나'],
-      canProceedToResponse: false,
-    },
-    {
-      question: '더 나누고 싶은 이야기가 있으신가요?',
-      options: [
-        '더 얘기할게',
-        '이 정도면 충분해',
-        '정리가 안 돼',
-        '직접 입력할게',
-      ],
-      canProceedToResponse: true,
-    },
-  ],
-  direct: [
-    {
-      question: '지금 어떤 마음이 드시나요?',
-      options: ['힘들어', '답답해', '슬퍼', '모르겠어'],
-      canProceedToResponse: false,
-    },
-    {
-      question: '이 상황이 얼마나 지속되고 있나요?',
-      options: ['오늘 갑자기', '며칠 전부터', '꽤 오래됐어', '반복돼'],
-      canProceedToResponse: false,
-    },
-    {
-      question: '더 나누고 싶은 이야기가 있으신가요?',
-      options: [
-        '더 얘기할게',
-        '이 정도면 충분해',
-        '정리가 안 돼',
-        '직접 입력할게',
-      ],
-      canProceedToResponse: true,
-    },
-  ],
+// 카테고리별 첫 질문 힌트 (AI가 참고할 가이드)
+const INITIAL_QUESTION_HINTS: Record<Category, string> = {
+  self: '나 자신에 대한 고민을 선택함. 자존감, 불안, 우울, 정체성 등에 대해 물어보기',
+  future: '미래에 대한 고민을 선택함. 진로, 목표, 불확실함에 대해 물어보기',
+  work: '일/직장 고민을 선택함. 업무, 관계, 번아웃 등에 대해 물어보기',
+  relationship: '인간관계 고민을 선택함. 가족, 친구, 지인 관계에 대해 물어보기',
+  love: '연애 고민을 선택함. 썸, 연인, 이별, 짝사랑 등에 대해 물어보기',
+  daily: '일상 피로를 선택함. 지침, 무기력, 스트레스에 대해 물어보기',
+  other: '기타/말하기 어려움을 선택함. 현재 기분과 상태에 대해 물어보기',
+  direct: '직접 입력으로 고민을 말함. 내용을 바탕으로 공감하고 더 물어보기',
 };
 
 const QUESTION_DEPTH_GUIDE = `
@@ -220,64 +57,71 @@ export class OpenAIAgent {
     });
   }
 
-  private getFollowupQuestion(
-    category: Category,
-    contextCount: number,
-  ): GenerateOptionsResult {
-    const questions = FOLLOWUP_QUESTIONS[category];
-    const index = Math.min(contextCount - 1, questions.length - 1);
-    return questions[index];
-  }
-
   async generateOptions(
     context: string[],
     currentStep: string,
     category?: Category,
   ): Promise<GenerateOptionsResult> {
-    if (currentStep === 'initial' && category && INITIAL_QUESTIONS[category]) {
-      return INITIAL_QUESTIONS[category];
-    }
-
     const contextCount = context.length;
+    const categoryContext = category ? CATEGORY_CONTEXTS[category] : '';
+    const questionHint =
+      category && currentStep === 'initial'
+        ? INITIAL_QUESTION_HINTS[category]
+        : '';
 
-    if (!this.hasApiKey && category) {
-      return this.getFollowupQuestion(category, contextCount);
+    // API 키가 없으면 기본 응답 반환
+    if (!this.hasApiKey) {
+      return {
+        question:
+          '말씀해주셔서 감사해요. 조금 더 이야기해주실 수 있을까요?',
+        options: ['네, 더 말할게요', '이 정도면 충분해요', '잘 모르겠어요'],
+        canProceedToResponse: contextCount >= 3,
+      };
     }
 
-    const categoryContext = category ? CATEGORY_CONTEXTS[category] : '';
-
-    const systemPrompt = `당신은 내담자 중심 상담(Person-Centered Therapy) 원칙을 따르는 상담 도우미입니다.
+    const systemPrompt = `당신은 털어놓기 편한 대화 상대입니다. 상담사처럼 딱딱하지 않고, 진심으로 들어주는 사람이에요.
 
 핵심 원칙:
-1. 무조건적 긍정적 존중: 판단하지 않고 있는 그대로 수용
-2. 공감적 이해: 내담자의 관점에서 경험을 이해
-3. 진정성: 따뜻하고 진실된 태도
+1. 판단하지 않고 있는 그대로 들어주기
+2. 상대방 입장에서 진심으로 공감하기
+3. 따뜻하고 자연스러운 어조
 
 ${categoryContext}
 
 ${QUESTION_DEPTH_GUIDE}
 
 현재 수집된 컨텍스트 수: ${contextCount}개
+${questionHint ? `상황: ${questionHint}` : ''}
 
-선택지 작성 규칙:
-- 3~4개의 선택지 제공
-- 각 선택지는 15자 이내로 짧고 명확하게
-- "기타" 또는 "말하기 어려워요" 같은 회피 선택지 1개 포함
-- 감정을 강요하지 않고, 선택의 자유 존중
-- 이전 선택과 자연스럽게 연결되는 질문
+중요 - 응답 스타일:
+1. question 필드: 공감 + 질문을 자연스럽게 이어서 작성
+   - 먼저 상대방이 말한 내용에 짧게 공감하고, 자연스럽게 질문으로 이어가세요
+   - 예: "그렇군요, 정말 힘드셨겠어요. 그게 언제부터 그러셨어요?"
+   - 예: "네, 충분히 그러실 수 있어요. 혹시 더 이야기해주실 수 있을까요?"
+   - 존댓말을 사용하되, 따뜻하고 부드럽게
+   - 매번 다른 표현으로 자연스럽게 (같은 말 반복 금지)
+
+2. 선택지 작성:
+   - 3~4개의 선택지
+   - 각 선택지는 반말체로 짧고 자연스럽게 (15자 이내)
+   - "말하기 어려워" 같은 회피 선택지 1개 포함
+   - 상황에 맞는 구체적인 선택지
 
 JSON 형식으로만 응답:
 {
-  "question": "따뜻한 어조의 질문",
-  "options": ["선택지1", "선택지2", "선택지3", "말하기 어려워요"],
+  "question": "공감 + 질문이 자연스럽게 이어지는 문장 (존댓말)",
+  "options": ["선택지1 (반말)", "선택지2 (반말)", "선택지3 (반말)", "말하기 어려워"],
   "canProceedToResponse": false
 }`;
 
-    const userPrompt = `현재까지 대화 흐름:
+    const userPrompt =
+      contextCount === 0
+        ? `사용자가 "${category}" 카테고리를 선택했습니다. 첫 질문을 생성해주세요.`
+        : `현재까지 대화 흐름:
 ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
 현재 단계: ${currentStep}
-다음 질문과 선택지를 생성해주세요.`;
+사용자의 마지막 선택/입력에 공감하면서 다음 질문과 선택지를 생성해주세요.`;
 
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -286,7 +130,7 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
         { role: 'user', content: userPrompt },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.7,
+      temperature: 0.85,
     });
 
     return JSON.parse(response.choices[0].message.content || '{}');
@@ -442,6 +286,52 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     });
 
     return response.choices[0].message.content || '';
+  }
+
+  /**
+   * 선택 시 짧은 공감 코멘트 생성
+   */
+  async generateEmpathyComment(
+    selectedOption: string,
+    context: string[],
+  ): Promise<string> {
+    // 기본 공감 코멘트 (API 키 없을 때 사용)
+    const fallbackComments = [
+      '그렇군요.',
+      '네, 이해해요.',
+      '말씀해주셔서 고마워요.',
+      '그런 마음이 드셨군요.',
+      '충분히 그럴 수 있어요.',
+    ];
+
+    if (!this.hasApiKey) {
+      return fallbackComments[Math.floor(Math.random() * fallbackComments.length)];
+    }
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `당신은 따뜻한 심리 상담사입니다.
+사용자가 선택한 내용에 대해 짧고 따뜻한 공감 코멘트를 해주세요.
+
+규칙:
+- 한 문장, 최대 20자 이내
+- 부드럽고 수용적인 어조
+- 판단하지 않음
+- 예: "그랬군요.", "네, 알겠어요.", "그런 마음이 드셨군요."`,
+        },
+        {
+          role: 'user',
+          content: `사용자 선택: "${selectedOption}"`,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 50,
+    });
+
+    return response.choices[0].message.content || '네, 알겠어요.';
   }
 
   /**
