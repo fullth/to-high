@@ -57,6 +57,15 @@ export class OpenAIAgent {
     });
   }
 
+  // 의미없는 짧은 입력 패턴
+  private readonly MEANINGLESS_PATTERNS = /^(ㄷㄷ+|ㅋㅋ+|ㅎㅎ+|ㅇㅇ+|ㄴㄴ+|ㅇㅋ|ㅇㅇㅇ|응+|어+|음+|아+|오+|ㅠㅠ+|ㅜㅜ+|\.+|\?+|ㅁㅁ|;;+|ㄱㄱ|ㅃㅃ|ㄹㅇ|ㅈㅈ)$/;
+
+  // 의미없는 입력인지 확인
+  private isMeaninglessInput(input: string): boolean {
+    const trimmed = input.trim();
+    return trimmed.length <= 5 && this.MEANINGLESS_PATTERNS.test(trimmed);
+  }
+
   async generateOptions(
     context: string[],
     currentStep: string,
@@ -68,6 +77,16 @@ export class OpenAIAgent {
       category && currentStep === 'initial'
         ? INITIAL_QUESTION_HINTS[category]
         : '';
+
+    // 마지막 입력이 의미없는 짧은 입력이면 API 호출 없이 바로 응답 (토큰 절약)
+    const lastInput = context[context.length - 1];
+    if (lastInput && this.isMeaninglessInput(lastInput)) {
+      return {
+        question: '괜찮아요. 말로 하기 어려우시면 아래 버튼으로 선택해주셔도 돼요.',
+        options: ['조금 더 생각해볼게', '다른 얘기할래', '잘 모르겠어'],
+        canProceedToResponse: contextCount >= 5,
+      };
+    }
 
     // API 키가 없으면 기본 응답 반환
     if (!this.hasApiKey) {
@@ -101,7 +120,18 @@ ${questionHint ? `상황: ${questionHint}` : ''}
    - 존댓말을 사용하되, 따뜻하고 부드럽게
    - 매번 다른 표현으로 자연스럽게 (같은 말 반복 금지)
 
-2. 선택지 작성:
+2. 의미 없거나 짧은 입력 처리 (ㄷㄷ, ㅎㅎ, ㅋㅋ, ㅇㅇ, 응, 어, 음, ㄴㄴ 등 인터넷 용어):
+   [절대 금지]
+   - "힘드셨겠어요", "어려우셨겠어요", "힘드신가봐요" 같은 과잉 공감
+   - 짧은 입력을 고민/힘든 상황으로 해석하지 말 것
+
+   [올바른 대응]
+   - 버튼 선택 유도하기 (진지하고 따뜻하게)
+   - 예: "ㄷㄷ" → "괜찮아요. 말로 하기 어려우시면 아래 버튼으로 선택해주셔도 돼요."
+   - 예: "ㅋㅋ" → "천천히 하셔도 돼요. 버튼 중에서 골라주셔도 괜찮아요."
+   - 예: "음" → "네, 편하게 아래 선택지 중에서 골라주세요."
+
+3. 선택지 작성:
    - 3~4개의 선택지
    - 각 선택지는 반말체로 짧고 자연스럽게 (15자 이내)
    - "말하기 어려워" 같은 회피 선택지 1개 포함
@@ -303,6 +333,11 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
       '그런 마음이 드셨군요.',
       '충분히 그럴 수 있어요.',
     ];
+
+    // 의미없는 입력이면 API 호출 없이 바로 응답 (토큰 절약)
+    if (this.isMeaninglessInput(selectedOption)) {
+      return '네, 알겠어요.';
+    }
 
     if (!this.hasApiKey) {
       return fallbackComments[Math.floor(Math.random() * fallbackComments.length)];
