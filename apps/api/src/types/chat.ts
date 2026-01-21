@@ -4,6 +4,7 @@ export interface GenerateOptionsResult {
   question: string;
   options: string[];
   canProceedToResponse: boolean;
+  canRequestFeedback?: boolean; // 컨텍스트가 충분히 쌓였을 때 피드백 요청 가능
 }
 
 export interface ResponseModeOption {

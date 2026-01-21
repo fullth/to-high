@@ -33,7 +33,12 @@ export interface StartSessionResponse {
   question: string;
   options: string[];
   canProceedToResponse: boolean;
+  canRequestFeedback?: boolean;
   counselorType?: CounselorType;
+  // 대화 기억 관련
+  contextCount?: number;
+  hasHistory?: boolean;
+  previousSessionSummary?: string;
 }
 
 export function startSession(category: string, token?: string, counselorType?: CounselorType) {
@@ -59,12 +64,14 @@ export interface SelectOptionResponse {
   question?: string;
   options?: string[];
   canProceedToResponse?: boolean;
+  canRequestFeedback?: boolean;
   responseModes?: ResponseModeOption[];
   isCrisis?: boolean;
   crisisLevel?: string;
   crisisMessage?: string;
   contextSummary?: string;
   empathyComment?: string;
+  contextCount?: number;
 }
 
 interface ResponseModeOption {
