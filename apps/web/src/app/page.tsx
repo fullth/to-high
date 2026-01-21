@@ -14,7 +14,7 @@ import {
   SelectOptionResponse,
   CounselorType,
 } from "@/lib/api";
-import { ChatMessage, ChatPhase, ResponseModeOption } from "@/types/chat";
+import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption } from "@/types/chat";
 
 // 상담가 유형 정의
 const counselorTypes = [
@@ -123,11 +123,15 @@ type HistoryItem = {
   isQuestion?: boolean;
 };
 
+// 비로그인 사용자 최대 대화 횟수
+const MAX_ANONYMOUS_SELECTIONS = 5;
+
 export default function Home() {
   const { user, token, isLoading: authLoading, login, logout } = useAuth();
 
   // 세션 상태
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [phase, setPhase] = useState<ChatPhase>("selecting");
   const [question, setQuestion] = useState<string>("");
   const [options, setOptions] = useState<string[]>([]);
@@ -141,6 +145,11 @@ export default function Home() {
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [directInput, setDirectInput] = useState("");
   const [selectedCounselorType, setSelectedCounselorType] = useState<CounselorType | null>(null);
+  const [canRequestFeedback, setCanRequestFeedback] = useState(false);
+  const [contextCount, setContextCount] = useState(0);
+  const [hasHistory, setHasHistory] = useState(false);
+  const [previousSessionSummary, setPreviousSessionSummary] = useState<string | null>(null);
+  const [showModeSelection, setShowModeSelection] = useState(false);
 
   // 한도 도달 에러 상태
   const [limitError, setLimitError] = useState<{
@@ -193,12 +202,29 @@ export default function Home() {
       setSessionId(res.sessionId);
       setQuestion(res.question);
       setOptions(res.options);
+      setCanRequestFeedback(res.canRequestFeedback || false);
+      setContextCount(res.contextCount || 0);
+      setHasHistory(res.hasHistory || false);
+      setPreviousSessionSummary(res.previousSessionSummary || null);
       setPhase("selecting");
-      setSelectionHistory([{
+
+      const historyItems: HistoryItem[] = [];
+
+      // 재방문자 환영 메시지
+      if (res.hasHistory && res.previousSessionSummary) {
+        historyItems.push({
+          type: "assistant",
+          content: `다시 와주셨네요. 지난번에 "${res.previousSessionSummary}" 이야기를 나눴었죠. 기억하고 있어요.`,
+        });
+      }
+
+      historyItems.push({
         type: "assistant",
         content: res.question,
         isQuestion: true,
-      }]);
+      });
+
+      setSelectionHistory(historyItems);
     } catch (err) {
       console.error(err);
     } finally {
@@ -215,11 +241,26 @@ export default function Home() {
       setSessionId(res.sessionId);
       setQuestion(res.question);
       setOptions(res.options);
+      setCanRequestFeedback(res.canRequestFeedback || false);
+      setContextCount(res.contextCount || 0);
+      setHasHistory(res.hasHistory || false);
+      setPreviousSessionSummary(res.previousSessionSummary || null);
       setPhase("selecting");
-      setSelectionHistory([
-        { type: "user", content: directInput.trim() },
-        { type: "assistant", content: res.question, isQuestion: true },
-      ]);
+
+      const historyItems: HistoryItem[] = [];
+
+      // 재방문자 환영 메시지
+      if (res.hasHistory && res.previousSessionSummary) {
+        historyItems.push({
+          type: "assistant",
+          content: `다시 와주셨네요. 지난번에 "${res.previousSessionSummary}" 이야기를 나눴었죠. 기억하고 있어요.`,
+        });
+      }
+
+      historyItems.push({ type: "user", content: directInput.trim() });
+      historyItems.push({ type: "assistant", content: res.question, isQuestion: true });
+
+      setSelectionHistory(historyItems);
       setDirectInput("");
     } catch (err) {
       console.error(err);
@@ -232,6 +273,13 @@ export default function Home() {
   const handleSelectOption = useCallback(
     async (selected: string) => {
       if (!sessionId) return;
+
+      // 비로그인 사용자 대화 횟수 제한
+      if (!user && selectionHistory.length >= MAX_ANONYMOUS_SELECTIONS) {
+        setShowLoginPrompt(true);
+        return;
+      }
+
       setIsLoading(true);
       setSupplementInput("");
 
@@ -281,6 +329,8 @@ export default function Home() {
           });
           setQuestion(res.question);
           setOptions(res.options);
+          setCanRequestFeedback(res.canRequestFeedback || false);
+          setContextCount(res.contextCount || 0);
         }
 
         if (newHistoryItems.length > 0) {
@@ -293,8 +343,78 @@ export default function Home() {
         setIsLoading(false);
       }
     },
-    [sessionId, token, selectedCounselorType]
+    [sessionId, token, selectedCounselorType, user, selectionHistory.length]
   );
+
+  // 피드백 요청 (지금까지 이야기에 대한 생각 듣기)
+  const handleRequestFeedback = useCallback(async () => {
+    if (!sessionId) return;
+
+    // 상담가 유형이 선택된 경우 바로 채팅으로 이동
+    if (selectedCounselorType) {
+      setIsLoading(true);
+      setPhase("chatting");
+      setStreamingContent("");
+      let content = "";
+      try {
+        await setResponseModeStream(sessionId, "comfort", token || undefined, (chunk) => {
+          content += chunk;
+          setStreamingContent(content);
+        });
+        setMessages([{ role: "assistant", content }]);
+      } finally {
+        setStreamingContent("");
+        setIsLoading(false);
+      }
+    } else {
+      // 채팅창에서 모드 선택 UI 표시
+      setSelectionHistory(prev => [...prev, {
+        type: "assistant",
+        content: "이야기 잘 들었어요. 어떤 방식이 좋을까요?",
+        isQuestion: true,
+      }]);
+      setShowModeSelection(true);
+      setResponseModes([
+        { mode: "comfort", label: "그냥 위로해줘", description: "해결책 없이 공감과 위로만 받고 싶어요", emoji: "🤗" },
+        { mode: "listen", label: "그냥 들어줘", description: "말없이 들어주기만 해도 돼요", emoji: "👂" },
+        { mode: "organize", label: "상황 정리해줘", description: "복잡한 감정과 상황을 정리하고 싶어요", emoji: "📝" },
+        { mode: "validate", label: "내가 이상한 건가?", description: "내 감정이 정상인지 확인받고 싶어요", emoji: "🤔" },
+        { mode: "direction", label: "뭘 해야 할지 모르겠어", description: "작은 행동 하나만 제안해줘요", emoji: "🧭" },
+        { mode: "similar", label: "나만 이런 건가?", description: "비슷한 경험을 한 사람들 이야기가 궁금해요", emoji: "👥" },
+      ]);
+    }
+  }, [sessionId, token, selectedCounselorType]);
+
+  // 모드 선택 핸들러 (채팅창 내에서) - 같은 채팅창에서 응답 표시
+  const handleSelectModeInChat = useCallback(async (mode: ResponseMode) => {
+    if (!sessionId) return;
+
+    setSelectionHistory(prev => [...prev, {
+      type: "user",
+      content: responseModes.find(m => m.mode === mode)?.label || mode,
+      isQuestion: false,
+    }]);
+    setShowModeSelection(false);
+    setIsLoading(true);
+    setStreamingContent("");
+
+    let content = "";
+    try {
+      await setResponseModeStream(sessionId, mode, token || undefined, (chunk) => {
+        content += chunk;
+        setStreamingContent(content);
+      });
+      // 응답을 같은 채팅창에 추가
+      setSelectionHistory(prev => [...prev, {
+        type: "assistant",
+        content,
+        isQuestion: true,
+      }]);
+    } finally {
+      setStreamingContent("");
+      setIsLoading(false);
+    }
+  }, [sessionId, token, responseModes]);
 
   const handleSupplementSubmit = useCallback(async () => {
     if (!supplementInput.trim()) return;
@@ -381,6 +501,10 @@ export default function Home() {
     setStreamingContent("");
     setLimitError(null);
     setSelectedCounselorType(null);
+    setCanRequestFeedback(false);
+    setContextCount(0);
+    setHasHistory(false);
+    setPreviousSessionSummary(null);
   };
 
   // 한도 도달 에러 모달 컴포넌트
@@ -426,6 +550,44 @@ export default function Home() {
                 onClick={() => setLimitError(null)}
               >
                 계속 둘러보기
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  };
+
+  // 로그인 유도 모달 컴포넌트
+  const LoginPromptModal = () => {
+    if (!showLoginPrompt) return null;
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <Card className="max-w-md w-full border-primary/30 bg-card">
+          <CardHeader className="space-y-4">
+            <CardTitle className="text-lg text-center">
+              더 이야기 나눠볼까요?
+            </CardTitle>
+            <CardDescription className="text-center text-foreground/70">
+              로그인하시면 대화 기록이 저장되고,<br />
+              다음에 다시 찾아오셔도 기억하고 있을게요.
+            </CardDescription>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setShowLoginPrompt(false);
+                  login();
+                }}
+              >
+                Google로 로그인하기
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-muted-foreground"
+                onClick={() => setShowLoginPrompt(false)}
+              >
+                나중에 할게요
               </Button>
             </div>
           </CardHeader>
@@ -486,7 +648,7 @@ export default function Home() {
 
             {/* 상담가 유형 선택 */}
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground text-center">상담가 유형을 먼저 선택해보세요 (선택 안 해도 돼요)</p>
+              <p className="text-xs text-muted-foreground text-center">원하시는 상담가 유형이 있다면 먼저 선택해보세요! (선택하지 않아도 괜찮아요)</p>
               <div className="flex gap-2 justify-center flex-wrap">
                 {counselorTypes.map((type) => (
                   <button
@@ -542,7 +704,7 @@ export default function Home() {
                   value={directInput}
                   onChange={(e) => setDirectInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleDirectInputSubmit()}
-                  placeholder="직접 이야기하기..."
+                  placeholder="마음이 괜찮다면, 직접 얘기해주셔도 좋아요"
                   className="flex-1 px-3 sm:px-4 h-11 sm:h-12 text-sm sm:text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                   disabled={isLoading}
                 />
@@ -615,56 +777,115 @@ export default function Home() {
 
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-secondary/50 rounded-2xl px-4 py-3">
-                    <p className="text-sm text-muted-foreground">귀 기울여 듣는 중...</p>
+                  <div className="bg-secondary/50 rounded-2xl px-4 py-3 max-w-[85%]">
+                    {streamingContent ? (
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{streamingContent}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">귀 기울여 듣는 중...</p>
+                    )}
                   </div>
                 </div>
               )}
               <div ref={chatEndRef} />
             </div>
 
-            {/* 옵션 */}
-            <div className="grid gap-3">
-              {options.map((option, idx) => (
-                <Button
-                  key={idx}
-                  variant="outline"
-                  className="w-full h-auto py-4 text-left justify-start whitespace-normal transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
-                  onClick={() => handleSelectOption(option)}
-                  disabled={isLoading}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-
-            {/* 직접 입력 */}
-            <div className="space-y-2">
-              <div className="flex gap-3 items-stretch">
-                <input
-                  type="text"
-                  value={supplementInput}
-                  onChange={(e) => setSupplementInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
-                  placeholder="직접 이야기하기..."
-                  className="flex-1 px-4 h-12 text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
-                  disabled={isLoading}
-                />
-                <Button
-                  className="h-12 px-6"
-                  onClick={handleSupplementSubmit}
-                  disabled={isLoading || !supplementInput.trim()}
-                >
-                  전송
-                </Button>
+            {/* 모드 선택 UI (채팅창 내에서) */}
+            {showModeSelection ? (
+              <div className="grid gap-3">
+                {responseModes.map((modeOption) => {
+                  const modeStyle = {
+                    comfort: { bg: "bg-rose-100", text: "text-rose-600", label: "위로" },
+                    listen: { bg: "bg-sky-100", text: "text-sky-600", label: "경청" },
+                    organize: { bg: "bg-amber-100", text: "text-amber-600", label: "정리" },
+                    validate: { bg: "bg-violet-100", text: "text-violet-600", label: "확인" },
+                    direction: { bg: "bg-emerald-100", text: "text-emerald-600", label: "방향" },
+                    similar: { bg: "bg-indigo-100", text: "text-indigo-600", label: "공감" },
+                  }[modeOption.mode];
+                  return (
+                    <button
+                      key={modeOption.mode}
+                      onClick={() => handleSelectModeInChat(modeOption.mode)}
+                      disabled={isLoading}
+                      className="w-full p-4 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-full ${modeStyle.bg} ${modeStyle.text} flex items-center justify-center text-xs font-bold shrink-0`}>
+                          {modeStyle.label}
+                        </div>
+                        <div>
+                          <p className="font-medium">{modeOption.label}</p>
+                          <p className="text-sm text-muted-foreground">{modeOption.description}</p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                말하기 어려우면 버튼만 눌러도 돼요
-              </p>
-            </div>
+            ) : (
+              <>
+                {/* 피드백 요청 버튼 - 항상 표시, 2번 대화부터 활성화 */}
+                <div className="pb-3">
+                  <button
+                    onClick={handleRequestFeedback}
+                    disabled={isLoading || selectionHistory.length < 2}
+                    className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-primary/30 text-primary/80 text-sm font-medium transition-all duration-200 hover:border-primary/50 hover:bg-primary/5 hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">💬</span>
+                      <span>
+                        {selectionHistory.length < 2
+                          ? "조금 더 이야기를 나눠볼까요?"
+                          : "여기까지 들은 이야기, 제 생각을 말씀드려도 될까요?"}
+                      </span>
+                    </span>
+                  </button>
+                </div>
+
+                {/* 옵션 */}
+                <div className="grid gap-3">
+                  {options.map((option, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      className="w-full h-auto py-4 text-left justify-start whitespace-normal transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
+                      onClick={() => handleSelectOption(option)}
+                      disabled={isLoading}
+                    >
+                      {option}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* 직접 입력 */}
+                <div className="space-y-2">
+                  <div className="flex gap-3 items-stretch">
+                    <input
+                      type="text"
+                      value={supplementInput}
+                      onChange={(e) => setSupplementInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
+                      placeholder="마음이 괜찮다면, 직접 얘기해주셔도 좋아요"
+                      className="flex-1 px-4 h-12 text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
+                      disabled={isLoading}
+                    />
+                    <Button
+                      className="h-12 px-6"
+                      onClick={handleSupplementSubmit}
+                      disabled={isLoading || !supplementInput.trim()}
+                    >
+                      전송
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    말하기 어려우면 버튼만 눌러도 돼요
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
         <LimitErrorModal />
+        <LoginPromptModal />
       </main>
     );
   }
@@ -825,6 +1046,7 @@ export default function Home() {
           </div>
         </div>
         <LimitErrorModal />
+        <LoginPromptModal />
       </main>
     );
   }

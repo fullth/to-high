@@ -45,6 +45,7 @@ export class ChatService {
     }
 
     let previousContext: string | undefined;
+    let previousSessionSummary: string | undefined;
 
     try {
       if (userId !== 'anonymous') {
@@ -54,6 +55,10 @@ export class ChatService {
           previousContext = recentSummaries
             .map((s) => `[이전 상담: ${s.category}] ${s.summary}`)
             .join('\n');
+
+          // 사용자에게 보여줄 친근한 요약 생성
+          const lastSession = recentSummaries[0];
+          previousSessionSummary = lastSession.summary;
         }
       }
 
@@ -93,6 +98,8 @@ export class ChatService {
       return {
         sessionId: session._id,
         hasHistory: !!previousContext,
+        previousSessionSummary,
+        contextCount: updatedSession!.context.length,
         ...options,
       };
     } catch (error) {
@@ -138,7 +145,9 @@ export class ChatService {
         crisisLevel: crisisResult.level,
         crisisMessage: crisisResult.recommendedAction,
         canProceedToResponse: true,
+        canRequestFeedback: true,
         responseModes: RESPONSE_MODE_OPTIONS,
+        contextCount: session.context.length + 1,
       };
     }
 
@@ -165,6 +174,7 @@ export class ChatService {
       return {
         sessionId,
         contextSummary,
+        contextCount: updatedSession!.context.length,
         ...options,
       };
     }
@@ -190,13 +200,16 @@ export class ChatService {
         sessionId,
         empathyComment,
         canProceedToResponse: true,
+        canRequestFeedback: options.canRequestFeedback,
         responseModes: RESPONSE_MODE_OPTIONS,
+        contextCount: updatedSession!.context.length,
       };
     }
 
     return {
       sessionId,
       empathyComment,
+      contextCount: updatedSession!.context.length,
       ...options,
     };
   }
