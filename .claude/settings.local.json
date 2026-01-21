@@ -21,7 +21,8 @@
       "Bash(curl:*)",
       "Bash(pgrep:*)",
       "Bash(brew services start:*)",
-      "Bash(mongod:*)"
+      "Bash(mongod:*)",
+      "Bash(npm run build:web:*)"
     ]
   },
   "hooks": {

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { SessionDocument } from '../../database/session.schema';
-import { ResponseMode } from '../../types/session';
+import { CounselorType, ResponseMode } from '../../types/session';
 
 @Injectable()
 export class SessionRepository {
@@ -11,12 +11,13 @@ export class SessionRepository {
     private sessionModel: Model<SessionDocument>,
   ) {}
 
-  async create(userId: string, category: string): Promise<SessionDocument> {
+  async create(userId: string, category: string, counselorType?: CounselorType): Promise<SessionDocument> {
     const isValidObjectId = Types.ObjectId.isValid(userId) && userId !== 'anonymous';
     return this.sessionModel.create({
       userId: isValidObjectId ? new Types.ObjectId(userId) : new Types.ObjectId(),
       context: [`카테고리: ${category}`],
       category,
+      ...(counselorType && { counselorType }),
     });
   }
 

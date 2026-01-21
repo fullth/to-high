@@ -56,15 +56,18 @@ export class AuthController {
       properties: {
         userId: { type: 'string', description: '사용자 ID' },
         email: { type: 'string', description: '이메일 주소' },
+        name: { type: 'string', description: '사용자 이름' },
       },
     },
   })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @UseGuards(AuthGuard('jwt'))
-  getMe(@Req() req: any): UserResponse {
+  async getMe(@Req() req: any): Promise<UserResponse> {
+    const user = await this.authService.findById(req.user.userId);
     return {
       userId: req.user.userId,
       email: req.user.email,
+      name: user?.name,
     };
   }
 }

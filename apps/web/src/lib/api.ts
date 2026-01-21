@@ -24,27 +24,31 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
   return response.json();
 }
 
+// 상담가 유형
+export type CounselorType = "T" | "F" | "deep";
+
 // 세션 시작
 export interface StartSessionResponse {
   sessionId: string;
   question: string;
   options: string[];
   canProceedToResponse: boolean;
+  counselorType?: CounselorType;
 }
 
-export function startSession(category: string, token?: string) {
+export function startSession(category: string, token?: string, counselorType?: CounselorType) {
   return fetchApi<StartSessionResponse>("/chat/start", {
     method: "POST",
-    body: JSON.stringify({ category }),
+    body: JSON.stringify({ category, counselorType }),
     token,
   });
 }
 
 // 직접 입력으로 세션 시작
-export function startSessionWithText(initialText: string, token?: string) {
+export function startSessionWithText(initialText: string, token?: string, counselorType?: CounselorType) {
   return fetchApi<StartSessionResponse>("/chat/start", {
     method: "POST",
-    body: JSON.stringify({ initialText }),
+    body: JSON.stringify({ initialText, counselorType }),
     token,
   });
 }
@@ -118,6 +122,7 @@ export function endSession(sessionId: string, token?: string) {
 export interface User {
   userId: string;
   email: string;
+  name?: string;
 }
 
 export function getMe(token: string) {

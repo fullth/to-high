@@ -18,7 +18,7 @@ import type { Response } from 'express';
 import { ChatService } from '../../app/chat/chat.service';
 import { OptionalJwtAuthGuard } from '../../common/optional-jwt.guard';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe';
-import { Category, ResponseMode } from '../../types/session';
+import { Category, CounselorType, ResponseMode } from '../../types/session';
 import {
   EndSessionSchema,
   SelectOptionSchema,
@@ -59,6 +59,11 @@ export class ChatController {
           type: 'string',
           description: '직접 입력 텍스트 (카테고리 대신 사용 가능)',
         },
+        counselorType: {
+          type: 'string',
+          enum: ['T', 'F', 'deep'],
+          description: '상담가 유형 (T: 냉철한 조언, F: 따스한 공감, deep: 깊은 대화)',
+        },
       },
     },
   })
@@ -78,19 +83,21 @@ export class ChatController {
   @UsePipes(new ZodValidationPipe(StartSessionSchema))
   async startSession(
     @Req() req: any,
-    @Body() dto: { category?: Category; initialText?: string },
+    @Body() dto: { category?: Category; initialText?: string; counselorType?: CounselorType },
   ): Promise<StartSessionResponse> {
     const userId = req.user?.userId || 'anonymous';
     const result = await this.chatService.startSession(
       userId,
       dto.category,
       dto.initialText,
+      dto.counselorType,
     );
     return {
       sessionId: result.sessionId.toString(),
       question: result.question,
       options: result.options,
       canProceedToResponse: result.canProceedToResponse,
+      counselorType: dto.counselorType,
     };
   }
 

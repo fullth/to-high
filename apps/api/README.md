@@ -6,6 +6,16 @@ AI 기반 감정 상담 서비스
 
 ---
 
+## 배포 환경
+
+| 서비스 | URL |
+|--------|-----|
+| **API (Railway)** | `https://to-highapi-production.up.railway.app` |
+| **Web (Vercel)** | TBD |
+| **DB** | MongoDB Atlas (Railway 연동) |
+
+---
+
 ## 프로젝트 진행 상황
 
 ### 완료된 작업

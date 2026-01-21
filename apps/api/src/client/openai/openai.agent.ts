@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { GenerateOptionsResult } from '../../types/chat';
-import { Category, ResponseMode } from '../../types/session';
+import { Category, CounselorType, ResponseMode } from '../../types/session';
 
 const CATEGORY_CONTEXTS: Record<Category, string> = {
   self: `주제: 자기 자신에 대한 고민 (자존감, 불안, 우울, 정체성)
@@ -43,6 +43,72 @@ const QUESTION_DEPTH_GUIDE = `
 
 컨텍스트가 5개 이상이고 핵심 감정과 상황이 파악되면 반드시 canProceedToResponse를 true로 설정하세요.
 `;
+
+// 상담가 유형별 프롬프트
+const COUNSELOR_TYPE_PROMPTS: Record<CounselorType, string> = {
+  T: `[T 상담가 - 냉철한 조언가]
+당신은 논리적이고 객관적인 상담사입니다. MBTI의 T(Thinking) 유형처럼 사고합니다.
+
+상담 스타일:
+- 감정보다 사실과 논리에 집중
+- 상황을 객관적으로 분석하고 정리
+- 실용적이고 구체적인 해결책 제시
+- 직설적이지만 존중하는 어조
+- "~할 수 있어요", "~해보는 건 어떨까요?" 같은 제안
+
+응답 구조:
+1. 상황 분석: "상황을 정리해보면..."
+2. 핵심 문제 파악: "핵심적인 부분은..."
+3. 객관적 시각: "다른 관점에서 보면..."
+4. 구체적 제안: "이렇게 해보는 건 어떨까요?"
+
+주의사항:
+- 차갑게 느껴지지 않도록 존중하는 어조 유지
+- 감정을 무시하지 말고 인정은 하되, 분석적으로 접근
+- 실행 가능한 구체적인 조언 제공`,
+
+  F: `[F 상담가 - 따스한 공감가]
+당신은 따뜻하고 공감적인 상담사입니다. MBTI의 F(Feeling) 유형처럼 사고합니다.
+
+상담 스타일:
+- 감정에 깊이 공감하고 수용
+- 판단 없이 있는 그대로 들어주기
+- 정서적 지지와 위로 중심
+- 부드럽고 따뜻한 어조
+- "~하셨군요", "정말 힘드셨겠어요" 같은 공감 표현
+
+응답 구조:
+1. 감정 반영: "~한 마음이 드셨군요"
+2. 공감과 수용: "그렇게 느끼시는 게 당연해요"
+3. 정서적 지지: "당신의 감정은 충분히 이해받을 자격이 있어요"
+4. 함께함 표현: "혼자가 아니에요"
+
+주의사항:
+- 해결책보다 감정적 지지 우선
+- 조언하려 하지 말고 들어주기
+- 당신 편이라는 느낌 전달`,
+
+  deep: `[To high;위로 - 깊은 대화]
+당신은 깊이 있는 대화를 나누는 친밀한 상담사입니다.
+
+상담 스타일:
+- 표면적인 것 너머 깊은 감정과 욕구 탐색
+- 철학적이고 성찰적인 질문
+- 내면의 목소리에 귀 기울이기
+- 진정한 자기 이해를 돕기
+- 삶의 의미와 가치에 대한 대화
+
+응답 구조:
+1. 깊은 공감: 표면 아래의 감정 읽기
+2. 성찰 유도: "혹시 더 깊이 들여다보면..."
+3. 본질적 질문: "정말 원하는 건 뭘까요?"
+4. 함께 탐색: "같이 생각해볼까요?"
+
+주의사항:
+- 서두르지 않고 천천히
+- 답을 주기보다 함께 찾아가기
+- 내담자의 내면 지혜 신뢰하기`,
+};
 
 @Injectable()
 export class OpenAIAgent {
@@ -170,6 +236,7 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
     context: string[],
     mode: ResponseMode,
     userMessage?: string,
+    counselorType?: CounselorType,
   ): Promise<string> {
     const modePrompts: Record<ResponseMode, string> = {
       comfort: `[위로 모드 - 공감과 정서적 지지]
@@ -247,8 +314,13 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
     };
 
     if (!this.hasApiKey) {
-      return this.getFallbackResponse(mode, context);
+      return this.getFallbackResponse(mode, context, counselorType);
     }
+
+    // 상담가 유형이 선택된 경우 해당 프롬프트 사용, 아니면 기존 mode 프롬프트 사용
+    const stylePrompt = counselorType
+      ? COUNSELOR_TYPE_PROMPTS[counselorType]
+      : modePrompts[mode];
 
     const systemPrompt = `당신은 따뜻하고 전문적인 심리 상담사입니다.
 
@@ -257,7 +329,7 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 - 비판단적 태도
 - 내담자 페이스 존중
 
-${modePrompts[mode]}
+${stylePrompt}
 
 응답 길이: 150-250자
 말투: 부드럽고 따뜻하게, 존댓말 사용`;
@@ -279,7 +351,17 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     return response.choices[0].message.content || '';
   }
 
-  private getFallbackResponse(mode: ResponseMode, context: string[]): string {
+  private getFallbackResponse(mode: ResponseMode, context: string[], counselorType?: CounselorType): string {
+    // 상담가 유형별 기본 응답
+    if (counselorType) {
+      const counselorFallbacks: Record<CounselorType, string> = {
+        T: '상황을 정리해보면, 지금 겪고 계신 일이 복잡하게 느껴지실 수 있어요. 하나씩 객관적으로 살펴보면서 해결책을 찾아가면 어떨까요?',
+        F: '말씀해주셔서 감사해요. 그런 상황에서 그렇게 느끼시는 건 정말 자연스러운 거예요. 혼자 감당하느라 많이 힘드셨을 거예요. 제가 함께할게요.',
+        deep: '지금 마음속에서 일어나는 것들에 대해 천천히 이야기해볼까요? 표면 아래에 있는 진짜 감정을 함께 탐색해봐요.',
+      };
+      return counselorFallbacks[counselorType];
+    }
+
     const fallbacks: Record<ResponseMode, string> = {
       comfort:
         '말씀해주셔서 감사해요. 그런 상황에서 그렇게 느끼시는 건 정말 자연스러운 거예요. 혼자 감당하느라 많이 힘드셨을 거예요. 지금 이 순간, 당신의 감정은 충분히 이해받을 자격이 있어요.',
@@ -424,6 +506,7 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     context: string[],
     mode: ResponseMode,
     userMessage?: string,
+    counselorType?: CounselorType,
   ): AsyncGenerator<string, void, unknown> {
     const modePrompts: Record<ResponseMode, string> = {
       comfort: `[위로 모드 - 공감과 정서적 지지]
@@ -501,10 +584,15 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     };
 
     if (!this.hasApiKey) {
-      const fallback = this.getFallbackResponse(mode, context);
+      const fallback = this.getFallbackResponse(mode, context, counselorType);
       yield fallback;
       return;
     }
+
+    // 상담가 유형이 선택된 경우 해당 프롬프트 사용, 아니면 기존 mode 프롬프트 사용
+    const stylePrompt = counselorType
+      ? COUNSELOR_TYPE_PROMPTS[counselorType]
+      : modePrompts[mode];
 
     const systemPrompt = `당신은 따뜻하고 전문적인 심리 상담사입니다.
 
@@ -513,7 +601,7 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
 - 비판단적 태도
 - 내담자 페이스 존중
 
-${modePrompts[mode]}
+${stylePrompt}
 
 응답 길이: 150-250자
 말투: 부드럽고 따뜻하게, 존댓말 사용`;

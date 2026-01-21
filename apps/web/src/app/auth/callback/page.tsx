@@ -1,10 +1,9 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 
 function CallbackContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -12,11 +11,11 @@ function CallbackContent() {
 
     if (token) {
       localStorage.setItem("accessToken", token);
-      router.replace("/");
+      window.location.href = "/";
     } else {
-      router.replace("/?error=auth_failed");
+      window.location.href = "/?error=auth_failed";
     }
-  }, [searchParams, router]);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

@@ -12,8 +12,36 @@ import {
   sendMessageStream,
   endSession,
   SelectOptionResponse,
+  CounselorType,
 } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseModeOption } from "@/types/chat";
+
+// 상담가 유형 정의
+const counselorTypes = [
+  {
+    id: "F" as CounselorType,
+    label: "따스한 F 상담가",
+    description: "감정적 공감이 필요할 때",
+    color: "#E8A0BF",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+      </svg>
+    ),
+  },
+  {
+    id: "T" as CounselorType,
+    label: "냉철한 T 상담가",
+    description: "객관적 조언이 필요할 때",
+    color: "#5B8FB9",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+    ),
+  },
+];
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const categories = [
@@ -112,6 +140,7 @@ export default function Home() {
   const [supplementInput, setSupplementInput] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [directInput, setDirectInput] = useState("");
+  const [selectedCounselorType, setSelectedCounselorType] = useState<CounselorType | null>(null);
 
   // 한도 도달 에러 상태
   const [limitError, setLimitError] = useState<{
@@ -160,7 +189,7 @@ export default function Home() {
   const handleCategorySelect = async (categoryId: string) => {
     setIsLoading(true);
     try {
-      const res = await startSession(categoryId, token || undefined);
+      const res = await startSession(categoryId, token || undefined, selectedCounselorType || undefined);
       setSessionId(res.sessionId);
       setQuestion(res.question);
       setOptions(res.options);
@@ -182,7 +211,7 @@ export default function Home() {
     if (!directInput.trim()) return;
     setIsLoading(true);
     try {
-      const res = await startSessionWithText(directInput.trim(), token || undefined);
+      const res = await startSessionWithText(directInput.trim(), token || undefined, selectedCounselorType || undefined);
       setSessionId(res.sessionId);
       setQuestion(res.question);
       setOptions(res.options);
@@ -226,8 +255,24 @@ export default function Home() {
         }
 
         if (res.canProceedToResponse && res.responseModes) {
-          setPhase("mode");
-          setResponseModes(res.responseModes);
+          // 상담가 유형이 선택된 경우 모드 선택 스킵하고 바로 채팅
+          if (selectedCounselorType) {
+            setPhase("chatting");
+            setStreamingContent("");
+            let content = "";
+            try {
+              await setResponseModeStream(sessionId, "comfort", token || undefined, (chunk) => {
+                content += chunk;
+                setStreamingContent(content);
+              });
+              setMessages([{ role: "assistant", content }]);
+            } finally {
+              setStreamingContent("");
+            }
+          } else {
+            setPhase("mode");
+            setResponseModes(res.responseModes);
+          }
         } else if (res.question && res.options) {
           newHistoryItems.push({
             type: "assistant",
@@ -248,7 +293,7 @@ export default function Home() {
         setIsLoading(false);
       }
     },
-    [sessionId, token]
+    [sessionId, token, selectedCounselorType]
   );
 
   const handleSupplementSubmit = useCallback(async () => {
@@ -335,6 +380,7 @@ export default function Home() {
     setCrisisMessage(null);
     setStreamingContent("");
     setLimitError(null);
+    setSelectedCounselorType(null);
   };
 
   // 한도 도달 에러 모달 컴포넌트
@@ -393,29 +439,33 @@ export default function Home() {
     return (
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
         {/* 헤더 */}
-        <header className="p-4 flex justify-between items-center">
-          <Logo size="md" />
-          {/* 우상단 로그인 */}
-          <div>
-            {authLoading ? (
-              <Button variant="outline" size="sm" disabled>
-                로딩 중...
-              </Button>
-            ) : user ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
-                <Button variant="outline" size="sm" onClick={logout}>
-                  로그아웃
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground hidden sm:inline">대화 저장 오픈 예정</span>
+        <header className="p-4 border-b border-border/30">
+          <div className="flex justify-between items-center">
+            <Logo size="md" />
+            {/* 우상단 로그인 */}
+            <div>
+              {authLoading ? (
+                <div className="h-9 w-20 bg-secondary/50 rounded-lg animate-pulse" />
+              ) : user ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                      {(user.name || user.email)?.[0]?.toUpperCase()}
+                    </div>
+                    <span className="text-sm text-foreground/80 hidden sm:inline">
+                      {user.name || user.email.split('@')[0]}
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground">
+                    로그아웃
+                  </Button>
+                </div>
+              ) : (
                 <Button variant="outline" size="sm" onClick={login} className="border-primary/50 text-primary hover:bg-primary/10">
                   로그인
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </header>
 
@@ -431,6 +481,35 @@ export default function Home() {
               </p>
               {isLoading && (
                 <p className="text-sm text-primary animate-pulse">귀 기울여 듣는 중...</p>
+              )}
+            </div>
+
+            {/* 상담가 유형 선택 */}
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground text-center">상담가 유형을 먼저 선택해보세요 (선택 안 해도 돼요)</p>
+              <div className="flex gap-2 justify-center flex-wrap">
+                {counselorTypes.map((type) => (
+                  <button
+                    key={type.id}
+                    className={`px-3 py-2 rounded-full border text-sm transition-all duration-200 flex items-center gap-1.5 ${
+                      selectedCounselorType === type.id
+                        ? "border-primary bg-primary/10 text-primary font-medium"
+                        : "border-border/50 hover:border-primary/40 hover:bg-secondary/30"
+                    } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                    onClick={() => setSelectedCounselorType(selectedCounselorType === type.id ? null : type.id)}
+                    disabled={isLoading}
+                  >
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: type.color }}>
+                      {type.icon}
+                    </span>
+                    <span>{type.label}</span>
+                  </button>
+                ))}
+              </div>
+              {selectedCounselorType && (
+                <p className="text-xs text-primary text-center">
+                  {counselorTypes.find(t => t.id === selectedCounselorType)?.description}
+                </p>
               )}
             </div>
 
@@ -489,18 +568,27 @@ export default function Home() {
   if (phase === "selecting") {
     return (
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
-        <header className="p-4 flex justify-between items-center">
-          <Logo size="md" />
-          <div className="flex items-center gap-2">
-            {user && (
-              <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
-            )}
-            <button
-              onClick={handleNewSession}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              새 상담
-            </button>
+        <header className="p-4 border-b border-border/30">
+          <div className="flex justify-between items-center">
+            <Logo size="md" />
+            <div className="flex items-center gap-3">
+              {user && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                    {(user.name || user.email)?.[0]?.toUpperCase()}
+                  </div>
+                  <span className="text-sm text-foreground/80 hidden sm:inline">
+                    {user.name || user.email.split('@')[0]}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={handleNewSession}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+              >
+                새 상담
+              </button>
+            </div>
           </div>
         </header>
 
@@ -585,14 +673,28 @@ export default function Home() {
   if (phase === "mode") {
     return (
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
-        <header className="p-4 flex justify-between items-center">
-          <Logo size="md" />
-          <button
-            onClick={handleNewSession}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            새 상담
-          </button>
+        <header className="p-4 border-b border-border/30">
+          <div className="flex justify-between items-center">
+            <Logo size="md" />
+            <div className="flex items-center gap-3">
+              {user && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                    {(user.name || user.email)?.[0]?.toUpperCase()}
+                  </div>
+                  <span className="text-sm text-foreground/80 hidden sm:inline">
+                    {user.name || user.email.split('@')[0]}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={handleNewSession}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+              >
+                새 상담
+              </button>
+            </div>
+          </div>
         </header>
 
         <div className="flex-1 flex flex-col items-center justify-center p-6">
@@ -648,11 +750,25 @@ export default function Home() {
   if (phase === "chatting") {
     return (
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/10">
-        <header className="border-b border-border/50 p-4 flex justify-between items-center bg-background/80 backdrop-blur-sm">
-          <Logo size="sm" />
-          <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
-            여기까지
-          </Button>
+        <header className="border-b border-border/50 p-4 bg-background/80 backdrop-blur-sm">
+          <div className="flex justify-between items-center">
+            <Logo size="sm" />
+            <div className="flex items-center gap-3">
+              {user && (
+                <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-secondary/50">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                    {(user.name || user.email)?.[0]?.toUpperCase()}
+                  </div>
+                  <span className="text-xs text-foreground/80 hidden sm:inline">
+                    {user.name || user.email.split('@')[0]}
+                  </span>
+                </div>
+              )}
+              <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
+                여기까지
+              </Button>
+            </div>
+          </div>
         </header>
 
         <div className="flex-1 overflow-auto p-4 space-y-4">
@@ -717,8 +833,20 @@ export default function Home() {
   if (phase === "ended") {
     return (
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
-        <header className="p-4 flex justify-between items-center">
-          <Logo size="md" />
+        <header className="p-4 border-b border-border/30">
+          <div className="flex justify-between items-center">
+            <Logo size="md" />
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                  {(user.name || user.email)?.[0]?.toUpperCase()}
+                </div>
+                <span className="text-sm text-foreground/80 hidden sm:inline">
+                  {user.name || user.email.split('@')[0]}
+                </span>
+              </div>
+            )}
+          </div>
         </header>
 
         <div className="flex-1 flex flex-col items-center justify-center p-6">

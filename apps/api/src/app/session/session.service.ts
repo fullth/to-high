@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { SessionDocument } from '../../database/session.schema';
 import { SessionRepository } from '../../persistence/session/session.repository';
-import { ResponseMode } from '../../types/session';
+import { CounselorType, ResponseMode } from '../../types/session';
 
 @Injectable()
 export class SessionService {
@@ -11,8 +11,8 @@ export class SessionService {
     private openaiAgent: OpenAIAgent,
   ) {}
 
-  async create(userId: string, category: string): Promise<SessionDocument> {
-    return this.sessionRepository.create(userId, category);
+  async create(userId: string, category: string, counselorType?: CounselorType): Promise<SessionDocument> {
+    return this.sessionRepository.create(userId, category, counselorType);
   }
 
   async findById(id: string): Promise<SessionDocument | null> {

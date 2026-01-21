@@ -8,6 +8,8 @@ export type ResponseMode =
   | 'listen'
   | 'similar';
 
+export type CounselorType = 'T' | 'F' | 'deep';
+
 export type Category = 'self' | 'future' | 'work' | 'relationship' | 'love' | 'daily' | 'other' | 'direct';
 export type SessionStatus = 'active' | 'completed';
 
@@ -18,6 +20,7 @@ export interface Session {
   status: SessionStatus;
   summary?: string;
   category: Category;
+  counselorType?: CounselorType;
   responseMode?: ResponseMode;
   createdAt: Date;
   updatedAt: Date;

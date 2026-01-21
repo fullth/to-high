@@ -3,7 +3,7 @@ import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
 import { RESPONSE_MODE_OPTIONS } from '../../types/chat';
-import { Category, ResponseMode } from '../../types/session';
+import { Category, CounselorType, ResponseMode } from '../../types/session';
 import { SessionService } from '../session/session.service';
 
 // 토큰 낭비 방지 제한
@@ -37,6 +37,7 @@ export class ChatService {
     userId: string,
     category?: Category,
     initialText?: string,
+    counselorType?: CounselorType,
   ) {
     // 입력 검증
     if (initialText) {
@@ -61,6 +62,7 @@ export class ChatService {
       const session = await this.sessionService.create(
         userId,
         sessionCategory as Category,
+        counselorType,
       );
 
       if (previousContext) {
@@ -249,6 +251,7 @@ export class ChatService {
       session.context,
       session.responseMode as ResponseMode,
       userMessage,
+      (session as any).counselorType as CounselorType,
     );
 
     if (userMessage) {
@@ -320,6 +323,7 @@ export class ChatService {
       session.context,
       session.responseMode as ResponseMode,
       userMessage,
+      (session as any).counselorType as CounselorType,
     )) {
       fullResponse += chunk;
       yield chunk;
