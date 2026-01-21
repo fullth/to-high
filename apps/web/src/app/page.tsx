@@ -420,52 +420,55 @@ export default function Home() {
         </header>
 
         {/* 메인 콘텐츠 */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="max-w-lg w-full space-y-8">
-            <div className="text-center space-y-3">
-              <p className="text-lg text-muted-foreground">
+        <div className="flex-1 flex flex-col items-center justify-start sm:justify-center p-4 sm:p-6 pt-4">
+          <div className="max-w-lg w-full space-y-4 sm:space-y-8">
+            <div className="text-center space-y-1 sm:space-y-3">
+              <p className="text-base sm:text-lg text-muted-foreground">
                 오늘 하루 어땠어요?
               </p>
+              {isLoading && (
+                <p className="text-sm text-primary animate-pulse">귀 기울여 듣는 중...</p>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <p className="text-center text-muted-foreground">
+            <div className="space-y-3 sm:space-y-4">
+              <p className="text-center text-sm sm:text-base text-muted-foreground">
                 요즘 마음에 걸리는 게 있다면 얘기해줄래요?
               </p>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    className={`p-4 rounded-xl border bg-card text-center transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30 hover:scale-[1.02] ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`p-2.5 sm:p-4 rounded-xl border bg-card text-center transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30 hover:scale-[1.02] ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={() => handleCategorySelect(category.id)}
                     disabled={isLoading}
                   >
                     <div
-                      className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white"
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full mx-auto mb-1.5 sm:mb-2 flex items-center justify-center text-white"
                       style={{ backgroundColor: category.color }}
                     >
                       {category.icon}
                     </div>
-                    <div className="text-sm font-medium">{category.label}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{category.description}</div>
+                    <div className="text-xs sm:text-sm font-medium">{category.label}</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{category.description}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             <div className="space-y-2">
-              <div className="flex gap-3 items-stretch">
+              <div className="flex gap-2 sm:gap-3 items-stretch">
                 <input
                   type="text"
                   value={directInput}
                   onChange={(e) => setDirectInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleDirectInputSubmit()}
                   placeholder="직접 이야기하기..."
-                  className="flex-1 px-4 h-12 text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
+                  className="flex-1 px-3 sm:px-4 h-11 sm:h-12 text-sm sm:text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                   disabled={isLoading}
                 />
                 <Button
-                  className="h-12 px-6"
+                  className="h-11 sm:h-12 px-4 sm:px-6"
                   onClick={handleDirectInputSubmit}
                   disabled={isLoading || !directInput.trim()}
                 >
@@ -476,10 +479,6 @@ export default function Home() {
                 하고 싶은 말이 있으면 편하게 적어주세요
               </p>
             </div>
-
-            {isLoading && (
-              <p className="text-center text-muted-foreground text-sm">귀 기울여 듣는 중...</p>
-            )}
           </div>
         </div>
       </main>
