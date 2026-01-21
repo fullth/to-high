@@ -435,11 +435,11 @@ export default function Home() {
             </div>
 
             <div className="space-y-3 sm:space-y-4">
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    className={`p-2.5 sm:p-4 rounded-xl border bg-card text-center transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30 hover:scale-[1.02] ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`p-3 sm:p-4 rounded-xl border bg-card text-center transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30 hover:scale-[1.02] ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
                     onClick={() => handleCategorySelect(category.id)}
                     disabled={isLoading}
                   >
