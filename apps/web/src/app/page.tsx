@@ -423,10 +423,10 @@ export default function Home() {
         <div className="flex-1 flex flex-col items-center justify-start sm:justify-center p-4 sm:p-6 pt-4">
           <div className="max-w-lg w-full space-y-4 sm:space-y-8">
             <div className="text-center space-y-2 sm:space-y-3">
-              <p className="text-sm sm:text-base text-muted-foreground">
+              <p className="text-base sm:text-xl text-foreground/90 tracking-wide" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
                 오늘 하루 어땠어요?
               </p>
-              <p className="text-sm sm:text-base text-muted-foreground">
+              <p className="text-base sm:text-xl text-foreground/90 tracking-wide" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
                 요즘 마음에 걸리는 게 있다면 얘기해줄래요?
               </p>
               {isLoading && (
