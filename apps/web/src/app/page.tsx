@@ -353,7 +353,6 @@ export default function Home() {
     // 상담가 유형이 선택된 경우 바로 채팅으로 이동
     if (selectedCounselorType) {
       setIsLoading(true);
-      setPhase("chatting");
       setStreamingContent("");
       let content = "";
       try {
@@ -361,7 +360,15 @@ export default function Home() {
           content += chunk;
           setStreamingContent(content);
         });
-        setMessages([{ role: "assistant", content }]);
+        // 기존 대화 내역을 채팅 메시지로 변환하고 AI 응답 추가
+        const previousMessages: ChatMessage[] = selectionHistory.map(item => ({
+          role: item.type === "user" ? "user" : "assistant",
+          content: item.content,
+        }));
+        // AI 응답 추가
+        previousMessages.push({ role: "assistant", content });
+        setMessages(previousMessages);
+        setPhase("chatting");
       } finally {
         setStreamingContent("");
         setIsLoading(false);
@@ -383,15 +390,16 @@ export default function Home() {
         { mode: "similar", label: "나만 이런 건가?", description: "비슷한 경험을 한 사람들 이야기가 궁금해요", emoji: "👥" },
       ]);
     }
-  }, [sessionId, token, selectedCounselorType]);
+  }, [sessionId, token, selectedCounselorType, selectionHistory]);
 
-  // 모드 선택 핸들러 (채팅창 내에서) - 같은 채팅창에서 응답 표시
+  // 모드 선택 핸들러 (채팅창 내에서) - 같은 채팅창에서 응답 표시 후 채팅 모드로 전환
   const handleSelectModeInChat = useCallback(async (mode: ResponseMode) => {
     if (!sessionId) return;
 
+    const modeLabel = responseModes.find(m => m.mode === mode)?.label || mode;
     setSelectionHistory(prev => [...prev, {
       type: "user",
-      content: responseModes.find(m => m.mode === mode)?.label || mode,
+      content: modeLabel,
       isQuestion: false,
     }]);
     setShowModeSelection(false);
@@ -404,17 +412,22 @@ export default function Home() {
         content += chunk;
         setStreamingContent(content);
       });
-      // 응답을 같은 채팅창에 추가
-      setSelectionHistory(prev => [...prev, {
-        type: "assistant",
-        content,
-        isQuestion: true,
-      }]);
+      // 기존 대화 내역을 채팅 메시지로 변환하고 AI 응답 추가
+      const previousMessages: ChatMessage[] = selectionHistory.map(item => ({
+        role: item.type === "user" ? "user" : "assistant",
+        content: item.content,
+      }));
+      // 모드 선택도 추가
+      previousMessages.push({ role: "user", content: modeLabel });
+      // AI 응답 추가
+      previousMessages.push({ role: "assistant", content });
+      setMessages(previousMessages);
+      setPhase("chatting");
     } finally {
       setStreamingContent("");
       setIsLoading(false);
     }
-  }, [sessionId, token, responseModes]);
+  }, [sessionId, token, responseModes, selectionHistory]);
 
   const handleSupplementSubmit = useCallback(async () => {
     if (!supplementInput.trim()) return;
@@ -648,7 +661,8 @@ export default function Home() {
 
             {/* 상담가 유형 선택 */}
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground text-center">원하시는 상담가 유형이 있다면 먼저 선택해보세요! (선택하지 않아도 괜찮아요)</p>
+              <p className="text-xs text-muted-foreground text-center">원하시는 상담가 유형이 있다면 먼저 선택해보세요!</p>
+              <p className="text-xs text-muted-foreground text-center">(선택하지 않아도 괜찮아요)</p>
               <div className="flex gap-2 justify-center flex-wrap">
                 {counselorTypes.map((type) => (
                   <button
