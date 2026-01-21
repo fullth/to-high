@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const StartSessionSchema = z
   .object({
-    category: z.enum(['self', 'future', 'work', 'relationship']).optional(),
+    category: z.enum(['self', 'future', 'work', 'relationship', 'love', 'daily']).optional(),
     initialText: z.string().min(1).optional(),
   })
   .refine((data) => data.category || data.initialText, {
