@@ -113,6 +113,12 @@ export default function Home() {
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [directInput, setDirectInput] = useState("");
 
+  // 한도 도달 에러 상태
+  const [limitError, setLimitError] = useState<{
+    message: string;
+    lastInput: string;
+  } | null>(null);
+
   // 선택 히스토리
   const [selectionHistory, setSelectionHistory] = useState<HistoryItem[]>([]);
 
@@ -122,6 +128,33 @@ export default function Home() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectionHistory, messages, streamingContent]);
+
+  // 한도 에러 처리
+  const handleLimitError = (error: unknown, lastInput: string) => {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    // 한도 관련 에러인지 확인
+    if (errorMessage.includes('한도') || errorMessage.includes('너무 깁니다')) {
+      setLimitError({ message: errorMessage, lastInput });
+      return true;
+    }
+    return false;
+  };
+
+  // 클립보드 복사
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('복사되었습니다. 새 상담에서 붙여넣기 해주세요.');
+    } catch {
+      alert('복사에 실패했습니다.');
+    }
+  };
+
+  // 새 상담으로 이동 (에러 해제 포함)
+  const handleNewSessionFromError = () => {
+    setLimitError(null);
+    handleNewSession();
+  };
 
   // 카테고리 선택으로 세션 시작
   const handleCategorySelect = async (categoryId: string) => {
@@ -210,6 +243,7 @@ export default function Home() {
         }
       } catch (err) {
         console.error(err);
+        handleLimitError(err, selected);
       } finally {
         setIsLoading(false);
       }
@@ -266,6 +300,7 @@ export default function Home() {
       setMessages(prev => [...prev, { role: "assistant", content }]);
     } catch (err) {
       console.error(err);
+      handleLimitError(err, userMsg);
     } finally {
       setIsLoading(false);
       setStreamingContent("");
@@ -299,6 +334,58 @@ export default function Home() {
     setSelectionHistory([]);
     setCrisisMessage(null);
     setStreamingContent("");
+    setLimitError(null);
+  };
+
+  // 한도 도달 에러 모달 컴포넌트
+  const LimitErrorModal = () => {
+    if (!limitError) return null;
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <Card className="max-w-md w-full border-primary/30 bg-card">
+          <CardHeader className="space-y-4">
+            <CardTitle className="text-lg text-center">
+              죄송해요, 잠깐 쉬어가요
+            </CardTitle>
+            <CardDescription className="text-center text-foreground/70">
+              {limitError.message.includes('너무 깁니다')
+                ? '입력이 조금 길었어요. 짧게 나눠서 이야기해주시면 좋겠어요.'
+                : '대화가 길어졌네요. 새 상담을 시작해서 이어가면 어떨까요?'}
+            </CardDescription>
+            {limitError.lastInput && (
+              <div className="bg-secondary/50 rounded-lg p-3 text-sm">
+                <p className="text-muted-foreground mb-2 text-xs">마지막 입력:</p>
+                <p className="text-foreground/80 line-clamp-3">{limitError.lastInput}</p>
+              </div>
+            )}
+            <div className="flex flex-col gap-2 pt-2">
+              {limitError.lastInput && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => copyToClipboard(limitError.lastInput)}
+                >
+                  입력 내용 복사하기
+                </Button>
+              )}
+              <Button
+                className="w-full"
+                onClick={handleNewSessionFromError}
+              >
+                새 상담 시작하기
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-muted-foreground"
+                onClick={() => setLimitError(null)}
+              >
+                계속 둘러보기
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
+    );
   };
 
   // 초기 화면 (카테고리 선택)
@@ -490,6 +577,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+        <LimitErrorModal />
       </main>
     );
   }
@@ -621,6 +709,7 @@ export default function Home() {
             </Button>
           </div>
         </div>
+        <LimitErrorModal />
       </main>
     );
   }
