@@ -153,6 +153,7 @@ export default function Home() {
   const [hasHistory, setHasHistory] = useState(false);
   const [previousSessionSummary, setPreviousSessionSummary] = useState<string | null>(null);
   const [showModeSelection, setShowModeSelection] = useState(false);
+  const [isLoadingNewOptions, setIsLoadingNewOptions] = useState(false);
 
   // 한도 도달 에러 상태
   const [limitError, setLimitError] = useState<{
@@ -413,6 +414,28 @@ export default function Home() {
     },
     [sessionId, token, selectedCounselorType, user, selectionHistory.length]
   );
+
+  // 다른 옵션 보기 (히스토리에 추가하지 않고 옵션만 교체)
+  const handleRequestNewOptions = useCallback(async () => {
+    if (!sessionId) return;
+
+    setIsLoading(true);
+    setIsLoadingNewOptions(true);
+    try {
+      const res: SelectOptionResponse = await selectOption(sessionId, "다른 옵션 보기", token || undefined);
+
+      // 새 옵션이 있으면 교체
+      if (res.question && res.options) {
+        setQuestion(res.question);
+        setOptions(res.options);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingNewOptions(false);
+    }
+  }, [sessionId, token]);
 
   // 피드백 요청 (지금까지 이야기에 대한 생각 듣기)
   const handleRequestFeedback = useCallback(async () => {
@@ -685,7 +708,7 @@ export default function Home() {
         {/* 헤더 */}
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
-            <Logo size="md" />
+            <Logo size="md" onClick={handleNewSession} />
             {/* 우상단 로그인 */}
             <div>
               {authLoading ? (
@@ -723,42 +746,40 @@ export default function Home() {
               <p className="text-base sm:text-xl text-foreground/90 tracking-wide" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
                 요즘 마음에 걸리는 게 있다면 얘기해줄래요?
               </p>
-              {isLoading && (
-                <p className="text-sm text-primary animate-pulse">귀 기울여 듣는 중...</p>
-              )}
             </div>
 
-            {/* 상담가 유형 선택 */}
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground text-center">원하시는 상담가 유형이 있다면 먼저 선택해보세요!</p>
-              <p className="text-xs text-muted-foreground text-center">(선택하지 않아도 괜찮아요)</p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                {counselorTypes.map((type) => (
-                  <button
-                    key={type.id}
-                    className={`px-3 py-2 rounded-full border text-sm transition-all duration-200 flex items-center gap-1.5 ${
-                      selectedCounselorType === type.id
-                        ? "border-primary bg-primary/10 text-primary font-medium"
-                        : "border-border/50 hover:border-primary/40 hover:bg-secondary/30"
-                    } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
-                    onClick={() => setSelectedCounselorType(selectedCounselorType === type.id ? null : type.id)}
-                    disabled={isLoading}
-                  >
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: type.color }}>
-                      {type.icon}
-                    </span>
-                    <span>{type.label}</span>
-                  </button>
-                ))}
+            {/* 선택 영역 */}
+            <div className="rounded-2xl border border-border/50 p-4 sm:p-5 space-y-4 sm:space-y-5 bg-card/30">
+              {/* 상담가 유형 선택 */}
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground text-center">원하시는 상담가 유형이 있다면 먼저 선택해보세요!</p>
+                <p className="text-xs text-muted-foreground text-center">(선택하지 않아도 괜찮아요)</p>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  {counselorTypes.map((type) => (
+                    <button
+                      key={type.id}
+                      className={`px-3 py-2 rounded-full border text-sm transition-all duration-200 flex items-center gap-1.5 ${
+                        selectedCounselorType === type.id
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-border/50 hover:border-primary/40 hover:bg-secondary/30"
+                      } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                      onClick={() => setSelectedCounselorType(selectedCounselorType === type.id ? null : type.id)}
+                      disabled={isLoading}
+                    >
+                      <span className="w-4 h-4 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: type.color }}>
+                        {type.icon}
+                      </span>
+                      <span>{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedCounselorType && (
+                  <p className="text-xs text-primary text-center">
+                    {counselorTypes.find(t => t.id === selectedCounselorType)?.description}
+                  </p>
+                )}
               </div>
-              {selectedCounselorType && (
-                <p className="text-xs text-primary text-center">
-                  {counselorTypes.find(t => t.id === selectedCounselorType)?.description}
-                </p>
-              )}
-            </div>
 
-            <div className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                 {categories.map((category) => (
                   <button
@@ -780,14 +801,16 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* 직접 입력 영역 */}
+            <div className="rounded-2xl border border-secondary bg-secondary/30 p-4 space-y-2">
+              <p className="text-xs text-muted-foreground text-center">말하기 어려우면 위에서 선택해도 돼요</p>
               <div className="flex gap-2 sm:gap-3 items-stretch">
                 <input
                   type="text"
                   value={directInput}
                   onChange={(e) => setDirectInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleDirectInputSubmit()}
-                  placeholder="마음이 괜찮다면, 직접 얘기해주셔도 좋아요"
+                  placeholder="직접 얘기해주셔도 좋아요"
                   className="flex-1 px-3 sm:px-4 h-11 sm:h-12 text-sm sm:text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                   disabled={isLoading}
                 />
@@ -799,10 +822,29 @@ export default function Home() {
                   시작
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                하고 싶은 말이 있으면 편하게 적어주세요
-              </p>
             </div>
+
+            {/* 로딩 팝업 */}
+            {isLoading && (
+              <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <Card className="max-w-sm w-full border-primary/30 bg-card shadow-xl">
+                  <CardHeader className="text-center space-y-4 py-8">
+                    {/* 로딩 애니메이션 - 원형 안에 점 세 개 */}
+                    <div className="w-24 h-24 mx-auto rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center gap-2">
+                      <span className="w-3 h-3 bg-primary rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" style={{ animationDelay: "0ms" }} />
+                      <span className="w-3 h-3 bg-primary rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" style={{ animationDelay: "150ms" }} />
+                      <span className="w-3 h-3 bg-primary rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" style={{ animationDelay: "300ms" }} />
+                    </div>
+                    <CardTitle className="text-lg font-medium text-foreground/90">
+                      경청하려 자세를 고쳐앉는 중...
+                    </CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground">
+                      잠시만 기다려주세요
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -815,7 +857,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
-            <Logo size="md" />
+            <Logo size="md" onClick={handleNewSession} />
             <div className="flex items-center gap-3">
               {user && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
@@ -831,7 +873,7 @@ export default function Home() {
                 onClick={handleNewSession}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
               >
-                새 상담
+                처음으로
               </button>
             </div>
           </div>
@@ -858,7 +900,7 @@ export default function Home() {
                 </div>
               ))}
 
-              {isLoading && (
+              {isLoading && !isLoadingNewOptions && (
                 <div className="flex justify-start">
                   <div className="bg-secondary/50 rounded-2xl px-4 py-3 max-w-[85%]">
                     {streamingContent ? (
@@ -906,8 +948,9 @@ export default function Home() {
               </div>
             ) : (
               <>
-                {/* 피드백 요청 버튼 - 항상 표시, 2번 대화부터 활성화 */}
-                <div className="pb-3">
+                {/* 선택 영역 */}
+                <div className="rounded-2xl border border-border/50 p-4 space-y-3 bg-card/30">
+                  {/* 피드백 요청 버튼 - 항상 표시, 2번 대화부터 활성화 */}
                   <button
                     onClick={handleRequestFeedback}
                     disabled={isLoading || selectionHistory.length < 2}
@@ -922,32 +965,42 @@ export default function Home() {
                       </span>
                     </span>
                   </button>
-                </div>
 
-                {/* 옵션 */}
-                <div className="grid gap-3">
-                  {options.map((option, idx) => (
+                  {/* 옵션 */}
+                  <div className="grid gap-2">
+                    {options.map((option, idx) => (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        className="w-full h-auto py-3 text-left justify-start whitespace-normal transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
+                        onClick={() => handleSelectOption(option)}
+                        disabled={isLoading}
+                      >
+                        {option}
+                      </Button>
+                    ))}
+                    {/* 다른 옵션 보기 버튼 */}
                     <Button
-                      key={idx}
                       variant="outline"
-                      className="w-full h-auto py-4 text-left justify-start whitespace-normal transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
-                      onClick={() => handleSelectOption(option)}
+                      className="w-full h-auto py-3 border-secondary bg-secondary/30 text-muted-foreground hover:bg-secondary/50 hover:border-secondary transition-all duration-200"
+                      onClick={handleRequestNewOptions}
                       disabled={isLoading}
                     >
-                      {option}
+                      {isLoadingNewOptions ? "다른 선택지 생각하는 중..." : "다른 옵션 보기"}
                     </Button>
-                  ))}
+                  </div>
                 </div>
 
                 {/* 직접 입력 */}
-                <div className="space-y-2">
+                <div className="rounded-2xl border border-secondary bg-secondary/30 p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground text-center">말하기 어려우면 위에서 선택해도 돼요</p>
                   <div className="flex gap-3 items-stretch">
                     <input
                       type="text"
                       value={supplementInput}
                       onChange={(e) => setSupplementInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
-                      placeholder="마음이 괜찮다면, 직접 얘기해주셔도 좋아요"
+                      placeholder="직접 얘기해주셔도 좋아요"
                       className="flex-1 px-4 h-12 text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                       disabled={isLoading}
                     />
@@ -959,9 +1012,6 @@ export default function Home() {
                       전송
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground text-center">
-                    말하기 어려우면 버튼만 눌러도 돼요
-                  </p>
                 </div>
               </>
             )}
@@ -979,7 +1029,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
-            <Logo size="md" />
+            <Logo size="md" onClick={handleNewSession} />
             <div className="flex items-center gap-3">
               {user && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
@@ -995,7 +1045,7 @@ export default function Home() {
                 onClick={handleNewSession}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
               >
-                새 상담
+                처음으로
               </button>
             </div>
           </div>
@@ -1056,7 +1106,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/10">
         <header className="border-b border-border/50 p-4 bg-background/80 backdrop-blur-sm">
           <div className="flex justify-between items-center">
-            <Logo size="sm" />
+            <Logo size="sm" onClick={handleNewSession} />
             <div className="flex items-center gap-3">
               {user && (
                 <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-secondary/50">
@@ -1140,7 +1190,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
-            <Logo size="md" />
+            <Logo size="md" onClick={handleNewSession} />
             {user && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
                 <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
