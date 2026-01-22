@@ -458,4 +458,55 @@ export class ChatService {
       counselorType: session.counselorType,
     };
   }
+
+  /**
+   * 세션 저장하기
+   */
+  async saveSession(sessionId: string, userId: string, savedName?: string) {
+    if (userId === 'anonymous') {
+      throw new ForbiddenException('로그인이 필요합니다.');
+    }
+
+    const session = await this.sessionRepository.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    // 소유자 확인
+    if (session.userId.toString() !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const savedSession = await this.sessionRepository.saveSession(sessionId, savedName);
+
+    return {
+      sessionId: savedSession!._id.toString(),
+      isSaved: true,
+      savedName: (savedSession as any).savedName,
+      savedAt: (savedSession as any).savedAt?.toISOString(),
+    };
+  }
+
+  /**
+   * 저장된 세션 목록 조회
+   */
+  async getSavedSessions(userId: string) {
+    if (userId === 'anonymous') {
+      return [];
+    }
+
+    const sessions = await this.sessionRepository.getSavedSessions(userId);
+
+    return sessions.map((session) => ({
+      sessionId: session._id.toString(),
+      category: session.category,
+      savedName: (session as any).savedName,
+      summary: session.summary,
+      turnCount: (session as any).turnCount || 0,
+      counselorType: session.counselorType,
+      savedAt: (session as any).savedAt?.toISOString(),
+      createdAt: session.createdAt.toISOString(),
+    }));
+  }
 }

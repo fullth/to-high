@@ -28,7 +28,7 @@ export class SessionDocument extends Document {
   category: string;
 
   @Prop({
-    enum: ['T', 'F', 'deep'],
+    enum: ['T', 'F', 'reaction', 'listening'],
   })
   counselorType: string;
 
@@ -40,6 +40,16 @@ export class SessionDocument extends Document {
   // 대화 턴 수
   @Prop({ default: 0 })
   turnCount: number;
+
+  // 저장 관련 필드
+  @Prop({ default: false })
+  isSaved: boolean;
+
+  @Prop()
+  savedName: string;
+
+  @Prop()
+  savedAt: Date;
 
   createdAt: Date;
   updatedAt: Date;
