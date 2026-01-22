@@ -126,6 +126,9 @@ type HistoryItem = {
 // 비로그인 사용자 최대 대화 횟수
 const MAX_ANONYMOUS_SELECTIONS = 5;
 
+// 로그인 전 세션 상태 저장 키
+const SESSION_STATE_KEY = "to-high-pending-session";
+
 export default function Home() {
   const { user, token, isLoading: authLoading, login, logout } = useAuth();
 
@@ -162,6 +165,71 @@ export default function Home() {
 
   // 스크롤 ref
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // 세션 상태 저장 함수 (로그인 전)
+  const saveSessionState = useCallback(() => {
+    const stateToSave = {
+      sessionId,
+      phase,
+      question,
+      options,
+      responseModes,
+      selectionHistory,
+      selectedCounselorType,
+      canRequestFeedback,
+      contextCount,
+      showModeSelection,
+      hasHistory,
+      previousSessionSummary,
+    };
+    localStorage.setItem(SESSION_STATE_KEY, JSON.stringify(stateToSave));
+  }, [
+    sessionId,
+    phase,
+    question,
+    options,
+    responseModes,
+    selectionHistory,
+    selectedCounselorType,
+    canRequestFeedback,
+    contextCount,
+    showModeSelection,
+    hasHistory,
+    previousSessionSummary,
+  ]);
+
+  // 로그인 후 세션 상태 복원
+  useEffect(() => {
+    // 로그인 상태가 로딩 중이거나 사용자가 없으면 무시
+    if (authLoading || !user) return;
+
+    const savedState = localStorage.getItem(SESSION_STATE_KEY);
+    if (!savedState) return;
+
+    try {
+      const parsed = JSON.parse(savedState);
+      // 세션 ID가 있는 경우에만 복원
+      if (parsed.sessionId) {
+        setSessionId(parsed.sessionId);
+        setPhase(parsed.phase || "selecting");
+        setQuestion(parsed.question || "");
+        setOptions(parsed.options || []);
+        setResponseModes(parsed.responseModes || []);
+        setSelectionHistory(parsed.selectionHistory || []);
+        setSelectedCounselorType(parsed.selectedCounselorType || null);
+        setCanRequestFeedback(parsed.canRequestFeedback || false);
+        setContextCount(parsed.contextCount || 0);
+        setShowModeSelection(parsed.showModeSelection || false);
+        setHasHistory(parsed.hasHistory || false);
+        setPreviousSessionSummary(parsed.previousSessionSummary || null);
+      }
+    } catch (e) {
+      console.error("Failed to restore session state:", e);
+    } finally {
+      // 복원 후 저장된 상태 삭제
+      localStorage.removeItem(SESSION_STATE_KEY);
+    }
+  }, [authLoading, user]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -590,6 +658,7 @@ export default function Home() {
                 className="w-full"
                 onClick={() => {
                   setShowLoginPrompt(false);
+                  saveSessionState();
                   login();
                 }}
               >
