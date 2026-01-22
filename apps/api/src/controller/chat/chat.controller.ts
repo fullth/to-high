@@ -397,6 +397,40 @@ export class ChatController {
     return { sessions };
   }
 
+  @Get('sessions/saved')
+  @ApiOperation({
+    summary: '저장된 상담 목록',
+    description: '저장된 상담 목록을 조회합니다. 로그인 필수.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '저장된 상담 목록',
+    schema: {
+      type: 'object',
+      properties: {
+        sessions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              sessionId: { type: 'string' },
+              category: { type: 'string' },
+              savedName: { type: 'string' },
+              summary: { type: 'string' },
+              savedAt: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  async getSavedSessions(@Req() req: any) {
+    const userId = req.user?.userId || 'anonymous';
+    const sessions = await this.chatService.getSavedSessions(userId);
+    return { sessions };
+  }
+
   @Get('sessions/:sessionId')
   @ApiOperation({
     summary: '세션 상세 조회',
@@ -440,4 +474,40 @@ export class ChatController {
     const userId = req.user?.userId || 'anonymous';
     return this.chatService.resumeSession(sessionId, userId);
   }
+
+  @Post('sessions/:sessionId/save')
+  @ApiOperation({
+    summary: '상담 저장',
+    description: '상담 내역을 저장합니다. 로그인 필수.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        savedName: { type: 'string', description: '저장 이름 (선택)' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: '저장 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        isSaved: { type: 'boolean' },
+        savedName: { type: 'string' },
+        savedAt: { type: 'string' },
+      },
+    },
+  })
+  async saveSession(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: { savedName?: string },
+  ) {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.saveSession(sessionId, userId, dto.savedName);
+  }
+
 }

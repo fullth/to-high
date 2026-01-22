@@ -13,8 +13,11 @@ import {
   endSession,
   getSessions,
   resumeSession,
+  saveSession,
+  getSavedSessions,
   SelectOptionResponse,
   SessionListItem,
+  SavedSessionItem,
   CounselorType,
 } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption } from "@/types/chat";
@@ -222,6 +225,16 @@ export default function Home() {
   const [previousSessions, setPreviousSessions] = useState<SessionListItem[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
+  // 저장된 세션 목록
+  const [savedSessions, setSavedSessions] = useState<SavedSessionItem[]>([]);
+
+  // 저장 관련 상태
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveType, setSaveType] = useState<"category" | "custom" | null>(null);
+  const [customSaveName, setCustomSaveName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
   // 한도 도달 에러 상태
   const [limitError, setLimitError] = useState<{
     message: string;
@@ -303,13 +316,17 @@ export default function Home() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectionHistory, messages, streamingContent]);
 
-  // 로그인 시 이전 세션 목록 가져오기
+  // 로그인 시 이전 세션 목록 및 저장된 세션 가져오기
   useEffect(() => {
     if (!authLoading && user && token) {
       setIsLoadingSessions(true);
-      getSessions(token)
-        .then((res) => {
-          setPreviousSessions(res.sessions);
+      Promise.all([
+        getSessions(token),
+        getSavedSessions(token),
+      ])
+        .then(([sessionsRes, savedRes]) => {
+          setPreviousSessions(sessionsRes.sessions);
+          setSavedSessions(savedRes.sessions);
         })
         .catch((err) => {
           console.error("Failed to fetch sessions:", err);
@@ -694,6 +711,33 @@ export default function Home() {
     setContextCount(0);
     setHasHistory(false);
     setPreviousSessionSummary(null);
+    // 저장 관련 상태 리셋
+    setShowSaveModal(false);
+    setSaveType(null);
+    setCustomSaveName("");
+    setIsSaved(false);
+  };
+
+  // 상담 저장하기
+  const handleSaveSession = async () => {
+    if (!sessionId || !token) return;
+
+    setIsSaving(true);
+    try {
+      const savedName = saveType === "custom" ? customSaveName.trim() : undefined;
+      await saveSession(sessionId, token, savedName);
+      setIsSaved(true);
+      setShowSaveModal(false);
+
+      // 저장된 세션 목록 갱신
+      const res = await getSavedSessions(token);
+      setSavedSessions(res.sessions);
+    } catch (err) {
+      console.error("Failed to save session:", err);
+      alert("저장에 실패했습니다.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // 이전 세션 재개
@@ -804,12 +848,17 @@ export default function Home() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <Card className="max-w-md w-full border-primary/30 bg-card">
           <CardHeader className="space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </div>
             <CardTitle className="text-lg text-center">
-              더 이야기 나눠볼까요?
+              나만의 상담사를 키워보세요
             </CardTitle>
             <CardDescription className="text-center text-foreground/70">
-              로그인하시면 대화 기록이 저장되고,<br />
-              다음에 다시 찾아오셔도 기억하고 있을게요.
+              로그인하면 대화가 저장되고,<br />
+              대화할수록 당신을 더 잘 이해하게 돼요.
             </CardDescription>
             <div className="flex flex-col gap-2 pt-2">
               <Button
@@ -883,6 +932,29 @@ export default function Home() {
               </p>
             </div>
 
+            {/* 비로그인 사용자 로그인 유도 배너 */}
+            {!authLoading && !user && (
+              <button
+                onClick={login}
+                className="w-full rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 p-4 text-left hover:border-primary/50 hover:from-primary/10 hover:to-primary/15 transition-all duration-200"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground/90">나만의 심리 전문가를 키워보세요</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">로그인하면 대화가 저장되고, 당신을 기억해요</p>
+                  </div>
+                  <svg className="w-5 h-5 text-primary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            )}
+
             {/* 이전 상담 이어하기 - 로그인한 사용자에게만 표시 */}
             {user && previousSessions.length > 0 && (
               <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
@@ -941,6 +1013,61 @@ export default function Home() {
                 <div className="space-y-2">
                   <div className="h-16 bg-secondary/50 rounded-xl" />
                   <div className="h-16 bg-secondary/50 rounded-xl" />
+                </div>
+              </div>
+            )}
+
+            {/* 저장된 상담 목록 - 로그인한 사용자에게만 표시 */}
+            {user && savedSessions.length > 0 && (
+              <div className="rounded-2xl border border-secondary/50 bg-secondary/10 p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground/90 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    저장된 상담
+                  </p>
+                  <span className="text-xs text-muted-foreground">{savedSessions.length}개</span>
+                </div>
+                <div className="space-y-2 max-h-[180px] overflow-auto">
+                  {savedSessions.slice(0, 5).map((session) => {
+                    const categoryInfo = categories.find(c => c.id === session.category) || {
+                      label: session.category === 'direct' ? '직접 입력' : session.category,
+                      color: '#8B9BAA',
+                    };
+                    const date = new Date(session.savedAt);
+                    const timeAgo = getTimeAgo(date);
+
+                    return (
+                      <button
+                        key={session.sessionId}
+                        onClick={() => handleResumeSession(session.sessionId)}
+                        disabled={isLoading}
+                        className="w-full p-3 rounded-xl border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
+                            style={{ backgroundColor: categoryInfo.color }}
+                          >
+                            {session.savedName ? '📝' : categoryInfo.label.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">
+                                {session.savedName || categoryInfo.label}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-secondary text-muted-foreground">저장됨</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {session.summary || '저장된 상담'}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1381,6 +1508,41 @@ export default function Home() {
                   </span>
                 </div>
               )}
+              {user && !isSaved && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSaveModal(true)}
+                  className="text-primary"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  저장
+                </Button>
+              )}
+              {isSaved && (
+                <span className="text-xs text-primary flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  저장됨
+                </span>
+              )}
+              {!user && (
+                <button
+                  onClick={() => {
+                    saveSessionState();
+                    login();
+                  }}
+                  className="text-xs text-primary/80 hover:text-primary flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  로그인하고 저장
+                </button>
+              )}
               <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
                 여기까지
               </Button>
@@ -1443,6 +1605,78 @@ export default function Home() {
         </div>
         <LimitErrorModal />
         <LoginPromptModal />
+
+        {/* 저장 모달 */}
+        {showSaveModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="max-w-md w-full border-primary/30 bg-card">
+              <CardHeader className="space-y-4">
+                <CardTitle className="text-lg text-center">상담 저장하기</CardTitle>
+                <CardDescription className="text-center">
+                  저장 방식을 선택해주세요
+                </CardDescription>
+
+                <div className="space-y-3 pt-2">
+                  <button
+                    onClick={() => setSaveType("category")}
+                    className={`w-full p-4 rounded-xl border text-left transition-all ${
+                      saveType === "category"
+                        ? "border-primary bg-primary/10"
+                        : "border-border/50 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-medium">카테고리별 저장</div>
+                    <div className="text-sm text-muted-foreground">자동으로 카테고리에 분류됩니다</div>
+                  </button>
+
+                  <button
+                    onClick={() => setSaveType("custom")}
+                    className={`w-full p-4 rounded-xl border text-left transition-all ${
+                      saveType === "custom"
+                        ? "border-primary bg-primary/10"
+                        : "border-border/50 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-medium">나만의 상담</div>
+                    <div className="text-sm text-muted-foreground">직접 이름을 지정해서 저장합니다</div>
+                  </button>
+
+                  {saveType === "custom" && (
+                    <input
+                      type="text"
+                      value={customSaveName}
+                      onChange={(e) => setCustomSaveName(e.target.value)}
+                      placeholder="상담 이름을 입력하세요"
+                      className="w-full px-4 py-3 rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      autoFocus
+                    />
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowSaveModal(false);
+                      setSaveType(null);
+                      setCustomSaveName("");
+                    }}
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSaveSession}
+                    disabled={isSaving || !saveType || (saveType === "custom" && !customSaveName.trim())}
+                  >
+                    {isSaving ? "저장 중..." : "저장하기"}
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+          </div>
+        )}
       </main>
     );
   }
@@ -1483,9 +1717,116 @@ export default function Home() {
               </CardHeader>
             </Card>
 
+            {/* 저장하기 버튼 */}
+            {!isSaved ? (
+              <div className="space-y-3">
+                {user ? (
+                  <Button
+                    variant="outline"
+                    className="w-full border-primary/50 text-primary hover:bg-primary/10"
+                    onClick={() => setShowSaveModal(true)}
+                  >
+                    이번 상담 저장하기
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full border-primary/50 text-primary hover:bg-primary/10"
+                    onClick={() => {
+                      setShowLoginPrompt(true);
+                    }}
+                  >
+                    로그인하고 상담 저장하기
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center text-sm text-primary flex items-center justify-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                저장되었습니다
+              </div>
+            )}
+
             <Button className="w-full transition-all" onClick={handleNewSession}>
               다시 이야기하기
             </Button>
+
+            {/* 저장 모달 */}
+            {showSaveModal && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <Card className="max-w-md w-full border-primary/30 bg-card">
+                  <CardHeader className="space-y-4">
+                    <CardTitle className="text-lg text-center">상담 저장하기</CardTitle>
+                    <CardDescription className="text-center">
+                      저장 방식을 선택해주세요
+                    </CardDescription>
+
+                    <div className="space-y-3 pt-2">
+                      {/* 카테고리별 저장 */}
+                      <button
+                        onClick={() => setSaveType("category")}
+                        className={`w-full p-4 rounded-xl border text-left transition-all ${
+                          saveType === "category"
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="font-medium">카테고리별 저장</div>
+                        <div className="text-sm text-muted-foreground">자동으로 카테고리에 분류됩니다</div>
+                      </button>
+
+                      {/* 나만의 상담 */}
+                      <button
+                        onClick={() => setSaveType("custom")}
+                        className={`w-full p-4 rounded-xl border text-left transition-all ${
+                          saveType === "custom"
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="font-medium">나만의 상담</div>
+                        <div className="text-sm text-muted-foreground">직접 이름을 지정해서 저장합니다</div>
+                      </button>
+
+                      {/* 나만의 상담 이름 입력 */}
+                      {saveType === "custom" && (
+                        <input
+                          type="text"
+                          value={customSaveName}
+                          onChange={(e) => setCustomSaveName(e.target.value)}
+                          placeholder="상담 이름을 입력하세요"
+                          className="w-full px-4 py-3 rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          autoFocus
+                        />
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="ghost"
+                        className="flex-1"
+                        onClick={() => {
+                          setShowSaveModal(false);
+                          setSaveType(null);
+                          setCustomSaveName("");
+                        }}
+                      >
+                        취소
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={handleSaveSession}
+                        disabled={isSaving || !saveType || (saveType === "custom" && !customSaveName.trim())}
+                      >
+                        {isSaving ? "저장 중..." : "저장하기"}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                </Card>
+              </div>
+            )}
           </div>
         </div>
       </main>

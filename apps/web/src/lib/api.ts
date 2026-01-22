@@ -316,3 +316,38 @@ export function resumeSession(sessionId: string, token: string) {
     token,
   });
 }
+
+// ============ 세션 저장 관련 API ============
+
+// 저장된 세션 항목
+export interface SavedSessionItem {
+  sessionId: string;
+  category: string;
+  savedName?: string;
+  summary?: string;
+  turnCount: number;
+  counselorType?: string;
+  savedAt: string;
+  createdAt: string;
+}
+
+// 세션 저장
+export interface SaveSessionResponse {
+  sessionId: string;
+  isSaved: boolean;
+  savedName?: string;
+  savedAt: string;
+}
+
+export function saveSession(sessionId: string, token: string, savedName?: string) {
+  return fetchApi<SaveSessionResponse>(`/chat/sessions/${sessionId}/save`, {
+    method: "POST",
+    body: JSON.stringify({ savedName }),
+    token,
+  });
+}
+
+// 저장된 세션 목록 조회
+export function getSavedSessions(token: string) {
+  return fetchApi<{ sessions: SavedSessionItem[] }>("/chat/sessions/saved", { token });
+}

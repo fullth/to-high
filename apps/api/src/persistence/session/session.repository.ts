@@ -159,4 +159,35 @@ export class SessionRepository {
       createdAt: s.createdAt,
     }));
   }
+
+  /**
+   * 세션 저장하기
+   */
+  async saveSession(
+    sessionId: string,
+    savedName?: string,
+  ): Promise<SessionDocument | null> {
+    return this.sessionModel.findByIdAndUpdate(
+      sessionId,
+      {
+        isSaved: true,
+        savedAt: new Date(),
+        ...(savedName && { savedName }),
+      },
+      { new: true },
+    );
+  }
+
+  /**
+   * 저장된 세션 목록 조회
+   */
+  async getSavedSessions(userId: string): Promise<SessionDocument[]> {
+    return this.sessionModel
+      .find({
+        userId: new Types.ObjectId(userId),
+        isSaved: true,
+      })
+      .select('summary category savedName savedAt createdAt counselorType turnCount')
+      .sort({ savedAt: -1 });
+  }
 }
