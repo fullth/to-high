@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
   Post,
   Req,
   Res,
@@ -31,6 +33,9 @@ import type {
   EndSessionResponse,
   SelectOptionResponse,
   StartSessionResponse,
+  SessionListResponse,
+  SessionDetailResponse,
+  ResumeSessionResponse,
 } from './dto/chat.response';
 
 @ApiTags('chat')
@@ -355,5 +360,84 @@ export class ChatController {
     } finally {
       res.end();
     }
+  }
+
+  @Get('sessions')
+  @ApiOperation({
+    summary: '세션 목록 조회',
+    description: '사용자의 상담 세션 목록을 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '세션 목록',
+    schema: {
+      type: 'object',
+      properties: {
+        sessions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              sessionId: { type: 'string' },
+              category: { type: 'string' },
+              status: { type: 'string', enum: ['active', 'completed'] },
+              summary: { type: 'string' },
+              turnCount: { type: 'number' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  async getSessions(@Req() req: any): Promise<SessionListResponse> {
+    const userId = req.user?.userId || 'anonymous';
+    const sessions = await this.chatService.getUserSessions(userId);
+    return { sessions };
+  }
+
+  @Get('sessions/:sessionId')
+  @ApiOperation({
+    summary: '세션 상세 조회',
+    description: '특정 상담 세션의 전체 대화 내역을 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '세션 상세 정보',
+  })
+  async getSessionDetail(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+  ): Promise<SessionDetailResponse> {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.getSessionDetail(sessionId, userId);
+  }
+
+  @Post('sessions/:sessionId/resume')
+  @ApiOperation({
+    summary: '세션 재개',
+    description: '이전 상담 세션을 이어서 진행합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '세션 재개 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        question: { type: 'string' },
+        options: { type: 'array', items: { type: 'string' } },
+        previousContext: { type: 'array', items: { type: 'string' } },
+        rollingSummary: { type: 'string' },
+      },
+    },
+  })
+  async resumeSession(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+  ): Promise<ResumeSessionResponse> {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.resumeSession(sessionId, userId);
   }
 }

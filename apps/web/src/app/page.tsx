@@ -11,17 +11,64 @@ import {
   setResponseModeStream,
   sendMessageStream,
   endSession,
+  getSessions,
+  resumeSession,
   SelectOptionResponse,
+  SessionListItem,
   CounselorType,
 } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption } from "@/types/chat";
 
-// 상담가 유형 정의
-const counselorTypes = [
+// 상위 상담 모드 정의
+type TopLevelMode = "mbti" | "reaction" | "listening" | null;
+
+const topLevelModes = [
+  {
+    id: "mbti" as TopLevelMode,
+    label: "MBTI 모드",
+    description: "T/F 성향에 맞는 상담",
+    color: "#6366F1",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2a7 7 0 0 0 0 14 7 7 0 0 0 0-14"/>
+        <path d="M12 8v8"/>
+        <path d="M8 12h8"/>
+      </svg>
+    ),
+  },
+  {
+    id: "reaction" as TopLevelMode,
+    label: "리액션 모드",
+    description: "짧은 반응, 가볍게 대화",
+    color: "#9B8AA4",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    ),
+  },
+  {
+    id: "listening" as TopLevelMode,
+    label: "경청 모드",
+    description: "그냥 들어줄게요",
+    color: "#7C9885",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M9 18V5l12-2v13"/>
+        <circle cx="6" cy="18" r="3"/>
+        <circle cx="18" cy="16" r="3"/>
+      </svg>
+    ),
+  },
+];
+
+// MBTI 하위 선택 (T/F)
+const mbtiSubTypes = [
   {
     id: "F" as CounselorType,
-    label: "따스한 F 상담가",
-    description: "감정적 공감이 필요할 때",
+    label: "F - 감정형",
+    description: "따뜻한 위로가 필요할 때",
     color: "#E8A0BF",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -31,8 +78,8 @@ const counselorTypes = [
   },
   {
     id: "T" as CounselorType,
-    label: "냉철한 T 상담가",
-    description: "객관적 조언이 필요할 때",
+    label: "T - 사고형",
+    description: "현실적인 조언이 필요할 때",
     color: "#5B8FB9",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -123,6 +170,21 @@ type HistoryItem = {
   isQuestion?: boolean;
 };
 
+// 시간 경과 표시 함수
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (minutes < 1) return '방금 전';
+  if (minutes < 60) return `${minutes}분 전`;
+  if (hours < 24) return `${hours}시간 전`;
+  if (days < 7) return `${days}일 전`;
+  return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+}
+
 // 비로그인 사용자 최대 대화 횟수
 const MAX_ANONYMOUS_SELECTIONS = 5;
 
@@ -148,12 +210,17 @@ export default function Home() {
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [directInput, setDirectInput] = useState("");
   const [selectedCounselorType, setSelectedCounselorType] = useState<CounselorType | null>(null);
+  const [selectedTopMode, setSelectedTopMode] = useState<TopLevelMode>(null);
   const [canRequestFeedback, setCanRequestFeedback] = useState(false);
   const [contextCount, setContextCount] = useState(0);
   const [hasHistory, setHasHistory] = useState(false);
   const [previousSessionSummary, setPreviousSessionSummary] = useState<string | null>(null);
   const [showModeSelection, setShowModeSelection] = useState(false);
   const [isLoadingNewOptions, setIsLoadingNewOptions] = useState(false);
+
+  // 이전 세션 목록
+  const [previousSessions, setPreviousSessions] = useState<SessionListItem[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   // 한도 도달 에러 상태
   const [limitError, setLimitError] = useState<{
@@ -235,6 +302,23 @@ export default function Home() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectionHistory, messages, streamingContent]);
+
+  // 로그인 시 이전 세션 목록 가져오기
+  useEffect(() => {
+    if (!authLoading && user && token) {
+      setIsLoadingSessions(true);
+      getSessions(token)
+        .then((res) => {
+          setPreviousSessions(res.sessions);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch sessions:", err);
+        })
+        .finally(() => {
+          setIsLoadingSessions(false);
+        });
+    }
+  }, [authLoading, user, token]);
 
   // 한도 에러 처리
   const handleLimitError = (error: unknown, lastInput: string) => {
@@ -605,10 +689,61 @@ export default function Home() {
     setStreamingContent("");
     setLimitError(null);
     setSelectedCounselorType(null);
+    setSelectedTopMode(null);
     setCanRequestFeedback(false);
     setContextCount(0);
     setHasHistory(false);
     setPreviousSessionSummary(null);
+  };
+
+  // 이전 세션 재개
+  const handleResumeSession = async (targetSessionId: string) => {
+    if (!token) return;
+    setIsLoading(true);
+    try {
+      const res = await resumeSession(targetSessionId, token);
+      setSessionId(res.sessionId);
+      setQuestion(res.question);
+      setOptions(res.options);
+      setCanRequestFeedback(res.canRequestFeedback || false);
+      setSelectedCounselorType(res.counselorType as CounselorType || null);
+      setPhase("selecting");
+
+      const historyItems: HistoryItem[] = [];
+
+      // 이전 대화 요약 표시
+      if (res.rollingSummary) {
+        historyItems.push({
+          type: "assistant",
+          content: `지난번 대화를 기억하고 있어요. ${res.rollingSummary}`,
+        });
+      }
+
+      // 이전 대화 일부 표시 (선택적)
+      if (res.previousContext && res.previousContext.length > 0) {
+        // 최근 몇 개만 표시
+        res.previousContext.slice(-4).forEach((ctx: string) => {
+          if (ctx.startsWith("나:")) {
+            historyItems.push({ type: "user", content: ctx.replace("나: ", "") });
+          } else if (ctx.startsWith("상담사:")) {
+            historyItems.push({ type: "assistant", content: ctx.replace("상담사: ", "") });
+          }
+        });
+      }
+
+      // 새 질문 추가
+      historyItems.push({
+        type: "assistant",
+        content: res.question,
+        isQuestion: true,
+      });
+
+      setSelectionHistory(historyItems);
+    } catch (err) {
+      console.error("Failed to resume session:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 한도 도달 에러 모달 컴포넌트
@@ -748,36 +883,164 @@ export default function Home() {
               </p>
             </div>
 
+            {/* 이전 상담 이어하기 - 로그인한 사용자에게만 표시 */}
+            {user && previousSessions.length > 0 && (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground/90">이전 상담 이어하기</p>
+                  <span className="text-xs text-muted-foreground">{previousSessions.length}개의 상담</span>
+                </div>
+                <div className="space-y-2 max-h-[200px] overflow-auto">
+                  {previousSessions.slice(0, 3).map((session) => {
+                    const categoryInfo = categories.find(c => c.id === session.category) || {
+                      label: session.category === 'direct' ? '직접 입력' : session.category,
+                      color: '#8B9BAA',
+                    };
+                    const isActive = session.status === 'active';
+                    const date = new Date(session.updatedAt);
+                    const timeAgo = getTimeAgo(date);
+
+                    return (
+                      <button
+                        key={session.sessionId}
+                        onClick={() => handleResumeSession(session.sessionId)}
+                        disabled={isLoading}
+                        className="w-full p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
+                            style={{ backgroundColor: categoryInfo.color }}
+                          >
+                            {categoryInfo.label.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">{categoryInfo.label}</span>
+                              {isActive && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary">진행중</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {session.summary || '대화를 이어가보세요'}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 세션 로딩 중 */}
+            {user && isLoadingSessions && (
+              <div className="rounded-2xl border border-border/30 bg-secondary/20 p-4 animate-pulse">
+                <div className="h-4 bg-secondary rounded w-1/3 mb-3" />
+                <div className="space-y-2">
+                  <div className="h-16 bg-secondary/50 rounded-xl" />
+                  <div className="h-16 bg-secondary/50 rounded-xl" />
+                </div>
+              </div>
+            )}
+
             {/* 선택 영역 */}
             <div className="rounded-2xl border border-border/50 p-4 sm:p-5 space-y-4 sm:space-y-5 bg-card/30">
-              {/* 상담가 유형 선택 */}
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground text-center">원하시는 상담가 유형이 있다면 먼저 선택해보세요!</p>
-                <p className="text-xs text-muted-foreground text-center">(선택하지 않아도 괜찮아요)</p>
-                <div className="flex gap-2 justify-center flex-wrap">
-                  {counselorTypes.map((type) => (
+              {/* 상담 모드 선택 - 2단계 구조 */}
+              <div className="space-y-3">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground/90 mb-1">먼저, 어떤 방식으로 대화할까요?</p>
+                  <p className="text-xs text-muted-foreground">(선택하지 않아도 괜찮아요)</p>
+                </div>
+
+                {/* 상위 모드 선택 */}
+                <div className="grid grid-cols-3 gap-2">
+                  {topLevelModes.map((mode) => (
                     <button
-                      key={type.id}
-                      className={`px-3 py-2 rounded-full border text-sm transition-all duration-200 flex items-center gap-1.5 ${
-                        selectedCounselorType === type.id
-                          ? "border-primary bg-primary/10 text-primary font-medium"
+                      key={mode.id}
+                      className={`p-3 rounded-xl border text-center transition-all duration-200 ${
+                        selectedTopMode === mode.id
+                          ? "border-primary bg-primary/10 shadow-sm"
                           : "border-border/50 hover:border-primary/40 hover:bg-secondary/30"
                       } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
-                      onClick={() => setSelectedCounselorType(selectedCounselorType === type.id ? null : type.id)}
+                      onClick={() => {
+                        if (selectedTopMode === mode.id) {
+                          setSelectedTopMode(null);
+                          setSelectedCounselorType(null);
+                        } else {
+                          setSelectedTopMode(mode.id);
+                          // reaction, listening은 바로 counselorType 설정
+                          if (mode.id === "reaction" || mode.id === "listening") {
+                            setSelectedCounselorType(mode.id as CounselorType);
+                          } else {
+                            setSelectedCounselorType(null);
+                          }
+                        }
+                      }}
                       disabled={isLoading}
                     >
-                      <span className="w-4 h-4 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: type.color }}>
-                        {type.icon}
-                      </span>
-                      <span>{type.label}</span>
+                      <div
+                        className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white"
+                        style={{ backgroundColor: mode.color }}
+                      >
+                        {mode.icon}
+                      </div>
+                      <div className="text-xs font-medium">{mode.label}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{mode.description}</div>
                     </button>
                   ))}
                 </div>
-                {selectedCounselorType && (
-                  <p className="text-xs text-primary text-center">
-                    {counselorTypes.find(t => t.id === selectedCounselorType)?.description}
-                  </p>
+
+                {/* MBTI 선택 시 T/F 하위 선택 */}
+                {selectedTopMode === "mbti" && (
+                  <div className="bg-secondary/30 rounded-xl p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <p className="text-xs text-center text-foreground/80 font-medium">어떤 상담 스타일이 좋으세요?</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {mbtiSubTypes.map((subType) => (
+                        <button
+                          key={subType.id}
+                          className={`p-3 rounded-xl border text-center transition-all duration-200 ${
+                            selectedCounselorType === subType.id
+                              ? "border-primary bg-background shadow-sm"
+                              : "border-border/30 bg-background/50 hover:border-primary/40"
+                          } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                          onClick={() => setSelectedCounselorType(selectedCounselorType === subType.id ? null : subType.id)}
+                          disabled={isLoading}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-full mx-auto mb-1.5 flex items-center justify-center text-white"
+                            style={{ backgroundColor: subType.color }}
+                          >
+                            {subType.icon}
+                          </div>
+                          <div className="text-xs font-medium">{subType.label}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">{subType.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
+
+                {/* 선택된 모드 표시 */}
+                {selectedCounselorType && (
+                  <div className="flex items-center justify-center gap-2 text-xs text-primary">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    <span>
+                      {selectedCounselorType === "T" && "현실적인 조언 모드로 대화해요"}
+                      {selectedCounselorType === "F" && "따뜻한 위로 모드로 대화해요"}
+                      {selectedCounselorType === "reaction" && "가볍게 리액션하며 대화해요"}
+                      {selectedCounselorType === "listening" && "말없이 들어드릴게요"}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* 카테고리 구분선 */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border/50" />
+                <span className="text-xs text-muted-foreground">어떤 이야기인가요?</span>
+                <div className="flex-1 h-px bg-border/50" />
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">

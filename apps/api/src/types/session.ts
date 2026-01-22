@@ -8,7 +8,8 @@ export type ResponseMode =
   | 'listen'
   | 'similar';
 
-export type CounselorType = 'T' | 'F' | 'deep';
+// 상담 모드: T(논리적), F(공감적), reaction(짧은 리액션), listening(경청)
+export type CounselorType = 'T' | 'F' | 'reaction' | 'listening';
 
 export type Category = 'self' | 'future' | 'work' | 'relationship' | 'love' | 'daily' | 'other' | 'direct';
 export type SessionStatus = 'active' | 'completed';
