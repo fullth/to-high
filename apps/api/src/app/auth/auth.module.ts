@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { PersistenceModule } from '../../persistence/persistence.module';
+import { NotificationService } from '../../common/notification.service';
 import { AuthService } from './auth.service';
 import { GoogleStrategy } from './strategy/google.strategy';
 import { JwtStrategy } from './strategy/jwt.strategy';
@@ -19,7 +20,7 @@ import { JwtStrategy } from './strategy/jwt.strategy';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, GoogleStrategy, JwtStrategy],
+  providers: [AuthService, GoogleStrategy, JwtStrategy, NotificationService],
   exports: [AuthService],
 })
 export class AuthModule {}
