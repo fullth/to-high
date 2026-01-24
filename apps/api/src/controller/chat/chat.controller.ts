@@ -1,6 +1,8 @@
 import {
   Body,
   Controller,
+  Get,
+  Param,
   Post,
   Req,
   Res,
@@ -31,6 +33,9 @@ import type {
   EndSessionResponse,
   SelectOptionResponse,
   StartSessionResponse,
+  SessionListResponse,
+  SessionDetailResponse,
+  ResumeSessionResponse,
 } from './dto/chat.response';
 
 @ApiTags('chat')
@@ -356,4 +361,153 @@ export class ChatController {
       res.end();
     }
   }
+
+  @Get('sessions')
+  @ApiOperation({
+    summary: '세션 목록 조회',
+    description: '사용자의 상담 세션 목록을 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '세션 목록',
+    schema: {
+      type: 'object',
+      properties: {
+        sessions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              sessionId: { type: 'string' },
+              category: { type: 'string' },
+              status: { type: 'string', enum: ['active', 'completed'] },
+              summary: { type: 'string' },
+              turnCount: { type: 'number' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  async getSessions(@Req() req: any): Promise<SessionListResponse> {
+    const userId = req.user?.userId || 'anonymous';
+    const sessions = await this.chatService.getUserSessions(userId);
+    return { sessions };
+  }
+
+  @Get('sessions/saved')
+  @ApiOperation({
+    summary: '저장된 상담 목록',
+    description: '저장된 상담 목록을 조회합니다. 로그인 필수.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '저장된 상담 목록',
+    schema: {
+      type: 'object',
+      properties: {
+        sessions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              sessionId: { type: 'string' },
+              category: { type: 'string' },
+              savedName: { type: 'string' },
+              summary: { type: 'string' },
+              savedAt: { type: 'string' },
+              createdAt: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  async getSavedSessions(@Req() req: any) {
+    const userId = req.user?.userId || 'anonymous';
+    const sessions = await this.chatService.getSavedSessions(userId);
+    return { sessions };
+  }
+
+  @Get('sessions/:sessionId')
+  @ApiOperation({
+    summary: '세션 상세 조회',
+    description: '특정 상담 세션의 전체 대화 내역을 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '세션 상세 정보',
+  })
+  async getSessionDetail(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+  ): Promise<SessionDetailResponse> {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.getSessionDetail(sessionId, userId);
+  }
+
+  @Post('sessions/:sessionId/resume')
+  @ApiOperation({
+    summary: '세션 재개',
+    description: '이전 상담 세션을 이어서 진행합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '세션 재개 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        question: { type: 'string' },
+        options: { type: 'array', items: { type: 'string' } },
+        previousContext: { type: 'array', items: { type: 'string' } },
+        rollingSummary: { type: 'string' },
+      },
+    },
+  })
+  async resumeSession(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+  ): Promise<ResumeSessionResponse> {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.resumeSession(sessionId, userId);
+  }
+
+  @Post('sessions/:sessionId/save')
+  @ApiOperation({
+    summary: '상담 저장',
+    description: '상담 내역을 저장합니다. 로그인 필수.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        savedName: { type: 'string', description: '저장 이름 (선택)' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: '저장 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        isSaved: { type: 'boolean' },
+        savedName: { type: 'string' },
+        savedAt: { type: 'string' },
+      },
+    },
+  })
+  async saveSession(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: { savedName?: string },
+  ) {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.saveSession(sessionId, userId, dto.savedName);
+  }
+
 }

@@ -16,6 +16,10 @@ import {
   EMPATHY_COMMENT_PROMPT,
   CONTEXT_SUMMARY_PROMPT,
   SESSION_SUMMARY_PROMPT,
+  ROLLING_SUMMARY_PROMPT,
+  EXTRACT_USER_PROFILE_PROMPT,
+  COUNSELOR_MODE_PROMPTS,
+  COUNSELOR_MODE_OPTIONS_PROMPTS,
 } from '../../prompts';
 import { GenerateOptionsResult } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
@@ -46,6 +50,7 @@ export class OpenAIAgent {
     context: string[],
     currentStep: string,
     category?: Category,
+    counselorType?: CounselorType,
   ): Promise<GenerateOptionsResult> {
     const contextCount = context.length;
     const categoryContext = category ? CATEGORY_CONTEXTS[category] : '';
@@ -70,6 +75,23 @@ export class OpenAIAgent {
     // 마지막 입력이 의미없는 짧은 입력이면 API 호출 없이 바로 응답 (토큰 절약)
     const lastInput = context[context.length - 1];
     if (lastInput && this.isMeaninglessInput(lastInput)) {
+      // 모드별 기본 응답
+      if (counselorType === 'listening') {
+        return {
+          question: '네...',
+          options: ['더 말할게요', '여기까지만요'],
+          canProceedToResponse: contextCount >= PROMPT_CONFIG.MIN_CONTEXT_FOR_RESPONSE,
+          canRequestFeedback,
+        };
+      }
+      if (counselorType === 'reaction') {
+        return {
+          question: '네네',
+          options: ['그래서 말인데요', '다른 얘기할게요', '글쎄요...'],
+          canProceedToResponse: contextCount >= PROMPT_CONFIG.MIN_CONTEXT_FOR_RESPONSE,
+          canRequestFeedback,
+        };
+      }
       return {
         question: '괜찮아요. 말로 하기 어려우시면 아래 버튼으로 선택해주셔도 돼요.',
         options: ['조금 더 생각해볼게', '다른 얘기할래', '잘 모르겠어'],
@@ -88,7 +110,15 @@ export class OpenAIAgent {
       };
     }
 
+    // 모드별 프롬프트 추가
+    const modePrompt = counselorType ? COUNSELOR_MODE_PROMPTS[counselorType] : '';
+    const modeOptionsPrompt = counselorType ? COUNSELOR_MODE_OPTIONS_PROMPTS[counselorType] : '';
+
     const systemPrompt = `${GENERATE_OPTIONS_SYSTEM_PROMPT}
+
+${modePrompt}
+
+${modeOptionsPrompt}
 
 ${categoryContext}
 
@@ -165,7 +195,8 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
       const counselorFallbacks: Record<CounselorType, string> = {
         T: '상황을 정리해보면, 지금 겪고 계신 일이 복잡하게 느껴지실 수 있어요. 하나씩 객관적으로 살펴보면서 해결책을 찾아가면 어떨까요?',
         F: '말씀해주셔서 감사해요. 그런 상황에서 그렇게 느끼시는 건 정말 자연스러운 거예요. 혼자 감당하느라 많이 힘드셨을 거예요. 제가 함께할게요.',
-        deep: '지금 마음속에서 일어나는 것들에 대해 천천히 이야기해볼까요? 표면 아래에 있는 진짜 감정을 함께 탐색해봐요.',
+        reaction: '아 그러셨군요... 정말요? 아이고...',
+        listening: '네... 그러셨군요.',
       };
       return counselorFallbacks[counselorType];
     }
@@ -306,6 +337,66 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
       if (content) {
         yield content;
       }
+    }
+  }
+
+  /**
+   * 롤링 요약 생성 (오래된 대화 요약)
+   */
+  async generateRollingSummary(
+    existingSummary: string,
+    contextToSummarize: string[],
+  ): Promise<string> {
+    if (!this.hasApiKey) {
+      // API 키 없을 때 간단한 요약
+      return contextToSummarize.slice(-5).join(' / ');
+    }
+
+    const userPrompt = existingSummary
+      ? `기존 요약:\n${existingSummary}\n\n추가된 대화:\n${contextToSummarize.join('\n')}\n\n기존 요약에 추가된 대화 내용을 통합하여 새로운 요약을 작성하세요.`
+      : `대화 내용:\n${contextToSummarize.join('\n')}`;
+
+    const response = await this.openai.chat.completions.create({
+      model: PROMPT_CONFIG.MODEL,
+      messages: [
+        { role: 'system', content: ROLLING_SUMMARY_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.5,
+    });
+
+    return response.choices[0].message.content || existingSummary;
+  }
+
+  /**
+   * 사용자 프로필 정보 추출
+   */
+  async extractUserProfile(
+    context: string[],
+  ): Promise<{ emotions: string[]; topics: string[]; importantContext: string[] }> {
+    if (!this.hasApiKey) {
+      return { emotions: [], topics: [], importantContext: [] };
+    }
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: PROMPT_CONFIG.MODEL,
+        messages: [
+          { role: 'system', content: EXTRACT_USER_PROFILE_PROMPT },
+          { role: 'user', content: `대화 내용:\n${context.join('\n')}` },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+      return {
+        emotions: result.emotions || [],
+        topics: result.topics || [],
+        importantContext: result.importantContext || [],
+      };
+    } catch {
+      return { emotions: [], topics: [], importantContext: [] };
     }
   }
 }

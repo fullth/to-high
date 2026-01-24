@@ -24,8 +24,8 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
   return response.json();
 }
 
-// 상담가 유형
-export type CounselorType = "T" | "F" | "deep";
+// 상담 모드: T(논리적), F(공감적), reaction(짧은 리액션), listening(경청)
+export type CounselorType = "T" | "F" | "reaction" | "listening";
 
 // 세션 시작
 export interface StartSessionResponse {
@@ -257,4 +257,97 @@ export async function sendMessageStream(
   }
 
   return fullContent;
+}
+
+// ============ 세션 이력 관련 API ============
+
+// 세션 목록 항목
+export interface SessionListItem {
+  sessionId: string;
+  category: string;
+  status: "active" | "completed";
+  summary?: string;
+  turnCount: number;
+  counselorType?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 세션 목록 조회
+export function getSessions(token: string) {
+  return fetchApi<{ sessions: SessionListItem[] }>("/chat/sessions", { token });
+}
+
+// 세션 상세 조회
+export interface SessionDetail {
+  sessionId: string;
+  category: string;
+  status: "active" | "completed";
+  context: string[];
+  fullContext: string[];
+  rollingSummary?: string;
+  summary?: string;
+  counselorType?: string;
+  responseMode?: string;
+  turnCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getSessionDetail(sessionId: string, token: string) {
+  return fetchApi<SessionDetail>(`/chat/sessions/${sessionId}`, { token });
+}
+
+// 세션 재개
+export interface ResumeSessionResponse {
+  sessionId: string;
+  question: string;
+  options: string[];
+  canProceedToResponse: boolean;
+  canRequestFeedback?: boolean;
+  previousContext: string[];
+  rollingSummary?: string;
+  counselorType?: string;
+}
+
+export function resumeSession(sessionId: string, token: string) {
+  return fetchApi<ResumeSessionResponse>(`/chat/sessions/${sessionId}/resume`, {
+    method: "POST",
+    token,
+  });
+}
+
+// ============ 세션 저장 관련 API ============
+
+// 저장된 세션 항목
+export interface SavedSessionItem {
+  sessionId: string;
+  category: string;
+  savedName?: string;
+  summary?: string;
+  turnCount: number;
+  counselorType?: string;
+  savedAt: string;
+  createdAt: string;
+}
+
+// 세션 저장
+export interface SaveSessionResponse {
+  sessionId: string;
+  isSaved: boolean;
+  savedName?: string;
+  savedAt: string;
+}
+
+export function saveSession(sessionId: string, token: string, savedName?: string) {
+  return fetchApi<SaveSessionResponse>(`/chat/sessions/${sessionId}/save`, {
+    method: "POST",
+    body: JSON.stringify({ savedName }),
+    token,
+  });
+}
+
+// 저장된 세션 목록 조회
+export function getSavedSessions(token: string) {
+  return fetchApi<{ sessions: SavedSessionItem[] }>("/chat/sessions/saved", { token });
 }
