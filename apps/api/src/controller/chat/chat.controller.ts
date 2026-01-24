@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   Res,
@@ -532,5 +533,39 @@ export class ChatController {
   ) {
     const userId = req.user?.userId || 'anonymous';
     return this.chatService.deleteSession(sessionId, userId);
+  }
+
+  @Patch('sessions/:sessionId/alias')
+  @ApiOperation({
+    summary: '상담 별칭 수정',
+    description: '상담의 별칭(이름)을 수정합니다. 로그인 필수.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['alias'],
+      properties: {
+        alias: { type: 'string', description: '새 별칭 (50자 이내)' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '수정 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        alias: { type: 'string' },
+      },
+    },
+  })
+  async updateSessionAlias(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: { alias: string },
+  ) {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.updateSessionAlias(sessionId, userId, dto.alias);
   }
 }

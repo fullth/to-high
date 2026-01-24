@@ -127,7 +127,7 @@ export class SessionRepository {
       .find({
         userId: new Types.ObjectId(userId),
       })
-      .select('summary category status createdAt updatedAt counselorType turnCount')
+      .select('summary category status createdAt updatedAt counselorType turnCount alias')
       .sort({ updatedAt: -1 })
       .limit(limit);
   }
@@ -209,5 +209,23 @@ export class SessionRepository {
       userId: new Types.ObjectId(userId),
     });
     return result.deletedCount > 0;
+  }
+
+  /**
+   * 세션 별칭 수정
+   */
+  async updateAlias(
+    sessionId: string,
+    userId: string,
+    alias: string,
+  ): Promise<SessionDocument | null> {
+    return this.sessionModel.findOneAndUpdate(
+      {
+        _id: sessionId,
+        userId: new Types.ObjectId(userId),
+      },
+      { alias },
+      { new: true },
+    );
   }
 }
