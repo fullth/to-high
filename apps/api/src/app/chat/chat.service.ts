@@ -550,4 +550,28 @@ export class ChatService {
 
     return { success: true };
   }
+
+  /**
+   * 세션 별칭 수정
+   */
+  async updateSessionAlias(sessionId: string, userId: string, alias: string) {
+    if (userId === 'anonymous') {
+      throw new ForbiddenException('로그인이 필요합니다.');
+    }
+
+    // 별칭 길이 제한
+    if (alias.length > 50) {
+      throw new BadRequestException('별칭은 50자 이내로 입력해주세요.');
+    }
+
+    const session = await this.sessionRepository.updateAlias(sessionId, userId, alias);
+    if (!session) {
+      throw new NotFoundException('세션을 찾을 수 없거나 수정 권한이 없습니다.');
+    }
+
+    return {
+      sessionId: session._id.toString(),
+      alias: session.alias,
+    };
+  }
 }

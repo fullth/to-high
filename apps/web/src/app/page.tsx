@@ -15,6 +15,7 @@ import {
   resumeSession,
   saveSession,
   getSavedSessions,
+  updateSessionAlias,
   SelectOptionResponse,
   SessionListItem,
   SavedSessionItem,
@@ -227,6 +228,10 @@ export default function Home() {
 
   // 저장된 세션 목록
   const [savedSessions, setSavedSessions] = useState<SavedSessionItem[]>([]);
+
+  // 세션 별칭 수정 상태
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingAlias, setEditingAlias] = useState("");
 
   // 저장 관련 상태
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -810,6 +815,28 @@ export default function Home() {
     }
   };
 
+  // 세션 별칭 수정
+  const handleUpdateAlias = async (targetSessionId: string) => {
+    if (!token || !editingAlias.trim()) {
+      setEditingSessionId(null);
+      return;
+    }
+    try {
+      await updateSessionAlias(targetSessionId, editingAlias.trim(), token);
+      // 로컬 상태 업데이트
+      setPreviousSessions((prev) =>
+        prev.map((s) =>
+          s.sessionId === targetSessionId ? { ...s, alias: editingAlias.trim() } : s
+        )
+      );
+    } catch (err) {
+      console.error("Failed to update alias:", err);
+    } finally {
+      setEditingSessionId(null);
+      setEditingAlias("");
+    }
+  };
+
   // 한도 도달 에러 모달 컴포넌트
   const LimitErrorModal = () => {
     if (!limitError) return null;
@@ -1069,35 +1096,84 @@ export default function Home() {
                     const isActive = session.status === 'active';
                     const date = new Date(session.updatedAt);
                     const timeAgo = getTimeAgo(date);
+                    const displayName = session.alias || categoryInfo.label;
+                    const isEditing = editingSessionId === session.sessionId;
 
                     return (
-                      <button
+                      <div
                         key={session.sessionId}
-                        onClick={() => handleResumeSession(session.sessionId)}
-                        disabled={isLoading}
-                        className="w-full p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
+                        className="w-full p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left"
                       >
                         <div className="flex items-start gap-3">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
+                          <button
+                            onClick={() => handleResumeSession(session.sessionId)}
+                            disabled={isLoading || isEditing}
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs disabled:opacity-50"
                             style={{ backgroundColor: categoryInfo.color }}
                           >
-                            {categoryInfo.label.charAt(0)}
-                          </div>
+                            {session.alias ? '📝' : categoryInfo.label.charAt(0)}
+                          </button>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium truncate">{categoryInfo.label}</span>
-                              {isActive && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary">진행중</span>
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editingAlias}
+                                  onChange={(e) => setEditingAlias(e.target.value)}
+                                  onBlur={() => handleUpdateAlias(session.sessionId)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleUpdateAlias(session.sessionId);
+                                    if (e.key === 'Escape') {
+                                      setEditingSessionId(null);
+                                      setEditingAlias("");
+                                    }
+                                  }}
+                                  className="text-sm font-medium bg-secondary/50 border border-primary/30 rounded px-2 py-0.5 w-full focus:outline-none focus:border-primary"
+                                  autoFocus
+                                  maxLength={50}
+                                  placeholder="별칭 입력"
+                                />
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleResumeSession(session.sessionId)}
+                                    disabled={isLoading}
+                                    className="text-sm font-medium truncate hover:text-primary disabled:opacity-50"
+                                  >
+                                    {displayName}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingSessionId(session.sessionId);
+                                      setEditingAlias(session.alias || "");
+                                    }}
+                                    className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+                                    title="별칭 수정"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                  </button>
+                                  {isActive && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary">진행중</span>
+                                  )}
+                                </>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">
-                              {session.summary || '대화를 이어가보세요'}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
+                            <button
+                              onClick={() => handleResumeSession(session.sessionId)}
+                              disabled={isLoading || isEditing}
+                              className="block w-full text-left disabled:opacity-50"
+                            >
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                {session.summary || '대화를 이어가보세요'}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
+                            </button>
                           </div>
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

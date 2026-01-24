@@ -54,6 +54,10 @@ export class UserDocument extends Document {
   // 레거시 사용자 (기존 3개 이상 사용자, 제한 면제)
   @Prop({ default: false })
   isGrandfathered: boolean;
+
+  // timestamps (자동 생성)
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(UserDocument);

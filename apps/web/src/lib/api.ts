@@ -279,6 +279,7 @@ export interface SessionListItem {
   counselorType?: string;
   createdAt: string;
   updatedAt: string;
+  alias?: string;
 }
 
 // 세션 목록 조회
@@ -366,4 +367,47 @@ export function deleteSession(sessionId: string, token: string) {
     method: "DELETE",
     token,
   });
+}
+
+// 세션 별칭 수정
+export function updateSessionAlias(sessionId: string, alias: string, token: string) {
+  return fetchApi<{ sessionId: string; alias: string }>(`/chat/sessions/${sessionId}/alias`, {
+    method: "PATCH",
+    body: JSON.stringify({ alias }),
+    token,
+  });
+}
+
+// ============ Admin API ============
+
+// 대시보드 통계
+export interface DashboardStats {
+  totalUsers: number;
+  totalSessions: number;
+  activeSessions: number;
+  todayUsers: number;
+  todaySessions: number;
+  subscribers: number;
+}
+
+export function getAdminDashboard(token: string) {
+  return fetchApi<DashboardStats>("/admin/dashboard", { token });
+}
+
+// 사용자 목록
+export interface AdminUser {
+  id: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  createdAt: string;
+  isSubscribed: boolean;
+  isGrandfathered: boolean;
+  sessionCount: number;
+  lastSessionAt?: string;
+  lastCategory?: string;
+}
+
+export function getAdminUsers(token: string) {
+  return fetchApi<{ users: AdminUser[] }>("/admin/users", { token });
 }
