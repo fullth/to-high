@@ -139,6 +139,15 @@ export class SessionRepository {
     return this.sessionModel.findById(sessionId);
   }
 
+  /**
+   * 사용자의 세션 수 카운트
+   */
+  async countUserSessions(userId: string): Promise<number> {
+    return this.sessionModel.countDocuments({
+      userId: new Types.ObjectId(userId),
+    });
+  }
+
   async getRecentSummaries(
     userId: string,
     limit = 3,
@@ -189,5 +198,16 @@ export class SessionRepository {
       })
       .select('summary category savedName savedAt createdAt counselorType turnCount')
       .sort({ savedAt: -1 });
+  }
+
+  /**
+   * 세션 삭제
+   */
+  async deleteSession(sessionId: string, userId: string): Promise<boolean> {
+    const result = await this.sessionModel.deleteOne({
+      _id: sessionId,
+      userId: new Types.ObjectId(userId),
+    });
+    return result.deletedCount > 0;
   }
 }

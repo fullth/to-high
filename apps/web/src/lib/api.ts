@@ -18,6 +18,14 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "요청에 실패했습니다" }));
+    // 세션 제한 초과 에러는 특별히 처리
+    if (error.code === 'SESSION_LIMIT_EXCEEDED') {
+      const limitError = new Error(error.message) as Error & { code: string; sessionCount: number; limit: number };
+      limitError.code = error.code;
+      limitError.sessionCount = error.sessionCount;
+      limitError.limit = error.limit;
+      throw limitError;
+    }
     throw new Error(error.message || `HTTP ${response.status}`);
   }
 
@@ -350,4 +358,12 @@ export function saveSession(sessionId: string, token: string, savedName?: string
 // 저장된 세션 목록 조회
 export function getSavedSessions(token: string) {
   return fetchApi<{ sessions: SavedSessionItem[] }>("/chat/sessions/saved", { token });
+}
+
+// 세션 삭제
+export function deleteSession(sessionId: string, token: string) {
+  return fetchApi<{ success: boolean }>(`/chat/sessions/${sessionId}`, {
+    method: "DELETE",
+    token,
+  });
 }
