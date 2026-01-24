@@ -241,6 +241,12 @@ export default function Home() {
     lastInput: string;
   } | null>(null);
 
+  // 공책(세션) 제한 초과 상태
+  const [notebookLimitError, setNotebookLimitError] = useState<{
+    sessionCount: number;
+    limit: number;
+  } | null>(null);
+
   // 선택 히스토리
   const [selectionHistory, setSelectionHistory] = useState<HistoryItem[]>([]);
 
@@ -395,8 +401,15 @@ export default function Home() {
       });
 
       setSelectionHistory(historyItems);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      // 세션 제한 초과 에러 처리
+      if (err.code === 'SESSION_LIMIT_EXCEEDED') {
+        setNotebookLimitError({
+          sessionCount: err.sessionCount,
+          limit: err.limit,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -432,8 +445,15 @@ export default function Home() {
 
       setSelectionHistory(historyItems);
       setDirectInput("");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      // 세션 제한 초과 에러 처리
+      if (err.code === 'SESSION_LIMIT_EXCEEDED') {
+        setNotebookLimitError({
+          sessionCount: err.sessionCount,
+          limit: err.limit,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -885,6 +905,62 @@ export default function Home() {
     );
   };
 
+  // 공책(세션) 제한 초과 모달
+  const NotebookLimitModal = () => {
+    if (!notebookLimitError) return null;
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <Card className="max-w-md w-full border-primary/30 bg-card">
+          <CardHeader className="space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <CardTitle className="text-lg text-center">
+              상담 일지를 적을 공책이 가득 찼어요
+            </CardTitle>
+            <CardDescription className="text-center text-foreground/70">
+              현재 {notebookLimitError.sessionCount}개의 상담 기록이 있어요.<br />
+              새 상담을 시작하려면 기존 기록을 정리하거나,<br />
+              매달 새 공책을 받아보시겠어요?
+            </CardDescription>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                className="w-full bg-amber-500 hover:bg-amber-600"
+                onClick={() => {
+                  setNotebookLimitError(null);
+                  // TODO: 구독 페이지로 이동
+                  alert("구독 기능은 준비 중이에요!");
+                }}
+              >
+                📔 새 공책 구독하기
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setNotebookLimitError(null);
+                  // TODO: 세션 관리 페이지로 이동
+                  alert("세션 관리 기능은 준비 중이에요!");
+                }}
+              >
+                기존 기록 정리하기
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-muted-foreground"
+                onClick={() => setNotebookLimitError(null)}
+              >
+                나중에 할게요
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  };
+
   // 초기 화면 (카테고리 선택)
   if (!sessionId) {
     return (
@@ -1237,6 +1313,7 @@ export default function Home() {
             )}
           </div>
         </div>
+        <NotebookLimitModal />
       </main>
     );
   }
@@ -1409,6 +1486,7 @@ export default function Home() {
         </div>
         <LimitErrorModal />
         <LoginPromptModal />
+        <NotebookLimitModal />
       </main>
     );
   }
@@ -1605,6 +1683,7 @@ export default function Home() {
         </div>
         <LimitErrorModal />
         <LoginPromptModal />
+        <NotebookLimitModal />
 
         {/* 저장 모달 */}
         {showSaveModal && (
