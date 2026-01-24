@@ -1,9 +1,13 @@
+import Link from "next/link";
+
 interface LogoProps {
   size?: "sm" | "md" | "lg";
   showText?: boolean;
+  href?: string;
+  onClick?: () => void;
 }
 
-export function Logo({ size = "md", showText = true }: LogoProps) {
+export function Logo({ size = "md", showText = true, href = "/", onClick }: LogoProps) {
   const sizes = {
     sm: { icon: 24, text: "text-lg" },
     md: { icon: 32, text: "text-xl" },
@@ -13,7 +17,7 @@ export function Logo({ size = "md", showText = true }: LogoProps) {
   const { icon, text } = sizes[size];
 
   return (
-    <div className="flex items-center gap-2">
+    <Link href={href} onClick={onClick} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
       {/* 아이콘 */}
       <div
         className="flex items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80"
@@ -50,10 +54,13 @@ export function Logo({ size = "md", showText = true }: LogoProps) {
 
       {/* 텍스트 */}
       {showText && (
-        <span className={`font-bold text-foreground/90 ${text}`}>
-          <span className="text-primary">위로(TO-HIGH): AI 기반 심리 상담</span>
+        <span className={`font-bold text-foreground/90 ${text} whitespace-nowrap`}>
+          <span className="text-primary">
+            <span className="sm:hidden">위로: AI 심리 상담</span>
+            <span className="hidden sm:inline">위로(TO-HIGH): AI 기반 심리 상담</span>
+          </span>
         </span>
       )}
-    </div>
+    </Link>
   );
 }

@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
+import { UserProfileRepository } from '../../persistence/user-profile/user-profile.repository';
 import { RESPONSE_MODE_OPTIONS } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
 import { SessionService } from '../session/session.service';
+import type { SessionListItem, SessionDetailResponse } from '../../controller/chat/dto/chat.response';
 
 // 토큰 낭비 방지 제한
 const MAX_INPUT_LENGTH = 500; // 최대 입력 길이
@@ -16,6 +18,7 @@ export class ChatService {
   constructor(
     private sessionService: SessionService,
     private sessionRepository: SessionRepository,
+    private userProfileRepository: UserProfileRepository,
     private openaiAgent: OpenAIAgent,
   ) {}
 
@@ -93,6 +96,7 @@ export class ChatService {
         updatedSession!.context,
         initialText ? 'collecting' : 'initial',
         sessionCategory as Category,
+        counselorType,
       );
 
       return {
@@ -169,6 +173,7 @@ export class ChatService {
         updatedSession!.context,
         'collecting',
         updatedSession!.category as Category,
+        (updatedSession as any).counselorType as CounselorType,
       );
 
       return {
@@ -193,6 +198,7 @@ export class ChatService {
       updatedSession!.context,
       'collecting',
       updatedSession!.category as Category,
+      (updatedSession as any).counselorType as CounselorType,
     );
 
     if (options.canProceedToResponse) {
@@ -343,5 +349,164 @@ export class ChatService {
     }
 
     await this.sessionService.addContext(sessionId, `상담사: ${fullResponse}`);
+  }
+
+  /**
+   * 사용자의 세션 목록 조회
+   */
+  async getUserSessions(userId: string): Promise<SessionListItem[]> {
+    if (userId === 'anonymous') {
+      return [];
+    }
+
+    const sessions = await this.sessionRepository.getUserSessions(userId);
+
+    return sessions.map((session) => ({
+      sessionId: session._id.toString(),
+      category: session.category,
+      status: session.status as 'active' | 'completed',
+      summary: session.summary,
+      turnCount: (session as any).turnCount || 0,
+      counselorType: session.counselorType,
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
+    }));
+  }
+
+  /**
+   * 세션 상세 조회
+   */
+  async getSessionDetail(sessionId: string, userId: string): Promise<SessionDetailResponse> {
+    const session = await this.sessionRepository.getSessionDetail(sessionId);
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    // 소유자 확인
+    if (userId !== 'anonymous' && session.userId.toString() !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return {
+      sessionId: session._id.toString(),
+      category: session.category,
+      status: session.status as 'active' | 'completed',
+      context: session.context,
+      fullContext: (session as any).fullContext || session.context,
+      rollingSummary: (session as any).rollingSummary,
+      summary: session.summary,
+      counselorType: session.counselorType,
+      responseMode: session.responseMode,
+      turnCount: (session as any).turnCount || 0,
+      createdAt: session.createdAt.toISOString(),
+      updatedAt: session.updatedAt.toISOString(),
+    };
+  }
+
+  /**
+   * 세션 재개 (이어하기)
+   */
+  async resumeSession(sessionId: string, userId: string) {
+    const session = await this.sessionRepository.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    // 소유자 확인
+    if (userId !== 'anonymous' && session.userId.toString() !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    // 완료된 세션이면 재활성화
+    if (session.status === 'completed') {
+      session.status = 'active';
+      await session.save();
+    }
+
+    // 사용자 프로필 요약 가져오기
+    let profileContext = '';
+    if (userId !== 'anonymous') {
+      const profileSummary = await this.userProfileRepository.getProfileSummary(userId);
+      if (profileSummary) {
+        profileContext = `[사용자 프로필]\n${profileSummary}\n\n`;
+      }
+    }
+
+    // 롤링 요약 + 최근 컨텍스트로 새 질문 생성
+    const rollingSummary = (session as any).rollingSummary || '';
+    const contextForAI = rollingSummary
+      ? [`[이전 대화 요약] ${rollingSummary}`, ...session.context.slice(-5)]
+      : session.context;
+
+    const options = await this.openaiAgent.generateOptions(
+      contextForAI,
+      'collecting',
+      session.category as Category,
+      session.counselorType as CounselorType,
+    );
+
+    return {
+      sessionId: session._id.toString(),
+      question: options.question,
+      options: options.options,
+      canProceedToResponse: options.canProceedToResponse,
+      canRequestFeedback: options.canRequestFeedback,
+      previousContext: session.context.slice(-10), // 최근 10개
+      rollingSummary,
+      counselorType: session.counselorType,
+    };
+  }
+
+  /**
+   * 세션 저장하기
+   */
+  async saveSession(sessionId: string, userId: string, savedName?: string) {
+    if (userId === 'anonymous') {
+      throw new ForbiddenException('로그인이 필요합니다.');
+    }
+
+    const session = await this.sessionRepository.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    // 소유자 확인
+    if (session.userId.toString() !== userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const savedSession = await this.sessionRepository.saveSession(sessionId, savedName);
+
+    return {
+      sessionId: savedSession!._id.toString(),
+      isSaved: true,
+      savedName: (savedSession as any).savedName,
+      savedAt: (savedSession as any).savedAt?.toISOString(),
+    };
+  }
+
+  /**
+   * 저장된 세션 목록 조회
+   */
+  async getSavedSessions(userId: string) {
+    if (userId === 'anonymous') {
+      return [];
+    }
+
+    const sessions = await this.sessionRepository.getSavedSessions(userId);
+
+    return sessions.map((session) => ({
+      sessionId: session._id.toString(),
+      category: session.category,
+      savedName: (session as any).savedName,
+      summary: session.summary,
+      turnCount: (session as any).turnCount || 0,
+      counselorType: session.counselorType,
+      savedAt: (session as any).savedAt?.toISOString(),
+      createdAt: session.createdAt.toISOString(),
+    }));
   }
 }

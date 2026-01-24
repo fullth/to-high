@@ -11,17 +11,67 @@ import {
   setResponseModeStream,
   sendMessageStream,
   endSession,
+  getSessions,
+  resumeSession,
+  saveSession,
+  getSavedSessions,
   SelectOptionResponse,
+  SessionListItem,
+  SavedSessionItem,
   CounselorType,
 } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption } from "@/types/chat";
 
-// 상담가 유형 정의
-const counselorTypes = [
+// 상위 상담 모드 정의
+type TopLevelMode = "mbti" | "reaction" | "listening" | null;
+
+const topLevelModes = [
+  {
+    id: "mbti" as TopLevelMode,
+    label: "MBTI 모드",
+    description: "T/F 성향에 맞는 상담",
+    color: "#6366F1",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2a7 7 0 0 0 0 14 7 7 0 0 0 0-14"/>
+        <path d="M12 8v8"/>
+        <path d="M8 12h8"/>
+      </svg>
+    ),
+  },
+  {
+    id: "reaction" as TopLevelMode,
+    label: "리액션 모드",
+    description: "짧은 반응, 가볍게 대화",
+    color: "#9B8AA4",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    ),
+  },
+  {
+    id: "listening" as TopLevelMode,
+    label: "경청 모드",
+    description: "그냥 들어줄게요",
+    color: "#7C9885",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        <path d="M9 18V5l12-2v13"/>
+        <circle cx="6" cy="18" r="3"/>
+        <circle cx="18" cy="16" r="3"/>
+      </svg>
+    ),
+  },
+];
+
+// MBTI 하위 선택 (T/F)
+const mbtiSubTypes = [
   {
     id: "F" as CounselorType,
-    label: "따스한 F 상담가",
-    description: "감정적 공감이 필요할 때",
+    label: "F - 감정형",
+    description: "따뜻한 위로가 필요할 때",
     color: "#E8A0BF",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -31,8 +81,8 @@ const counselorTypes = [
   },
   {
     id: "T" as CounselorType,
-    label: "냉철한 T 상담가",
-    description: "객관적 조언이 필요할 때",
+    label: "T - 사고형",
+    description: "현실적인 조언이 필요할 때",
     color: "#5B8FB9",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -123,8 +173,26 @@ type HistoryItem = {
   isQuestion?: boolean;
 };
 
+// 시간 경과 표시 함수
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (minutes < 1) return '방금 전';
+  if (minutes < 60) return `${minutes}분 전`;
+  if (hours < 24) return `${hours}시간 전`;
+  if (days < 7) return `${days}일 전`;
+  return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+}
+
 // 비로그인 사용자 최대 대화 횟수
 const MAX_ANONYMOUS_SELECTIONS = 5;
+
+// 로그인 전 세션 상태 저장 키
+const SESSION_STATE_KEY = "to-high-pending-session";
 
 export default function Home() {
   const { user, token, isLoading: authLoading, login, logout } = useAuth();
@@ -145,11 +213,27 @@ export default function Home() {
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [directInput, setDirectInput] = useState("");
   const [selectedCounselorType, setSelectedCounselorType] = useState<CounselorType | null>(null);
+  const [selectedTopMode, setSelectedTopMode] = useState<TopLevelMode>(null);
   const [canRequestFeedback, setCanRequestFeedback] = useState(false);
   const [contextCount, setContextCount] = useState(0);
   const [hasHistory, setHasHistory] = useState(false);
   const [previousSessionSummary, setPreviousSessionSummary] = useState<string | null>(null);
   const [showModeSelection, setShowModeSelection] = useState(false);
+  const [isLoadingNewOptions, setIsLoadingNewOptions] = useState(false);
+
+  // 이전 세션 목록
+  const [previousSessions, setPreviousSessions] = useState<SessionListItem[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  // 저장된 세션 목록
+  const [savedSessions, setSavedSessions] = useState<SavedSessionItem[]>([]);
+
+  // 저장 관련 상태
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveType, setSaveType] = useState<"category" | "custom" | null>(null);
+  const [customSaveName, setCustomSaveName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   // 한도 도달 에러 상태
   const [limitError, setLimitError] = useState<{
@@ -163,9 +247,95 @@ export default function Home() {
   // 스크롤 ref
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // 세션 상태 저장 함수 (로그인 전)
+  const saveSessionState = useCallback(() => {
+    const stateToSave = {
+      sessionId,
+      phase,
+      question,
+      options,
+      responseModes,
+      selectionHistory,
+      selectedCounselorType,
+      canRequestFeedback,
+      contextCount,
+      showModeSelection,
+      hasHistory,
+      previousSessionSummary,
+    };
+    localStorage.setItem(SESSION_STATE_KEY, JSON.stringify(stateToSave));
+  }, [
+    sessionId,
+    phase,
+    question,
+    options,
+    responseModes,
+    selectionHistory,
+    selectedCounselorType,
+    canRequestFeedback,
+    contextCount,
+    showModeSelection,
+    hasHistory,
+    previousSessionSummary,
+  ]);
+
+  // 로그인 후 세션 상태 복원
+  useEffect(() => {
+    // 로그인 상태가 로딩 중이거나 사용자가 없으면 무시
+    if (authLoading || !user) return;
+
+    const savedState = localStorage.getItem(SESSION_STATE_KEY);
+    if (!savedState) return;
+
+    try {
+      const parsed = JSON.parse(savedState);
+      // 세션 ID가 있는 경우에만 복원
+      if (parsed.sessionId) {
+        setSessionId(parsed.sessionId);
+        setPhase(parsed.phase || "selecting");
+        setQuestion(parsed.question || "");
+        setOptions(parsed.options || []);
+        setResponseModes(parsed.responseModes || []);
+        setSelectionHistory(parsed.selectionHistory || []);
+        setSelectedCounselorType(parsed.selectedCounselorType || null);
+        setCanRequestFeedback(parsed.canRequestFeedback || false);
+        setContextCount(parsed.contextCount || 0);
+        setShowModeSelection(parsed.showModeSelection || false);
+        setHasHistory(parsed.hasHistory || false);
+        setPreviousSessionSummary(parsed.previousSessionSummary || null);
+      }
+    } catch (e) {
+      console.error("Failed to restore session state:", e);
+    } finally {
+      // 복원 후 저장된 상태 삭제
+      localStorage.removeItem(SESSION_STATE_KEY);
+    }
+  }, [authLoading, user]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectionHistory, messages, streamingContent]);
+
+  // 로그인 시 이전 세션 목록 및 저장된 세션 가져오기
+  useEffect(() => {
+    if (!authLoading && user && token) {
+      setIsLoadingSessions(true);
+      Promise.all([
+        getSessions(token),
+        getSavedSessions(token),
+      ])
+        .then(([sessionsRes, savedRes]) => {
+          setPreviousSessions(sessionsRes.sessions);
+          setSavedSessions(savedRes.sessions);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch sessions:", err);
+        })
+        .finally(() => {
+          setIsLoadingSessions(false);
+        });
+    }
+  }, [authLoading, user, token]);
 
   // 한도 에러 처리
   const handleLimitError = (error: unknown, lastInput: string) => {
@@ -346,6 +516,28 @@ export default function Home() {
     [sessionId, token, selectedCounselorType, user, selectionHistory.length]
   );
 
+  // 다른 옵션 보기 (히스토리에 추가하지 않고 옵션만 교체)
+  const handleRequestNewOptions = useCallback(async () => {
+    if (!sessionId) return;
+
+    setIsLoading(true);
+    setIsLoadingNewOptions(true);
+    try {
+      const res: SelectOptionResponse = await selectOption(sessionId, "다른 옵션 보기", token || undefined);
+
+      // 새 옵션이 있으면 교체
+      if (res.question && res.options) {
+        setQuestion(res.question);
+        setOptions(res.options);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingNewOptions(false);
+    }
+  }, [sessionId, token]);
+
   // 피드백 요청 (지금까지 이야기에 대한 생각 듣기)
   const handleRequestFeedback = useCallback(async () => {
     if (!sessionId) return;
@@ -514,10 +706,88 @@ export default function Home() {
     setStreamingContent("");
     setLimitError(null);
     setSelectedCounselorType(null);
+    setSelectedTopMode(null);
     setCanRequestFeedback(false);
     setContextCount(0);
     setHasHistory(false);
     setPreviousSessionSummary(null);
+    // 저장 관련 상태 리셋
+    setShowSaveModal(false);
+    setSaveType(null);
+    setCustomSaveName("");
+    setIsSaved(false);
+  };
+
+  // 상담 저장하기
+  const handleSaveSession = async () => {
+    if (!sessionId || !token) return;
+
+    setIsSaving(true);
+    try {
+      const savedName = saveType === "custom" ? customSaveName.trim() : undefined;
+      await saveSession(sessionId, token, savedName);
+      setIsSaved(true);
+      setShowSaveModal(false);
+
+      // 저장된 세션 목록 갱신
+      const res = await getSavedSessions(token);
+      setSavedSessions(res.sessions);
+    } catch (err) {
+      console.error("Failed to save session:", err);
+      alert("저장에 실패했습니다.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 이전 세션 재개
+  const handleResumeSession = async (targetSessionId: string) => {
+    if (!token) return;
+    setIsLoading(true);
+    try {
+      const res = await resumeSession(targetSessionId, token);
+      setSessionId(res.sessionId);
+      setQuestion(res.question);
+      setOptions(res.options);
+      setCanRequestFeedback(res.canRequestFeedback || false);
+      setSelectedCounselorType(res.counselorType as CounselorType || null);
+      setPhase("selecting");
+
+      const historyItems: HistoryItem[] = [];
+
+      // 이전 대화 요약 표시
+      if (res.rollingSummary) {
+        historyItems.push({
+          type: "assistant",
+          content: `지난번 대화를 기억하고 있어요. ${res.rollingSummary}`,
+        });
+      }
+
+      // 이전 대화 일부 표시 (선택적)
+      if (res.previousContext && res.previousContext.length > 0) {
+        // 최근 몇 개만 표시
+        res.previousContext.slice(-4).forEach((ctx: string) => {
+          if (ctx.startsWith("나:")) {
+            historyItems.push({ type: "user", content: ctx.replace("나: ", "") });
+          } else if (ctx.startsWith("상담사:")) {
+            historyItems.push({ type: "assistant", content: ctx.replace("상담사: ", "") });
+          }
+        });
+      }
+
+      // 새 질문 추가
+      historyItems.push({
+        type: "assistant",
+        content: res.question,
+        isQuestion: true,
+      });
+
+      setSelectionHistory(historyItems);
+    } catch (err) {
+      console.error("Failed to resume session:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 한도 도달 에러 모달 컴포넌트
@@ -578,18 +848,24 @@ export default function Home() {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
         <Card className="max-w-md w-full border-primary/30 bg-card">
           <CardHeader className="space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </div>
             <CardTitle className="text-lg text-center">
-              더 이야기 나눠볼까요?
+              나만의 상담사를 키워보세요
             </CardTitle>
             <CardDescription className="text-center text-foreground/70">
-              로그인하시면 대화 기록이 저장되고,<br />
-              다음에 다시 찾아오셔도 기억하고 있을게요.
+              로그인하면 대화가 저장되고,<br />
+              대화할수록 당신을 더 잘 이해하게 돼요.
             </CardDescription>
             <div className="flex flex-col gap-2 pt-2">
               <Button
                 className="w-full"
                 onClick={() => {
                   setShowLoginPrompt(false);
+                  saveSessionState();
                   login();
                 }}
               >
@@ -616,7 +892,7 @@ export default function Home() {
         {/* 헤더 */}
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
-            <Logo size="md" />
+            <Logo size="md" onClick={handleNewSession} />
             {/* 우상단 로그인 */}
             <div>
               {authLoading ? (
@@ -654,42 +930,246 @@ export default function Home() {
               <p className="text-base sm:text-xl text-foreground/90 tracking-wide" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
                 요즘 마음에 걸리는 게 있다면 얘기해줄래요?
               </p>
-              {isLoading && (
-                <p className="text-sm text-primary animate-pulse">귀 기울여 듣는 중...</p>
-              )}
             </div>
 
-            {/* 상담가 유형 선택 */}
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground text-center">원하시는 상담가 유형이 있다면 먼저 선택해보세요!</p>
-              <p className="text-xs text-muted-foreground text-center">(선택하지 않아도 괜찮아요)</p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                {counselorTypes.map((type) => (
-                  <button
-                    key={type.id}
-                    className={`px-3 py-2 rounded-full border text-sm transition-all duration-200 flex items-center gap-1.5 ${
-                      selectedCounselorType === type.id
-                        ? "border-primary bg-primary/10 text-primary font-medium"
-                        : "border-border/50 hover:border-primary/40 hover:bg-secondary/30"
-                    } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
-                    onClick={() => setSelectedCounselorType(selectedCounselorType === type.id ? null : type.id)}
-                    disabled={isLoading}
-                  >
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: type.color }}>
-                      {type.icon}
-                    </span>
-                    <span>{type.label}</span>
-                  </button>
-                ))}
+            {/* 비로그인 사용자 로그인 유도 배너 */}
+            {!authLoading && !user && (
+              <button
+                onClick={login}
+                className="w-full rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 p-4 text-left hover:border-primary/50 hover:from-primary/10 hover:to-primary/15 transition-all duration-200"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground/90">나만의 심리 전문가를 키워보세요</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">로그인하면 대화가 저장되고, 당신을 기억해요</p>
+                  </div>
+                  <svg className="w-5 h-5 text-primary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </button>
+            )}
+
+            {/* 이전 상담 이어하기 - 로그인한 사용자에게만 표시 */}
+            {user && previousSessions.length > 0 && (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground/90">이전 상담 이어하기</p>
+                  <span className="text-xs text-muted-foreground">{previousSessions.length}개의 상담</span>
+                </div>
+                <div className="space-y-2 max-h-[200px] overflow-auto">
+                  {previousSessions.slice(0, 3).map((session) => {
+                    const categoryInfo = categories.find(c => c.id === session.category) || {
+                      label: session.category === 'direct' ? '직접 입력' : session.category,
+                      color: '#8B9BAA',
+                    };
+                    const isActive = session.status === 'active';
+                    const date = new Date(session.updatedAt);
+                    const timeAgo = getTimeAgo(date);
+
+                    return (
+                      <button
+                        key={session.sessionId}
+                        onClick={() => handleResumeSession(session.sessionId)}
+                        disabled={isLoading}
+                        className="w-full p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
+                            style={{ backgroundColor: categoryInfo.color }}
+                          >
+                            {categoryInfo.label.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">{categoryInfo.label}</span>
+                              {isActive && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary">진행중</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {session.summary || '대화를 이어가보세요'}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              {selectedCounselorType && (
-                <p className="text-xs text-primary text-center">
-                  {counselorTypes.find(t => t.id === selectedCounselorType)?.description}
-                </p>
-              )}
-            </div>
+            )}
 
-            <div className="space-y-3 sm:space-y-4">
+            {/* 세션 로딩 중 */}
+            {user && isLoadingSessions && (
+              <div className="rounded-2xl border border-border/30 bg-secondary/20 p-4 animate-pulse">
+                <div className="h-4 bg-secondary rounded w-1/3 mb-3" />
+                <div className="space-y-2">
+                  <div className="h-16 bg-secondary/50 rounded-xl" />
+                  <div className="h-16 bg-secondary/50 rounded-xl" />
+                </div>
+              </div>
+            )}
+
+            {/* 저장된 상담 목록 - 로그인한 사용자에게만 표시 */}
+            {user && savedSessions.length > 0 && (
+              <div className="rounded-2xl border border-secondary/50 bg-secondary/10 p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground/90 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    저장된 상담
+                  </p>
+                  <span className="text-xs text-muted-foreground">{savedSessions.length}개</span>
+                </div>
+                <div className="space-y-2 max-h-[180px] overflow-auto">
+                  {savedSessions.slice(0, 5).map((session) => {
+                    const categoryInfo = categories.find(c => c.id === session.category) || {
+                      label: session.category === 'direct' ? '직접 입력' : session.category,
+                      color: '#8B9BAA',
+                    };
+                    const date = new Date(session.savedAt);
+                    const timeAgo = getTimeAgo(date);
+
+                    return (
+                      <button
+                        key={session.sessionId}
+                        onClick={() => handleResumeSession(session.sessionId)}
+                        disabled={isLoading}
+                        className="w-full p-3 rounded-xl border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
+                            style={{ backgroundColor: categoryInfo.color }}
+                          >
+                            {session.savedName ? '📝' : categoryInfo.label.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">
+                                {session.savedName || categoryInfo.label}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-secondary text-muted-foreground">저장됨</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {session.summary || '저장된 상담'}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 선택 영역 */}
+            <div className="rounded-2xl border border-border/50 p-4 sm:p-5 space-y-4 sm:space-y-5 bg-card/30">
+              {/* 상담 모드 선택 - 2단계 구조 */}
+              <div className="space-y-3">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-foreground/90 mb-1">먼저, 어떤 방식으로 대화할까요?</p>
+                  <p className="text-xs text-muted-foreground">(선택하지 않아도 괜찮아요)</p>
+                </div>
+
+                {/* 상위 모드 선택 */}
+                <div className="grid grid-cols-3 gap-2">
+                  {topLevelModes.map((mode) => (
+                    <button
+                      key={mode.id}
+                      className={`p-3 rounded-xl border text-center transition-all duration-200 ${
+                        selectedTopMode === mode.id
+                          ? "border-primary bg-primary/10 shadow-sm"
+                          : "border-border/50 hover:border-primary/40 hover:bg-secondary/30"
+                      } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                      onClick={() => {
+                        if (selectedTopMode === mode.id) {
+                          setSelectedTopMode(null);
+                          setSelectedCounselorType(null);
+                        } else {
+                          setSelectedTopMode(mode.id);
+                          // reaction, listening은 바로 counselorType 설정
+                          if (mode.id === "reaction" || mode.id === "listening") {
+                            setSelectedCounselorType(mode.id as CounselorType);
+                          } else {
+                            setSelectedCounselorType(null);
+                          }
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white"
+                        style={{ backgroundColor: mode.color }}
+                      >
+                        {mode.icon}
+                      </div>
+                      <div className="text-xs font-medium">{mode.label}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{mode.description}</div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* MBTI 선택 시 T/F 하위 선택 */}
+                {selectedTopMode === "mbti" && (
+                  <div className="bg-secondary/30 rounded-xl p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <p className="text-xs text-center text-foreground/80 font-medium">어떤 상담 스타일이 좋으세요?</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {mbtiSubTypes.map((subType) => (
+                        <button
+                          key={subType.id}
+                          className={`p-3 rounded-xl border text-center transition-all duration-200 ${
+                            selectedCounselorType === subType.id
+                              ? "border-primary bg-background shadow-sm"
+                              : "border-border/30 bg-background/50 hover:border-primary/40"
+                          } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                          onClick={() => setSelectedCounselorType(selectedCounselorType === subType.id ? null : subType.id)}
+                          disabled={isLoading}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-full mx-auto mb-1.5 flex items-center justify-center text-white"
+                            style={{ backgroundColor: subType.color }}
+                          >
+                            {subType.icon}
+                          </div>
+                          <div className="text-xs font-medium">{subType.label}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">{subType.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 선택된 모드 표시 */}
+                {selectedCounselorType && (
+                  <div className="flex items-center justify-center gap-2 text-xs text-primary">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    <span>
+                      {selectedCounselorType === "T" && "현실적인 조언 모드로 대화해요"}
+                      {selectedCounselorType === "F" && "따뜻한 위로 모드로 대화해요"}
+                      {selectedCounselorType === "reaction" && "가볍게 리액션하며 대화해요"}
+                      {selectedCounselorType === "listening" && "말없이 들어드릴게요"}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* 카테고리 구분선 */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-border/50" />
+                <span className="text-xs text-muted-foreground">어떤 이야기인가요?</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                 {categories.map((category) => (
                   <button
@@ -711,14 +1191,16 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* 직접 입력 영역 */}
+            <div className="rounded-2xl border border-secondary bg-secondary/30 p-4 space-y-2">
+              <p className="text-xs text-muted-foreground text-center">말하기 어려우면 위에서 선택해도 돼요</p>
               <div className="flex gap-2 sm:gap-3 items-stretch">
                 <input
                   type="text"
                   value={directInput}
                   onChange={(e) => setDirectInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleDirectInputSubmit()}
-                  placeholder="마음이 괜찮다면, 직접 얘기해주셔도 좋아요"
+                  placeholder="직접 얘기해주셔도 좋아요"
                   className="flex-1 px-3 sm:px-4 h-11 sm:h-12 text-sm sm:text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                   disabled={isLoading}
                 />
@@ -730,10 +1212,29 @@ export default function Home() {
                   시작
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                하고 싶은 말이 있으면 편하게 적어주세요
-              </p>
             </div>
+
+            {/* 로딩 팝업 */}
+            {isLoading && (
+              <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <Card className="max-w-sm w-full border-primary/30 bg-card shadow-xl">
+                  <CardHeader className="text-center space-y-4 py-8">
+                    {/* 로딩 애니메이션 - 원형 안에 점 세 개 */}
+                    <div className="w-24 h-24 mx-auto rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center gap-2">
+                      <span className="w-3 h-3 bg-primary rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" style={{ animationDelay: "0ms" }} />
+                      <span className="w-3 h-3 bg-primary rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" style={{ animationDelay: "150ms" }} />
+                      <span className="w-3 h-3 bg-primary rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" style={{ animationDelay: "300ms" }} />
+                    </div>
+                    <CardTitle className="text-lg font-medium text-foreground/90">
+                      경청하려 자세를 고쳐앉는 중...
+                    </CardTitle>
+                    <CardDescription className="text-sm text-muted-foreground">
+                      잠시만 기다려주세요
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -746,7 +1247,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
-            <Logo size="md" />
+            <Logo size="md" onClick={handleNewSession} />
             <div className="flex items-center gap-3">
               {user && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
@@ -762,7 +1263,7 @@ export default function Home() {
                 onClick={handleNewSession}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
               >
-                새 상담
+                처음으로
               </button>
             </div>
           </div>
@@ -789,7 +1290,7 @@ export default function Home() {
                 </div>
               ))}
 
-              {isLoading && (
+              {isLoading && !isLoadingNewOptions && (
                 <div className="flex justify-start">
                   <div className="bg-secondary/50 rounded-2xl px-4 py-3 max-w-[85%]">
                     {streamingContent ? (
@@ -837,8 +1338,9 @@ export default function Home() {
               </div>
             ) : (
               <>
-                {/* 피드백 요청 버튼 - 항상 표시, 2번 대화부터 활성화 */}
-                <div className="pb-3">
+                {/* 선택 영역 */}
+                <div className="rounded-2xl border border-border/50 p-4 space-y-3 bg-card/30">
+                  {/* 피드백 요청 버튼 - 항상 표시, 2번 대화부터 활성화 */}
                   <button
                     onClick={handleRequestFeedback}
                     disabled={isLoading || selectionHistory.length < 2}
@@ -853,32 +1355,42 @@ export default function Home() {
                       </span>
                     </span>
                   </button>
-                </div>
 
-                {/* 옵션 */}
-                <div className="grid gap-3">
-                  {options.map((option, idx) => (
+                  {/* 옵션 */}
+                  <div className="grid gap-2">
+                    {options.map((option, idx) => (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        className="w-full h-auto py-3 text-left justify-start whitespace-normal transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
+                        onClick={() => handleSelectOption(option)}
+                        disabled={isLoading}
+                      >
+                        {option}
+                      </Button>
+                    ))}
+                    {/* 다른 옵션 보기 버튼 */}
                     <Button
-                      key={idx}
                       variant="outline"
-                      className="w-full h-auto py-4 text-left justify-start whitespace-normal transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
-                      onClick={() => handleSelectOption(option)}
+                      className="w-full h-auto py-3 border-secondary bg-secondary/30 text-muted-foreground hover:bg-secondary/50 hover:border-secondary transition-all duration-200"
+                      onClick={handleRequestNewOptions}
                       disabled={isLoading}
                     >
-                      {option}
+                      {isLoadingNewOptions ? "다른 선택지 생각하는 중..." : "다른 옵션 보기"}
                     </Button>
-                  ))}
+                  </div>
                 </div>
 
                 {/* 직접 입력 */}
-                <div className="space-y-2">
+                <div className="rounded-2xl border border-secondary bg-secondary/30 p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground text-center">말하기 어려우면 위에서 선택해도 돼요</p>
                   <div className="flex gap-3 items-stretch">
                     <input
                       type="text"
                       value={supplementInput}
                       onChange={(e) => setSupplementInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
-                      placeholder="마음이 괜찮다면, 직접 얘기해주셔도 좋아요"
+                      placeholder="직접 얘기해주셔도 좋아요"
                       className="flex-1 px-4 h-12 text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                       disabled={isLoading}
                     />
@@ -890,9 +1402,6 @@ export default function Home() {
                       전송
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground text-center">
-                    말하기 어려우면 버튼만 눌러도 돼요
-                  </p>
                 </div>
               </>
             )}
@@ -910,7 +1419,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
-            <Logo size="md" />
+            <Logo size="md" onClick={handleNewSession} />
             <div className="flex items-center gap-3">
               {user && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
@@ -926,7 +1435,7 @@ export default function Home() {
                 onClick={handleNewSession}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
               >
-                새 상담
+                처음으로
               </button>
             </div>
           </div>
@@ -987,7 +1496,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/10">
         <header className="border-b border-border/50 p-4 bg-background/80 backdrop-blur-sm">
           <div className="flex justify-between items-center">
-            <Logo size="sm" />
+            <Logo size="sm" onClick={handleNewSession} />
             <div className="flex items-center gap-3">
               {user && (
                 <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-secondary/50">
@@ -998,6 +1507,41 @@ export default function Home() {
                     {user.name || user.email.split('@')[0]}
                   </span>
                 </div>
+              )}
+              {user && !isSaved && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSaveModal(true)}
+                  className="text-primary"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  저장
+                </Button>
+              )}
+              {isSaved && (
+                <span className="text-xs text-primary flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  저장됨
+                </span>
+              )}
+              {!user && (
+                <button
+                  onClick={() => {
+                    saveSessionState();
+                    login();
+                  }}
+                  className="text-xs text-primary/80 hover:text-primary flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  로그인하고 저장
+                </button>
               )}
               <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
                 여기까지
@@ -1061,6 +1605,78 @@ export default function Home() {
         </div>
         <LimitErrorModal />
         <LoginPromptModal />
+
+        {/* 저장 모달 */}
+        {showSaveModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="max-w-md w-full border-primary/30 bg-card">
+              <CardHeader className="space-y-4">
+                <CardTitle className="text-lg text-center">상담 저장하기</CardTitle>
+                <CardDescription className="text-center">
+                  저장 방식을 선택해주세요
+                </CardDescription>
+
+                <div className="space-y-3 pt-2">
+                  <button
+                    onClick={() => setSaveType("category")}
+                    className={`w-full p-4 rounded-xl border text-left transition-all ${
+                      saveType === "category"
+                        ? "border-primary bg-primary/10"
+                        : "border-border/50 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-medium">카테고리별 저장</div>
+                    <div className="text-sm text-muted-foreground">자동으로 카테고리에 분류됩니다</div>
+                  </button>
+
+                  <button
+                    onClick={() => setSaveType("custom")}
+                    className={`w-full p-4 rounded-xl border text-left transition-all ${
+                      saveType === "custom"
+                        ? "border-primary bg-primary/10"
+                        : "border-border/50 hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-medium">나만의 상담</div>
+                    <div className="text-sm text-muted-foreground">직접 이름을 지정해서 저장합니다</div>
+                  </button>
+
+                  {saveType === "custom" && (
+                    <input
+                      type="text"
+                      value={customSaveName}
+                      onChange={(e) => setCustomSaveName(e.target.value)}
+                      placeholder="상담 이름을 입력하세요"
+                      className="w-full px-4 py-3 rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      autoFocus
+                    />
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowSaveModal(false);
+                      setSaveType(null);
+                      setCustomSaveName("");
+                    }}
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSaveSession}
+                    disabled={isSaving || !saveType || (saveType === "custom" && !customSaveName.trim())}
+                  >
+                    {isSaving ? "저장 중..." : "저장하기"}
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+          </div>
+        )}
       </main>
     );
   }
@@ -1071,7 +1687,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
-            <Logo size="md" />
+            <Logo size="md" onClick={handleNewSession} />
             {user && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
                 <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
@@ -1101,9 +1717,116 @@ export default function Home() {
               </CardHeader>
             </Card>
 
+            {/* 저장하기 버튼 */}
+            {!isSaved ? (
+              <div className="space-y-3">
+                {user ? (
+                  <Button
+                    variant="outline"
+                    className="w-full border-primary/50 text-primary hover:bg-primary/10"
+                    onClick={() => setShowSaveModal(true)}
+                  >
+                    이번 상담 저장하기
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full border-primary/50 text-primary hover:bg-primary/10"
+                    onClick={() => {
+                      setShowLoginPrompt(true);
+                    }}
+                  >
+                    로그인하고 상담 저장하기
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center text-sm text-primary flex items-center justify-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                저장되었습니다
+              </div>
+            )}
+
             <Button className="w-full transition-all" onClick={handleNewSession}>
               다시 이야기하기
             </Button>
+
+            {/* 저장 모달 */}
+            {showSaveModal && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <Card className="max-w-md w-full border-primary/30 bg-card">
+                  <CardHeader className="space-y-4">
+                    <CardTitle className="text-lg text-center">상담 저장하기</CardTitle>
+                    <CardDescription className="text-center">
+                      저장 방식을 선택해주세요
+                    </CardDescription>
+
+                    <div className="space-y-3 pt-2">
+                      {/* 카테고리별 저장 */}
+                      <button
+                        onClick={() => setSaveType("category")}
+                        className={`w-full p-4 rounded-xl border text-left transition-all ${
+                          saveType === "category"
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="font-medium">카테고리별 저장</div>
+                        <div className="text-sm text-muted-foreground">자동으로 카테고리에 분류됩니다</div>
+                      </button>
+
+                      {/* 나만의 상담 */}
+                      <button
+                        onClick={() => setSaveType("custom")}
+                        className={`w-full p-4 rounded-xl border text-left transition-all ${
+                          saveType === "custom"
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="font-medium">나만의 상담</div>
+                        <div className="text-sm text-muted-foreground">직접 이름을 지정해서 저장합니다</div>
+                      </button>
+
+                      {/* 나만의 상담 이름 입력 */}
+                      {saveType === "custom" && (
+                        <input
+                          type="text"
+                          value={customSaveName}
+                          onChange={(e) => setCustomSaveName(e.target.value)}
+                          placeholder="상담 이름을 입력하세요"
+                          className="w-full px-4 py-3 rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          autoFocus
+                        />
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="ghost"
+                        className="flex-1"
+                        onClick={() => {
+                          setShowSaveModal(false);
+                          setSaveType(null);
+                          setCustomSaveName("");
+                        }}
+                      >
+                        취소
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={handleSaveSession}
+                        disabled={isSaving || !saveType || (saveType === "custom" && !customSaveName.trim())}
+                      >
+                        {isSaving ? "저장 중..." : "저장하기"}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                </Card>
+              </div>
+            )}
           </div>
         </div>
       </main>
