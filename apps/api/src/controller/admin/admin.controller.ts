@@ -12,20 +12,29 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
 import { AdminService } from '../../app/admin/admin.service';
-
-// 관리자 이메일 목록 (환경변수로 관리하는 것이 좋음)
-const ADMIN_EMAILS = ['xoghksdla@gmail.com'];
 
 @ApiTags('admin')
 @ApiBearerAuth()
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'))
 export class AdminController {
-  constructor(private adminService: AdminService) {}
+  private adminEmails: string[];
+
+  constructor(
+    private adminService: AdminService,
+    private configService: ConfigService,
+  ) {
+    // 환경변수에서 관리자 이메일 목록 로드 (콤마로 구분)
+    const adminEmailsEnv = this.configService.get<string>('ADMIN_EMAILS');
+    this.adminEmails = adminEmailsEnv
+      ? adminEmailsEnv.split(',').map((e) => e.trim())
+      : ['xoghksdla@gmail.com']; // 기본값
+  }
 
   private checkAdmin(email: string) {
-    if (!ADMIN_EMAILS.includes(email)) {
+    if (!this.adminEmails.includes(email)) {
       throw new ForbiddenException('관리자 권한이 필요합니다.');
     }
   }

@@ -2,17 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 import { getAdminDashboard, getAdminUsers, DashboardStats, AdminUser } from "../../lib/api";
 
 export default function AdminPage() {
   const router = useRouter();
+  const { token, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    // auth 로딩 중이면 대기
+    if (authLoading) return;
+
     if (!token) {
       router.push("/");
       return;
@@ -20,15 +24,15 @@ export default function AdminPage() {
 
     async function loadData() {
       try {
-        const token = localStorage.getItem("token")!;
         const [dashboardData, usersData] = await Promise.all([
-          getAdminDashboard(token),
-          getAdminUsers(token),
+          getAdminDashboard(token!),
+          getAdminUsers(token!),
         ]);
         setStats(dashboardData);
         setUsers(usersData.users);
       } catch (err: unknown) {
-        if (err instanceof Error && err.message.includes("403")) {
+        console.error("Admin load error:", err);
+        if (err instanceof Error && (err.message.includes("403") || err.message.includes("Forbidden"))) {
           setError("관리자 권한이 필요합니다.");
         } else {
           setError("데이터를 불러오는데 실패했습니다.");
@@ -39,9 +43,9 @@ export default function AdminPage() {
     }
 
     loadData();
-  }, [router]);
+  }, [token, authLoading, router]);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-white text-lg">로딩 중...</div>
