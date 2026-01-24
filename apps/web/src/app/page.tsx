@@ -910,46 +910,68 @@ export default function Home() {
     if (!notebookLimitError) return null;
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-        <Card className="max-w-md w-full border-primary/30 bg-card">
-          <CardHeader className="space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center">
-              <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
+        <Card className="max-w-md w-full border-amber-200 bg-card overflow-hidden">
+          {/* 상단 일러스트 영역 */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center">
+            <div className="w-20 h-20 mx-auto mb-3 relative">
+              {/* 공책 아이콘 */}
+              <div className="absolute inset-0 bg-amber-100 rounded-lg transform rotate-3"></div>
+              <div className="absolute inset-0 bg-amber-200 rounded-lg transform -rotate-3"></div>
+              <div className="absolute inset-0 bg-white rounded-lg border-2 border-amber-300 flex items-center justify-center">
+                <svg className="w-10 h-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
             </div>
-            <CardTitle className="text-lg text-center">
-              상담 일지를 적을 공책이 가득 찼어요
-            </CardTitle>
-            <CardDescription className="text-center text-foreground/70">
-              현재 {notebookLimitError.sessionCount}개의 상담 기록이 있어요.<br />
-              새 상담을 시작하려면 기존 기록을 정리하거나,<br />
-              매달 새 공책을 받아보시겠어요?
+            <h3 className="text-lg font-semibold text-amber-900">
+              공책이 가득 찼어요
+            </h3>
+            <p className="text-sm text-amber-700 mt-1">
+              현재 {notebookLimitError.sessionCount}개의 상담 기록
+            </p>
+          </div>
+
+          <CardHeader className="space-y-4 pt-4">
+            <CardDescription className="text-center text-foreground/80">
+              매달 새 공책을 받아보시겠어요?<br />
+              <span className="text-muted-foreground text-sm">모든 대화를 기억하고, 무제한으로 상담할 수 있어요</span>
             </CardDescription>
+
+            {/* 가격 표시 */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 text-center border border-amber-100">
+              <div className="flex items-baseline justify-center gap-1">
+                <span className="text-3xl font-bold text-amber-600">5,000</span>
+                <span className="text-amber-600">원</span>
+                <span className="text-muted-foreground text-sm">/월</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">커피 한 잔 값으로 마음 돌봄</p>
+            </div>
+
             <div className="flex flex-col gap-2 pt-2">
               <Button
-                className="w-full bg-amber-500 hover:bg-amber-600"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium"
                 onClick={() => {
                   setNotebookLimitError(null);
-                  // TODO: 구독 페이지로 이동
-                  alert("구독 기능은 준비 중이에요!");
+                  // TODO: 토스페이먼츠 결제 연동
+                  alert("결제 기능을 준비하고 있어요! 조금만 기다려주세요 🙏");
                 }}
               >
-                📔 새 공책 구독하기
+                구독 시작하기
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                className="w-full border-amber-200 hover:bg-amber-50"
                 onClick={() => {
                   setNotebookLimitError(null);
                   // TODO: 세션 관리 페이지로 이동
-                  alert("세션 관리 기능은 준비 중이에요!");
+                  alert("기록 관리 기능을 준비하고 있어요!");
                 }}
               >
                 기존 기록 정리하기
               </Button>
               <Button
                 variant="ghost"
-                className="w-full text-muted-foreground"
+                className="w-full text-muted-foreground text-sm"
                 onClick={() => setNotebookLimitError(null)}
               >
                 나중에 할게요

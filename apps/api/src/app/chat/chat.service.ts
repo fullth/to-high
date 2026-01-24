@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
+import { UserRepository } from '../../persistence/user/user.repository';
 import { UserProfileRepository } from '../../persistence/user-profile/user-profile.repository';
 import { RESPONSE_MODE_OPTIONS } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
@@ -21,6 +22,7 @@ export class ChatService {
   constructor(
     private sessionService: SessionService,
     private sessionRepository: SessionRepository,
+    private userRepository: UserRepository,
     private userProfileRepository: UserProfileRepository,
     private openaiAgent: OpenAIAgent,
   ) {}
@@ -52,14 +54,21 @@ export class ChatService {
 
     // 무료 사용자 세션 제한 체크
     if (userId !== 'anonymous') {
-      const sessionCount = await this.sessionRepository.countUserSessions(userId);
-      if (sessionCount >= FREE_USER_SESSION_LIMIT) {
-        throw new ForbiddenException({
-          code: 'SESSION_LIMIT_EXCEEDED',
-          message: '상담 일지를 적을 공책이 가득 찼어요.',
-          sessionCount,
-          limit: FREE_USER_SESSION_LIMIT,
-        });
+      const user = await this.userRepository.findById(userId);
+
+      // 구독자 또는 레거시 사용자는 제한 없음
+      const isExempt = user?.isSubscribed || user?.isGrandfathered;
+
+      if (!isExempt) {
+        const sessionCount = await this.sessionRepository.countUserSessions(userId);
+        if (sessionCount >= FREE_USER_SESSION_LIMIT) {
+          throw new ForbiddenException({
+            code: 'SESSION_LIMIT_EXCEEDED',
+            message: '상담 일지를 적을 공책이 가득 찼어요.',
+            sessionCount,
+            limit: FREE_USER_SESSION_LIMIT,
+          });
+        }
       }
     }
 
