@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/auth-context";
 import {
   startSession,
   startSessionWithText,
+  summarizeText,
+  startSessionWithImportSummary,
   selectOption,
   setResponseModeStream,
   sendMessageStream,
@@ -16,6 +18,7 @@ import {
   saveSession,
   getSavedSessions,
   updateSessionAlias,
+  deleteSession,
   SelectOptionResponse,
   SessionListItem,
   SavedSessionItem,
@@ -169,7 +172,7 @@ const categories = [
 ];
 
 type HistoryItem = {
-  type: "user" | "assistant";
+  type: "user" | "assistant" | "system";
   content: string;
   isQuestion?: boolean;
 };
@@ -245,6 +248,15 @@ export default function Home() {
     message: string;
     lastInput: string;
   } | null>(null);
+
+  // 이전 상담 불러오기 상태
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importStep, setImportStep] = useState<"category" | "text" | "summary">("category");
+  const [importCategory, setImportCategory] = useState<string | null>(null);
+  const [importText, setImportText] = useState("");
+  const [importSummary, setImportSummary] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // 공책(세션) 제한 초과 상태
   const [notebookLimitError, setNotebookLimitError] = useState<{
@@ -425,7 +437,7 @@ export default function Home() {
     if (!directInput.trim()) return;
     setIsLoading(true);
     try {
-      const res = await startSessionWithText(directInput.trim(), token || undefined, selectedCounselorType || undefined);
+      const res = await startSessionWithText(directInput.trim(), undefined, token || undefined, selectedCounselorType || undefined);
       setSessionId(res.sessionId);
       setQuestion(res.question);
       setOptions(res.options);
@@ -577,11 +589,13 @@ export default function Home() {
           content += chunk;
           setStreamingContent(content);
         });
-        // 기존 대화 내역을 채팅 메시지로 변환하고 AI 응답 추가
-        const previousMessages: ChatMessage[] = selectionHistory.map(item => ({
-          role: item.type === "user" ? "user" : "assistant",
-          content: item.content,
-        }));
+        // 기존 대화 내역을 채팅 메시지로 변환하고 AI 응답 추가 (system 메시지 제외)
+        const previousMessages: ChatMessage[] = selectionHistory
+          .filter(item => item.type !== "system")
+          .map(item => ({
+            role: item.type === "user" ? "user" : "assistant",
+            content: item.content,
+          }));
         // AI 응답 추가
         previousMessages.push({ role: "assistant", content });
         setMessages(previousMessages);
@@ -629,11 +643,13 @@ export default function Home() {
         content += chunk;
         setStreamingContent(content);
       });
-      // 기존 대화 내역을 채팅 메시지로 변환하고 AI 응답 추가
-      const previousMessages: ChatMessage[] = selectionHistory.map(item => ({
-        role: item.type === "user" ? "user" : "assistant",
-        content: item.content,
-      }));
+      // 기존 대화 내역을 채팅 메시지로 변환하고 AI 응답 추가 (system 메시지 제외)
+      const previousMessages: ChatMessage[] = selectionHistory
+        .filter(item => item.type !== "system")
+        .map(item => ({
+          role: item.type === "user" ? "user" : "assistant",
+          content: item.content,
+        }));
       // 모드 선택도 추가
       previousMessages.push({ role: "user", content: modeLabel });
       // AI 응답 추가
@@ -780,11 +796,15 @@ export default function Home() {
 
       const historyItems: HistoryItem[] = [];
 
-      // 이전 대화 요약 표시
-      if (res.rollingSummary) {
+      // 세션 요약 카드 표시 (summary 또는 rollingSummary)
+      const summaryText = res.summary || res.rollingSummary;
+      if (summaryText) {
+        const categoryInfo = categories.find(c => c.id === res.category);
+        const categoryLabel = categoryInfo?.label || (res.category === 'direct' ? '직접 입력' : res.category);
+
         historyItems.push({
-          type: "assistant",
-          content: `지난번 대화를 기억하고 있어요. ${res.rollingSummary}`,
+          type: "system",
+          content: `📋 이전 상담 요약\n\n💭 주제: ${categoryLabel}\n📝 ${summaryText}\n🔄 대화 ${res.turnCount || 0}회`,
         });
       }
 
@@ -1080,6 +1100,38 @@ export default function Home() {
               </button>
             )}
 
+            {/* 이전 상담 불러오기 버튼 */}
+            <button
+              onClick={() => {
+                if (!user) {
+                  alert('로그인하면 이전 상담 내용을 불러올 수 있어요.');
+                  return;
+                }
+                setShowImportModal(true);
+                setImportStep("category");
+                setImportCategory(null);
+                setImportText("");
+                setImportSummary("");
+                setImportError(null);
+              }}
+              className="w-full rounded-2xl border border-secondary/50 bg-secondary/10 p-4 text-left hover:border-secondary hover:bg-secondary/20 transition-all duration-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-secondary/30 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-foreground/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground/90">다른 곳에서 상담하셨나요?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">이전 상담 내용을 붙여넣으면 맥락을 이해해요</p>
+                </div>
+                <svg className="w-5 h-5 text-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </button>
+
             {/* 이전 상담 이어하기 - 로그인한 사용자에게만 표시 */}
             {user && previousSessions.length > 0 && (
               <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5 space-y-3">
@@ -1102,9 +1154,30 @@ export default function Home() {
                     return (
                       <div
                         key={session.sessionId}
-                        className="w-full p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left"
+                        className="relative w-full p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left"
                       >
-                        <div className="flex items-start gap-3">
+                        {/* 삭제 버튼 - 오른쪽 상단 */}
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm('이 상담을 삭제할까요? 삭제된 상담은 복구할 수 없어요.')) return;
+                            try {
+                              await deleteSession(session.sessionId, token!);
+                              setPreviousSessions(prev => prev.filter(s => s.sessionId !== session.sessionId));
+                            } catch (error) {
+                              console.error('Delete session failed:', error);
+                              alert('삭제에 실패했어요. 다시 시도해주세요.');
+                            }
+                          }}
+                          className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground/50 hover:text-red-500 transition-colors"
+                          title="삭제"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+
+                        <div className="flex items-start gap-3 pr-6">
                           <button
                             onClick={() => handleResumeSession(session.sessionId)}
                             disabled={isLoading || isEditing}
@@ -1169,8 +1242,11 @@ export default function Home() {
                               <p className="text-xs text-muted-foreground truncate mt-0.5">
                                 {session.summary || '대화를 이어가보세요'}
                               </p>
-                              <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
                             </button>
+                          </div>
+                          {/* 마지막 상담일 - 오른쪽 */}
+                          <div className="text-right shrink-0">
+                            <p className="text-[10px] text-muted-foreground/70">{timeAgo}</p>
                           </div>
                         </div>
                       </div>
@@ -1213,33 +1289,57 @@ export default function Home() {
                     const timeAgo = getTimeAgo(date);
 
                     return (
-                      <button
+                      <div
                         key={session.sessionId}
-                        onClick={() => handleResumeSession(session.sessionId)}
-                        disabled={isLoading}
-                        className="w-full p-3 rounded-xl border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
+                        className="relative group"
                       >
-                        <div className="flex items-start gap-3">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
-                            style={{ backgroundColor: categoryInfo.color }}
-                          >
-                            {session.savedName ? '📝' : categoryInfo.label.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium truncate">
-                                {session.savedName || categoryInfo.label}
-                              </span>
-                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-secondary text-muted-foreground">저장됨</span>
+                        <button
+                          onClick={() => handleResumeSession(session.sessionId)}
+                          disabled={isLoading}
+                          className="w-full p-3 rounded-xl border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
+                              style={{ backgroundColor: categoryInfo.color }}
+                            >
+                              {session.savedName ? '📝' : categoryInfo.label.charAt(0)}
                             </div>
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">
-                              {session.summary || '저장된 상담'}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
+                            <div className="flex-1 min-w-0 pr-6">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium truncate">
+                                  {session.savedName || categoryInfo.label}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-secondary text-muted-foreground">저장됨</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                {session.summary || '저장된 상담'}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground/70 mt-1">{timeAgo}</p>
+                            </div>
                           </div>
-                        </div>
-                      </button>
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm('이 상담을 삭제할까요? 삭제된 상담은 복구할 수 없어요.')) return;
+                            try {
+                              await deleteSession(session.sessionId, token!);
+                              setSavedSessions(prev => prev.filter(s => s.sessionId !== session.sessionId));
+                            } catch (error) {
+                              console.error('Delete session failed:', error);
+                              alert('삭제에 실패했어요. 다시 시도해주세요.');
+                            }
+                          }}
+                          disabled={isLoading}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200"
+                          title="삭제"
+                        >
+                          <svg className="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -1412,6 +1512,258 @@ export default function Home() {
           </div>
         </div>
         <NotebookLimitModal />
+
+        {/* 이전 상담 불러오기 모달 */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <Card className="max-w-md w-full border-primary/30 bg-card shadow-xl max-h-[90vh] overflow-auto">
+              <CardHeader className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-medium text-foreground/90">
+                    {importStep === "category" ? "어떤 주제의 상담이었나요?" :
+                     importStep === "text" ? "이전 상담 내용 붙여넣기" :
+                     "요약 확인 및 수정"}
+                  </CardTitle>
+                  <button
+                    onClick={() => setShowImportModal(false)}
+                    className="p-1 rounded-full hover:bg-secondary/50 transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {importStep === "category" ? (
+                  <>
+                    <CardDescription className="text-sm text-muted-foreground">
+                      카테고리를 선택하면 맥락을 더 잘 이해할 수 있어요
+                    </CardDescription>
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      {categories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setImportCategory(cat.id);
+                            setImportStep("text");
+                          }}
+                          className="p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                              style={{ backgroundColor: cat.color }}
+                            >
+                              {cat.icon}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{cat.label}</p>
+                              <p className="text-xs text-muted-foreground">{cat.description}</p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : importStep === "text" ? (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <button
+                        onClick={() => setImportStep("category")}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        &larr; 카테고리 변경
+                      </button>
+                      <span>|</span>
+                      <span>
+                        {categories.find(c => c.id === importCategory)?.label || "선택됨"}
+                      </span>
+                    </div>
+                    <CardDescription className="text-sm text-muted-foreground">
+                      ChatGPT 등에서 나눈 상담 내용을 복사해서 붙여넣어 주세요. (최대 10만자)
+                    </CardDescription>
+                    <textarea
+                      value={importText}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length > 100000) {
+                          setImportText(value.slice(0, 100000));
+                          setImportError("10만자를 초과하여 뒷부분이 잘렸어요");
+                        } else {
+                          setImportText(value);
+                          setImportError(null);
+                        }
+                      }}
+                      placeholder="이전 상담 내용을 붙여넣어 주세요...
+
+예시:
+- ChatGPT와 나눈 대화
+- 노트에 적어둔 고민
+- 일기나 메모 등"
+                      className="w-full h-48 p-3 text-sm rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all resize-none"
+                      disabled={isImporting}
+                    />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{importText.length.toLocaleString()} / 100,000자</span>
+                      {importText.length > 90000 && (
+                        <span className="text-amber-500">거의 다 찼어요</span>
+                      )}
+                    </div>
+                    {/* 안심 문구 */}
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/30 border border-secondary/50">
+                      <svg className="w-4 h-4 text-primary/70 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <div className="text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground/80">안심하세요</p>
+                        <p className="mt-0.5">입력하신 내용은 암호화되어 안전하게 전송되며, 핵심 내용만 요약되어 상담에 활용됩니다. 원본 텍스트는 저장되지 않아요.</p>
+                      </div>
+                    </div>
+                    {importError && (
+                      <p className="text-sm text-red-500">{importError}</p>
+                    )}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setShowImportModal(false)}
+                        disabled={isImporting}
+                      >
+                        취소
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={async () => {
+                          if (!importText.trim()) {
+                            setImportError("내용을 입력해주세요");
+                            return;
+                          }
+                          if (importText.length < 50) {
+                            setImportError("최소 50자 이상 입력해주세요");
+                            return;
+                          }
+                          setIsImporting(true);
+                          setImportError(null);
+                          try {
+                            const result = await summarizeText(importText, token || undefined);
+                            setImportSummary(result.summary);
+                            setImportStep("summary");
+                          } catch (error) {
+                            console.error("Summarize failed:", error);
+                            setImportError("상담 내용을 분석하는 중 오류가 발생했어요. 다시 시도해주세요.");
+                          } finally {
+                            setIsImporting(false);
+                          }
+                        }}
+                        disabled={isImporting || !importText.trim()}
+                      >
+                        {isImporting ? (
+                          <span className="flex items-center gap-2">
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            분석 중...
+                          </span>
+                        ) : (
+                          "내용 분석하기"
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <button
+                        onClick={() => setImportStep("text")}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        &larr; 원문으로 돌아가기
+                      </button>
+                      <span>|</span>
+                      <span>
+                        {categories.find(c => c.id === importCategory)?.label || "선택됨"}
+                      </span>
+                    </div>
+                    <CardDescription className="text-sm text-muted-foreground">
+                      AI가 핵심 내용을 요약했어요. 필요하면 수정해주세요.
+                    </CardDescription>
+                    <textarea
+                      value={importSummary}
+                      onChange={(e) => setImportSummary(e.target.value)}
+                      className="w-full h-48 p-3 text-sm rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all resize-none"
+                      disabled={isImporting}
+                    />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{importSummary.length.toLocaleString()}자</span>
+                    </div>
+                    {importError && (
+                      <p className="text-sm text-red-500">{importError}</p>
+                    )}
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setShowImportModal(false)}
+                        disabled={isImporting}
+                      >
+                        취소
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={async () => {
+                          if (!importSummary.trim()) {
+                            setImportError("요약 내용을 입력해주세요");
+                            return;
+                          }
+                          setIsImporting(true);
+                          setImportError(null);
+                          try {
+                            const result = await startSessionWithImportSummary(
+                              importSummary,
+                              importCategory || undefined,
+                              token || undefined
+                            );
+                            setSessionId(result.sessionId);
+                            setQuestion(result.question);
+                            setOptions(result.options);
+                            setPhase("selecting");
+                            setSelectionHistory([
+                              { type: "assistant", content: result.question, isQuestion: true },
+                            ]);
+                            setShowImportModal(false);
+                            setImportText("");
+                            setImportSummary("");
+                            setImportCategory(null);
+                            setImportStep("category");
+                          } catch (error) {
+                            console.error("Import failed:", error);
+                            setImportError("상담을 시작하는 중 오류가 발생했어요. 다시 시도해주세요.");
+                          } finally {
+                            setIsImporting(false);
+                          }
+                        }}
+                        disabled={isImporting || !importSummary.trim()}
+                      >
+                        {isImporting ? (
+                          <span className="flex items-center gap-2">
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            시작 중...
+                          </span>
+                        ) : (
+                          "상담 시작하기"
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </CardHeader>
+            </Card>
+          </div>
+        )}
       </main>
     );
   }
@@ -1444,25 +1796,191 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="max-w-lg w-full space-y-6">
+        <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-hidden relative">
+          {/* 왼쪽 사이드바 - 이전 상담 목록 (로그인한 사용자만) - 절대 위치 */}
+          {user && (previousSessions.length > 0 || savedSessions.length > 0) && (
+            <aside className="w-full lg:w-80 lg:absolute lg:left-6 lg:top-6 lg:z-10 space-y-4 overflow-auto lg:max-h-[calc(100vh-120px)] mb-4 lg:mb-0">
+              {/* 이전 상담 이어하기 */}
+              {previousSessions.length > 0 && (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-foreground/90 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      이전 상담 이어하기
+                    </p>
+                    <span className="text-xs text-muted-foreground">{previousSessions.length}개</span>
+                  </div>
+                  <div className="space-y-2 max-h-[200px] overflow-auto">
+                    {previousSessions.map((session) => {
+                      const categoryInfo = categories.find(c => c.id === session.category) || {
+                        label: session.category === 'direct' ? '직접 입력' : session.category,
+                        color: '#8B9BAA',
+                      };
+                      const isActive = session.status === 'active';
+                      const displayName = session.alias || (session.category === 'direct' ? '직접 입력' : categoryInfo.label);
+                      const date = new Date(session.updatedAt);
+                      const timeAgo = getTimeAgo(date);
+
+                      return (
+                        <div
+                          key={session.sessionId}
+                          className="relative w-full p-3 rounded-xl border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200"
+                        >
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (!confirm('이 상담을 삭제할까요? 삭제된 상담은 복구할 수 없어요.')) return;
+                              try {
+                                await deleteSession(session.sessionId, token!);
+                                setPreviousSessions(prev => prev.filter(s => s.sessionId !== session.sessionId));
+                              } catch (error) {
+                                console.error('Delete session failed:', error);
+                                alert('삭제에 실패했어요. 다시 시도해주세요.');
+                              }
+                            }}
+                            className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground hover:text-red-500 transition-all duration-200"
+                            title="삭제"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleResumeSession(session.sessionId)}
+                            disabled={isLoading}
+                            className="w-full text-left"
+                          >
+                            <div className="flex items-start gap-2 pr-6">
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
+                                style={{ backgroundColor: categoryInfo.color }}
+                              >
+                                {categoryInfo.label.charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm font-medium truncate">{displayName}</span>
+                                  {isActive && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary">진행중</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                  {session.summary || '대화를 이어가보세요'}
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-[10px] text-muted-foreground/70">{timeAgo}</p>
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 저장된 상담 */}
+              {savedSessions.length > 0 && (
+                <div className="rounded-2xl border border-secondary/50 bg-secondary/10 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-foreground/90 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      저장된 상담
+                    </p>
+                    <span className="text-xs text-muted-foreground">{savedSessions.length}개</span>
+                  </div>
+                  <div className="space-y-2 max-h-[200px] overflow-auto">
+                    {savedSessions.slice(0, 5).map((session) => {
+                      const categoryInfo = categories.find(c => c.id === session.category) || {
+                        label: session.category === 'direct' ? '직접 입력' : session.category,
+                        color: '#8B9BAA',
+                      };
+                      const date = new Date(session.savedAt);
+                      const timeAgo = getTimeAgo(date);
+
+                      return (
+                        <button
+                          key={session.sessionId}
+                          onClick={() => handleResumeSession(session.sessionId)}
+                          disabled={isLoading}
+                          className="w-full p-3 rounded-xl border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left"
+                        >
+                          <div className="flex items-start gap-2">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
+                              style={{ backgroundColor: categoryInfo.color }}
+                            >
+                              {session.savedName ? '📝' : categoryInfo.label.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm font-medium truncate">
+                                  {session.savedName || categoryInfo.label}
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-secondary text-muted-foreground">저장됨</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                {session.summary || '저장된 상담'}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-[10px] text-muted-foreground/70">{timeAgo}</p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 다른 주제 상담하기 버튼 */}
+              <button
+                onClick={handleNewSession}
+                className="w-full p-3 rounded-xl border-2 border-dashed border-primary/30 text-primary/80 text-sm font-medium transition-all duration-200 hover:border-primary/50 hover:bg-primary/5"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  다른 주제로 상담하기
+                </span>
+              </button>
+            </aside>
+          )}
+
+          {/* 메인 영역 - 대화 (항상 가운데 정렬) */}
+          <div className="flex-1 grid place-items-center overflow-auto">
+            <div className="max-w-lg w-full space-y-6 mx-auto">
             {/* 대화 히스토리 */}
             <div className="space-y-4 max-h-[40vh] overflow-auto">
               {selectionHistory.map((item, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${item.type === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                      item.type === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary/50 text-foreground/90"
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{item.content}</p>
+                item.type === "system" ? (
+                  // 시스템 메시지 (이전 상담 요약 카드)
+                  <div key={idx} className="flex justify-center">
+                    <div className="w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/10 px-4 py-4 shadow-sm">
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">{item.content}</p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div
+                    key={idx}
+                    className={`flex ${item.type === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                        item.type === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary/50 text-foreground/90"
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{item.content}</p>
+                    </div>
+                  </div>
+                )
               ))}
 
               {isLoading && !isLoadingNewOptions && (
@@ -1580,6 +2098,7 @@ export default function Home() {
                 </div>
               </>
             )}
+          </div>
           </div>
         </div>
         <LimitErrorModal />
@@ -1726,57 +2245,189 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 space-y-4">
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary/50 text-foreground/90"
-                }`}
-              >
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-              </div>
-            </div>
-          ))}
-          {isLoading && streamingContent && (
-            <div className="flex justify-start">
-              <div className="bg-secondary/50 rounded-2xl px-4 py-3 max-w-[80%]">
-                <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">
-                  {streamingContent}
-                  <span className="animate-pulse">▋</span>
-                </p>
-              </div>
-            </div>
-          )}
-          {isLoading && !streamingContent && (
-            <div className="flex justify-start">
-              <div className="bg-secondary/50 rounded-2xl px-4 py-3">
-                <p className="text-sm text-muted-foreground">귀 기울여 듣는 중...</p>
-              </div>
-            </div>
-          )}
-          <div ref={chatEndRef} />
-        </div>
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          {/* 왼쪽 사이드바 - 이전 상담 목록 (로그인한 사용자만) */}
+          {user && (previousSessions.length > 0 || savedSessions.length > 0) && (
+            <aside className="hidden lg:block w-72 shrink-0 border-r border-border/30 overflow-auto p-4 space-y-4">
+              {/* 이전 상담 이어하기 */}
+              {previousSessions.length > 0 && (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-foreground/90 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      이전 상담
+                    </p>
+                    <span className="text-[10px] text-muted-foreground">{previousSessions.length}개</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[180px] overflow-auto">
+                    {previousSessions.map((session) => {
+                      const categoryInfo = categories.find(c => c.id === session.category) || {
+                        label: session.category === 'direct' ? '직접 입력' : session.category,
+                        color: '#8B9BAA',
+                      };
+                      const isActive = session.status === 'active';
+                      const isCurrent = session.sessionId === sessionId;
+                      const displayName = session.alias || (session.category === 'direct' ? '직접 입력' : categoryInfo.label);
 
-        <div className="border-t border-border/50 p-4 bg-background/80 backdrop-blur-sm">
-          <div className="flex gap-2 max-w-2xl mx-auto">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-              placeholder="메시지를 입력하세요..."
-              className="flex-1 px-4 py-2 border border-border/50 rounded-full bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
-              disabled={isLoading}
-            />
-            <Button onClick={handleSendMessage} disabled={isLoading || !inputMessage.trim()}>
-              전송
-            </Button>
+                      return (
+                        <button
+                          key={session.sessionId}
+                          onClick={() => !isCurrent && handleResumeSession(session.sessionId)}
+                          disabled={isLoading || isCurrent}
+                          className={`w-full p-2 rounded-lg text-left transition-all duration-200 ${
+                            isCurrent
+                              ? 'bg-primary/20 border border-primary/40'
+                              : 'border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white text-[10px]"
+                              style={{ backgroundColor: categoryInfo.color }}
+                            >
+                              {categoryInfo.label.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs font-medium truncate">{displayName}</span>
+                                {isActive && !isCurrent && (
+                                  <span className="px-1 py-0.5 rounded text-[8px] bg-primary/20 text-primary">진행중</span>
+                                )}
+                                {isCurrent && (
+                                  <span className="px-1 py-0.5 rounded text-[8px] bg-primary text-primary-foreground">현재</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {session.summary || '대화를 이어가보세요'}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 저장된 상담 */}
+              {savedSessions.length > 0 && (
+                <div className="rounded-2xl border border-secondary/50 bg-secondary/10 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-medium text-foreground/90 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      저장된 상담
+                    </p>
+                    <span className="text-[10px] text-muted-foreground">{savedSessions.length}개</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[180px] overflow-auto">
+                    {savedSessions.slice(0, 5).map((session) => {
+                      const categoryInfo = categories.find(c => c.id === session.category) || {
+                        label: session.category === 'direct' ? '직접 입력' : session.category,
+                        color: '#8B9BAA',
+                      };
+
+                      return (
+                        <button
+                          key={session.sessionId}
+                          onClick={() => handleResumeSession(session.sessionId)}
+                          disabled={isLoading}
+                          className="w-full p-2 rounded-lg border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white text-[10px]"
+                              style={{ backgroundColor: categoryInfo.color }}
+                            >
+                              {session.savedName ? '📝' : categoryInfo.label.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs font-medium truncate block">
+                                {session.savedName || categoryInfo.label}
+                              </span>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {session.summary || '저장된 상담'}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 다른 주제 상담하기 */}
+              <button
+                onClick={handleNewSession}
+                className="w-full p-2 rounded-xl border-2 border-dashed border-primary/30 text-primary/80 text-xs font-medium transition-all duration-200 hover:border-primary/50 hover:bg-primary/5"
+              >
+                <span className="flex items-center justify-center gap-1">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  다른 주제로 상담
+                </span>
+              </button>
+            </aside>
+          )}
+
+          {/* 오른쪽 메인 영역 - 채팅 */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-auto p-4 space-y-4">
+              {messages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary/50 text-foreground/90"
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  </div>
+                </div>
+              ))}
+              {isLoading && streamingContent && (
+                <div className="flex justify-start">
+                  <div className="bg-secondary/50 rounded-2xl px-4 py-3 max-w-[80%]">
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">
+                      {streamingContent}
+                      <span className="animate-pulse">▋</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              {isLoading && !streamingContent && (
+                <div className="flex justify-start">
+                  <div className="bg-secondary/50 rounded-2xl px-4 py-3">
+                    <p className="text-sm text-muted-foreground">귀 기울여 듣는 중...</p>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            <div className="border-t border-border/50 p-4 bg-background/80 backdrop-blur-sm">
+              <div className="flex gap-2 max-w-2xl mx-auto">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                  placeholder="메시지를 입력하세요..."
+                  className="flex-1 px-4 py-2 border border-border/50 rounded-full bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
+                  disabled={isLoading}
+                />
+                <Button onClick={handleSendMessage} disabled={isLoading || !inputMessage.trim()}>
+                  전송
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
         <LimitErrorModal />

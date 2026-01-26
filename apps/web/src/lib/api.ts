@@ -58,10 +58,42 @@ export function startSession(category: string, token?: string, counselorType?: C
 }
 
 // 직접 입력으로 세션 시작
-export function startSessionWithText(initialText: string, token?: string, counselorType?: CounselorType) {
+export function startSessionWithText(
+  initialText: string,
+  category?: string,
+  token?: string,
+  counselorType?: CounselorType
+) {
   return fetchApi<StartSessionResponse>("/chat/start", {
     method: "POST",
-    body: JSON.stringify({ initialText, counselorType }),
+    body: JSON.stringify({ initialText, category, counselorType }),
+    token,
+  });
+}
+
+// 텍스트 요약 (세션 생성 전 미리보기용)
+export interface SummarizeTextResponse {
+  summary: string;
+}
+
+export function summarizeText(text: string, token?: string) {
+  return fetchApi<SummarizeTextResponse>("/chat/summarize", {
+    method: "POST",
+    body: JSON.stringify({ text }),
+    token,
+  });
+}
+
+// 불러오기 요약으로 세션 시작 (사용자가 확인/수정한 요약 사용)
+export function startSessionWithImportSummary(
+  importSummary: string,
+  category?: string,
+  token?: string,
+  counselorType?: CounselorType
+) {
+  return fetchApi<StartSessionResponse>("/chat/start", {
+    method: "POST",
+    body: JSON.stringify({ importSummary, category, counselorType }),
     token,
   });
 }
@@ -410,4 +442,72 @@ export interface AdminUser {
 
 export function getAdminUsers(token: string) {
   return fetchApi<{ users: AdminUser[] }>("/admin/users", { token });
+}
+
+// Admin 세션 관련 API
+export interface AdminSession {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  category: string;
+  status: "active" | "completed";
+  summary?: string;
+  turnCount: number;
+  counselorType?: string;
+  isSaved: boolean;
+  savedName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminSessionDetail extends AdminSession {
+  rollingSummary?: string;
+  responseMode?: string;
+  alias?: string;
+  context: string[];
+  fullContext: string[];
+}
+
+export interface AdminSessionsResponse {
+  sessions: AdminSession[];
+  total: number;
+  hasMore: boolean;
+}
+
+export function getAdminSessions(
+  token: string,
+  options?: { anonymous?: boolean; limit?: number; offset?: number }
+) {
+  const params = new URLSearchParams();
+  if (options?.anonymous !== undefined) {
+    params.set("anonymous", options.anonymous.toString());
+  }
+  if (options?.limit !== undefined) {
+    params.set("limit", options.limit.toString());
+  }
+  if (options?.offset !== undefined) {
+    params.set("offset", options.offset.toString());
+  }
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return fetchApi<AdminSessionsResponse>(`/admin/sessions${query}`, { token });
+}
+
+export function getAdminSessionDetail(sessionId: string, token: string) {
+  return fetchApi<AdminSessionDetail>(`/admin/sessions/${sessionId}`, { token });
+}
+
+export function deleteAdminSession(sessionId: string, token: string) {
+  return fetchApi<{ success: boolean; sessionId: string }>(`/admin/sessions/${sessionId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export function deleteAdminSessions(sessionIds: string[], token: string) {
+  return fetchApi<{ success: boolean; deletedCount: number }>("/admin/sessions/delete-batch", {
+    method: "POST",
+    body: JSON.stringify({ sessionIds }),
+    token,
+  });
 }

@@ -219,13 +219,17 @@ export class SessionRepository {
     userId: string,
     alias: string,
   ): Promise<SessionDocument | null> {
-    return this.sessionModel.findOneAndUpdate(
-      {
-        _id: sessionId,
-        userId: new Types.ObjectId(userId),
-      },
-      { alias },
-      { new: true },
-    );
+    try {
+      return this.sessionModel.findOneAndUpdate(
+        {
+          _id: new Types.ObjectId(sessionId),
+          userId: new Types.ObjectId(userId),
+        },
+        { alias },
+        { new: true },
+      );
+    } catch {
+      return null;
+    }
   }
 }

@@ -10,12 +10,13 @@ import { SessionService } from '../session/session.service';
 import type { SessionListItem, SessionDetailResponse } from '../../controller/chat/dto/chat.response';
 
 // 토큰 낭비 방지 제한
-const MAX_INPUT_LENGTH = 500; // 최대 입력 길이
+const MAX_INPUT_LENGTH = 500; // 최대 입력 길이 (일반)
+const MAX_IMPORT_LENGTH = 100000; // 불러오기 최대 길이 (10만자)
 const MAX_CONTEXT_COUNT = 30; // 세션당 최대 대화 턴 수
 const MAX_CHAT_MESSAGES = 20; // 채팅 모드 최대 메시지 수
 
 // 무료 사용자 세션 제한
-const FREE_USER_SESSION_LIMIT = 5;
+const FREE_USER_SESSION_LIMIT = 3;
 
 @Injectable()
 export class ChatService {
@@ -34,6 +35,16 @@ export class ChatService {
     }
   }
 
+  /**
+   * 텍스트 요약 (세션 생성 전 미리보기용)
+   */
+  async summarizeText(text: string): Promise<string> {
+    if (text.length > MAX_IMPORT_LENGTH) {
+      throw new BadRequestException(`입력이 너무 깁니다. ${MAX_IMPORT_LENGTH}자 이내로 작성해주세요.`);
+    }
+    return this.openaiAgent.summarizeImportedText(text);
+  }
+
   // 세션 대화 수 검증
   private validateContextCount(contextCount: number): void {
     if (contextCount >= MAX_CONTEXT_COUNT) {
@@ -46,10 +57,21 @@ export class ChatService {
     category?: Category,
     initialText?: string,
     counselorType?: CounselorType,
+    importSummary?: string,
   ) {
-    // 입력 검증
-    if (initialText) {
-      this.validateInput(initialText);
+    // 입력 검증 - 불러오기(긴 텍스트)와 일반 입력 구분
+    const isImport = initialText && initialText.length > MAX_INPUT_LENGTH;
+    const hasImportSummary = !!importSummary;
+    if (initialText && !hasImportSummary) {
+      if (isImport) {
+        // 불러오기: 최대 10,000자
+        if (initialText.length > MAX_IMPORT_LENGTH) {
+          throw new BadRequestException(`입력이 너무 깁니다. ${MAX_IMPORT_LENGTH}자 이내로 작성해주세요.`);
+        }
+      } else {
+        // 일반 입력: 최대 500자
+        this.validateInput(initialText);
+      }
     }
 
     // 무료 사용자 세션 제한 체크
@@ -105,15 +127,31 @@ export class ChatService {
         );
       }
 
-      // 직접 입력 텍스트가 있으면 컨텍스트에 추가
-      if (initialText) {
+      // 직접 입력 텍스트 또는 불러오기 요약이 있으면 컨텍스트에 추가
+      if (importSummary) {
+        // 이미 요약된 불러오기 텍스트 (사용자가 확인/수정한 요약)
         await this.sessionService.addContext(
           session._id.toString(),
-          `[사용자 직접 입력] ${initialText}`,
+          `[이전 상담 불러오기 - 요약]\n${importSummary}`,
+        );
+      } else if (initialText) {
+        let textToStore: string;
+
+        if (isImport) {
+          // 긴 텍스트(불러오기)인 경우 AI로 요약
+          const summary = await this.openaiAgent.summarizeImportedText(initialText);
+          textToStore = `[이전 상담 불러오기 - 요약]\n${summary}`;
+        } else {
+          textToStore = `[사용자 직접 입력] ${initialText}`;
+        }
+
+        await this.sessionService.addContext(
+          session._id.toString(),
+          textToStore,
         );
       }
 
-      const updatedSession = initialText
+      const updatedSession = (initialText || importSummary)
         ? await this.sessionService.findById(session._id.toString())
         : session;
 
@@ -480,7 +518,10 @@ export class ChatService {
       canRequestFeedback: options.canRequestFeedback,
       previousContext: session.context.slice(-10), // 최근 10개
       rollingSummary,
+      summary: session.summary || '', // 세션 전체 요약
+      category: session.category,
       counselorType: session.counselorType,
+      turnCount: (session as any).turnCount || 0,
     };
   }
 
