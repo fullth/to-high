@@ -27,4 +27,8 @@ export class UserRepository {
   async create(dto: CreateUserDto): Promise<UserDocument> {
     return this.userModel.create(dto);
   }
+
+  async countAll(): Promise<number> {
+    return this.userModel.countDocuments();
+  }
 }

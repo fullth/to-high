@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
+import { UserRepository } from '../../persistence/user/user.repository';
 import { UserProfileRepository } from '../../persistence/user-profile/user-profile.repository';
 import { RESPONSE_MODE_OPTIONS } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
@@ -13,11 +14,15 @@ const MAX_INPUT_LENGTH = 500; // 최대 입력 길이
 const MAX_CONTEXT_COUNT = 30; // 세션당 최대 대화 턴 수
 const MAX_CHAT_MESSAGES = 20; // 채팅 모드 최대 메시지 수
 
+// 무료 사용자 세션 제한
+const FREE_USER_SESSION_LIMIT = 5;
+
 @Injectable()
 export class ChatService {
   constructor(
     private sessionService: SessionService,
     private sessionRepository: SessionRepository,
+    private userRepository: UserRepository,
     private userProfileRepository: UserProfileRepository,
     private openaiAgent: OpenAIAgent,
   ) {}
@@ -45,6 +50,26 @@ export class ChatService {
     // 입력 검증
     if (initialText) {
       this.validateInput(initialText);
+    }
+
+    // 무료 사용자 세션 제한 체크
+    if (userId !== 'anonymous') {
+      const user = await this.userRepository.findById(userId);
+
+      // 구독자 또는 레거시 사용자는 제한 없음
+      const isExempt = user?.isSubscribed || user?.isGrandfathered;
+
+      if (!isExempt) {
+        const sessionCount = await this.sessionRepository.countUserSessions(userId);
+        if (sessionCount >= FREE_USER_SESSION_LIMIT) {
+          throw new ForbiddenException({
+            code: 'SESSION_LIMIT_EXCEEDED',
+            message: '상담 일지를 적을 공책이 가득 찼어요.',
+            sessionCount,
+            limit: FREE_USER_SESSION_LIMIT,
+          });
+        }
+      }
     }
 
     let previousContext: string | undefined;
@@ -508,5 +533,45 @@ export class ChatService {
       savedAt: (session as any).savedAt?.toISOString(),
       createdAt: session.createdAt.toISOString(),
     }));
+  }
+
+  /**
+   * 세션 삭제
+   */
+  async deleteSession(sessionId: string, userId: string) {
+    if (userId === 'anonymous') {
+      throw new ForbiddenException('로그인이 필요합니다.');
+    }
+
+    const deleted = await this.sessionRepository.deleteSession(sessionId, userId);
+    if (!deleted) {
+      throw new NotFoundException('세션을 찾을 수 없거나 삭제 권한이 없습니다.');
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * 세션 별칭 수정
+   */
+  async updateSessionAlias(sessionId: string, userId: string, alias: string) {
+    if (userId === 'anonymous') {
+      throw new ForbiddenException('로그인이 필요합니다.');
+    }
+
+    // 별칭 길이 제한
+    if (alias.length > 50) {
+      throw new BadRequestException('별칭은 50자 이내로 입력해주세요.');
+    }
+
+    const session = await this.sessionRepository.updateAlias(sessionId, userId, alias);
+    if (!session) {
+      throw new NotFoundException('세션을 찾을 수 없거나 수정 권한이 없습니다.');
+    }
+
+    return {
+      sessionId: session._id.toString(),
+      alias: session.alias,
+    };
   }
 }

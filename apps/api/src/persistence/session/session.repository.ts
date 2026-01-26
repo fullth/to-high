@@ -127,7 +127,7 @@ export class SessionRepository {
       .find({
         userId: new Types.ObjectId(userId),
       })
-      .select('summary category status createdAt updatedAt counselorType turnCount')
+      .select('summary category status createdAt updatedAt counselorType turnCount alias')
       .sort({ updatedAt: -1 })
       .limit(limit);
   }
@@ -137,6 +137,15 @@ export class SessionRepository {
    */
   async getSessionDetail(sessionId: string): Promise<SessionDocument | null> {
     return this.sessionModel.findById(sessionId);
+  }
+
+  /**
+   * 사용자의 세션 수 카운트
+   */
+  async countUserSessions(userId: string): Promise<number> {
+    return this.sessionModel.countDocuments({
+      userId: new Types.ObjectId(userId),
+    });
   }
 
   async getRecentSummaries(
@@ -189,5 +198,34 @@ export class SessionRepository {
       })
       .select('summary category savedName savedAt createdAt counselorType turnCount')
       .sort({ savedAt: -1 });
+  }
+
+  /**
+   * 세션 삭제
+   */
+  async deleteSession(sessionId: string, userId: string): Promise<boolean> {
+    const result = await this.sessionModel.deleteOne({
+      _id: sessionId,
+      userId: new Types.ObjectId(userId),
+    });
+    return result.deletedCount > 0;
+  }
+
+  /**
+   * 세션 별칭 수정
+   */
+  async updateAlias(
+    sessionId: string,
+    userId: string,
+    alias: string,
+  ): Promise<SessionDocument | null> {
+    return this.sessionModel.findOneAndUpdate(
+      {
+        _id: sessionId,
+        userId: new Types.ObjectId(userId),
+      },
+      { alias },
+      { new: true },
+    );
   }
 }

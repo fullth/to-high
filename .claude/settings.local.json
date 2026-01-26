@@ -32,7 +32,11 @@
       "Bash(do git show --format=\"%b\" $hash)",
       "Bash(echo:*)",
       "Bash(done)",
-      "Bash(git filter-branch:*)"
+      "Bash(git filter-branch:*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch:*)",
+      "Bash(git stash:*)",
+      "Bash(git for-each-ref:*)",
+      "Bash(xargs -r -n 1 git update-ref -d)"
     ]
   },
   "hooks": {
