@@ -349,6 +349,9 @@ export interface ResumeSessionResponse {
   previousContext: string[];
   rollingSummary?: string;
   counselorType?: string;
+  summary?: string;
+  category?: string;
+  turnCount?: number;
 }
 
 export function resumeSession(sessionId: string, token: string) {

@@ -12,8 +12,11 @@ export class UserDocument extends Document {
   @Prop()
   picture: string;
 
-  @Prop({ required: true })
+  @Prop()
   googleId: string;
+
+  @Prop()
+  kakaoId: string;
 
   @Prop({
     type: {
