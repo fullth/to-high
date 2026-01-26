@@ -6,8 +6,9 @@ import { UserDocument } from '../../database/user.schema';
 interface CreateUserDto {
   email: string;
   name: string;
-  picture: string;
-  googleId: string;
+  picture?: string;
+  googleId?: string;
+  kakaoId?: string;
 }
 
 @Injectable()
@@ -18,6 +19,14 @@ export class UserRepository {
 
   async findByGoogleId(googleId: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ googleId });
+  }
+
+  async findByKakaoId(kakaoId: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ kakaoId });
+  }
+
+  async findByEmail(email: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ email });
   }
 
   async findById(id: string): Promise<UserDocument | null> {

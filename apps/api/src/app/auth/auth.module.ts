@@ -6,6 +6,7 @@ import { PersistenceModule } from '../../persistence/persistence.module';
 import { NotificationService } from '../../common/notification.service';
 import { AuthService } from './auth.service';
 import { GoogleStrategy } from './strategy/google.strategy';
+import { KakaoStrategy } from './strategy/kakao.strategy';
 import { JwtStrategy } from './strategy/jwt.strategy';
 
 @Module({
@@ -20,7 +21,7 @@ import { JwtStrategy } from './strategy/jwt.strategy';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, GoogleStrategy, JwtStrategy, NotificationService],
+  providers: [AuthService, GoogleStrategy, KakaoStrategy, JwtStrategy, NotificationService],
   exports: [AuthService],
 })
 export class AuthModule {}

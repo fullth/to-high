@@ -42,6 +42,29 @@ export class AuthController {
     res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
   }
 
+  @Get('kakao')
+  @ApiOperation({
+    summary: 'Kakao OAuth 로그인',
+    description: 'Kakao OAuth 로그인 페이지로 리다이렉트합니다.',
+  })
+  @ApiResponse({ status: 302, description: 'Kakao 로그인 페이지로 리다이렉트' })
+  @UseGuards(AuthGuard('kakao'))
+  kakaoLogin() {}
+
+  @Get('kakao/callback')
+  @ApiOperation({
+    summary: 'Kakao OAuth 콜백',
+    description: 'Kakao 인증 후 토큰과 함께 프론트엔드로 리다이렉트합니다.',
+  })
+  @ApiResponse({ status: 302, description: '프론트엔드로 리다이렉트 (토큰 포함)' })
+  @UseGuards(AuthGuard('kakao'))
+  kakaoCallback(@Req() req: any, @Res() res: Response): void {
+    const token = this.authService.generateToken(req.user);
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+  }
+
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({

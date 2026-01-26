@@ -8,6 +8,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: () => void;
+  loginWithKakao: () => void;
   logout: () => void;
 }
 
@@ -39,6 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = `${apiUrl}/auth/google`;
   };
 
+  const loginWithKakao = () => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    window.location.href = `${apiUrl}/auth/kakao`;
+  };
+
   const logout = () => {
     localStorage.removeItem("accessToken");
     setToken(null);
@@ -46,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, loginWithKakao, logout }}>
       {children}
     </AuthContext.Provider>
   );
