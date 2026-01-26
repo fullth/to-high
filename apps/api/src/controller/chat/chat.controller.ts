@@ -29,6 +29,7 @@ import {
   SendMessageSchema,
   SetModeSchema,
   StartSessionSchema,
+  SummarizeTextSchema,
 } from './dto/chat.request';
 import type {
   ChatResponse,
@@ -71,6 +72,10 @@ export class ChatController {
           enum: ['T', 'F', 'deep'],
           description: '상담가 유형 (T: 냉철한 조언, F: 따스한 공감, deep: 깊은 대화)',
         },
+        importSummary: {
+          type: 'string',
+          description: '이미 요약된 불러오기 텍스트 (요약 확인 후 전달)',
+        },
       },
     },
   })
@@ -90,7 +95,7 @@ export class ChatController {
   @UsePipes(new ZodValidationPipe(StartSessionSchema))
   async startSession(
     @Req() req: any,
-    @Body() dto: { category?: Category; initialText?: string; counselorType?: CounselorType },
+    @Body() dto: { category?: Category; initialText?: string; counselorType?: CounselorType; importSummary?: string },
   ): Promise<StartSessionResponse> {
     const userId = req.user?.userId || 'anonymous';
     const result = await this.chatService.startSession(
@@ -98,6 +103,7 @@ export class ChatController {
       dto.category,
       dto.initialText,
       dto.counselorType,
+      dto.importSummary,
     );
     return {
       sessionId: result.sessionId.toString(),
@@ -106,6 +112,41 @@ export class ChatController {
       canProceedToResponse: result.canProceedToResponse,
       counselorType: dto.counselorType,
     };
+  }
+
+  @Post('summarize')
+  @ApiOperation({
+    summary: '텍스트 요약',
+    description: '긴 텍스트를 상담 맥락에 맞게 요약합니다. 세션 생성 전 요약 미리보기용.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['text'],
+      properties: {
+        text: {
+          type: 'string',
+          description: '요약할 텍스트 (최대 10만자)',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: '요약 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string', description: '요약된 텍스트' },
+      },
+    },
+  })
+  @UsePipes(new ZodValidationPipe(SummarizeTextSchema))
+  async summarizeText(
+    @Body() dto: { text: string },
+  ): Promise<{ summary: string }> {
+    const summary = await this.chatService.summarizeText(dto.text);
+    return { summary };
   }
 
   @Post('select')
@@ -566,6 +607,12 @@ export class ChatController {
     @Body() dto: { alias: string },
   ) {
     const userId = req.user?.userId || 'anonymous';
-    return this.chatService.updateSessionAlias(sessionId, userId, dto.alias);
+    // Debug: raw body 확인
+    console.log('updateSessionAlias - req.body:', req.body);
+    console.log('updateSessionAlias - dto:', dto);
+    console.log('updateSessionAlias - Content-Type:', req.headers['content-type']);
+    const alias = dto?.alias ?? req.body?.alias ?? '';
+    console.log('updateSessionAlias - final alias:', alias);
+    return this.chatService.updateSessionAlias(sessionId, userId, alias);
   }
 }

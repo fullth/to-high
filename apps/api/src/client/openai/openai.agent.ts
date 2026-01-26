@@ -20,6 +20,7 @@ import {
   EXTRACT_USER_PROFILE_PROMPT,
   COUNSELOR_MODE_PROMPTS,
   COUNSELOR_MODE_OPTIONS_PROMPTS,
+  IMPORT_TEXT_SUMMARY_PROMPT,
 } from '../../prompts';
 import { GenerateOptionsResult } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
@@ -397,6 +398,35 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
       };
     } catch {
       return { emotions: [], topics: [], importantContext: [] };
+    }
+  }
+
+  /**
+   * 이전 상담 텍스트 요약 (불러오기 기능)
+   * 긴 텍스트(최대 10,000자)에서 상담에 필요한 핵심 정보 추출
+   */
+  async summarizeImportedText(text: string): Promise<string> {
+    if (!this.hasApiKey) {
+      // API 키 없을 때 처음 500자만 반환
+      return text.slice(0, 500);
+    }
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: PROMPT_CONFIG.MODEL,
+        messages: [
+          { role: 'system', content: IMPORT_TEXT_SUMMARY_PROMPT },
+          { role: 'user', content: `이전 상담 내용:\n${text}` },
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+      });
+
+      return response.choices[0].message.content || text.slice(0, 500);
+    } catch (error) {
+      console.error('summarizeImportedText error:', error);
+      // 오류 시 처음 500자만 반환
+      return text.slice(0, 500);
     }
   }
 }

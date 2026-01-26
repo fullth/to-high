@@ -2,10 +2,15 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import * as bodyParser from 'body-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // 대용량 텍스트 처리 엔드포인트만 body 크기 제한 증가 (10만자 텍스트 불러오기용)
+  app.use('/chat/start', bodyParser.json({ limit: '1mb' }));
+  app.use('/chat/summarize', bodyParser.json({ limit: '1mb' }));
 
   // 보안 헤더 설정 (Helmet)
   app.use(helmet());

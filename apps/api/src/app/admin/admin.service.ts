@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { UserDocument } from '../../database/user.schema';
 import { SessionDocument } from '../../database/session.schema';
 
@@ -72,5 +72,181 @@ export class AdminService {
     );
 
     return { users: usersWithSessions };
+  }
+
+  /**
+   * 모든 세션 목록 조회 (비로그인 사용자 포함)
+   */
+  async getAllSessions(filter?: { anonymous?: boolean; limit?: number; offset?: number }) {
+    const query: Record<string, unknown> = {};
+
+    // 비로그인 사용자만 필터링
+    if (filter?.anonymous === true) {
+      query.userId = 'anonymous';
+    } else if (filter?.anonymous === false) {
+      query.userId = { $ne: 'anonymous' };
+    }
+
+    const [sessions, total] = await Promise.all([
+      this.sessionModel
+        .find(query)
+        .sort({ updatedAt: -1 })
+        .skip(filter?.offset || 0)
+        .limit(filter?.limit || 50)
+        .lean(),
+      this.sessionModel.countDocuments(query),
+    ]);
+
+    // 사용자 정보 매핑
+    const sessionsWithUser = await Promise.all(
+      sessions.map(async (session) => {
+        let userEmail = '비로그인';
+        let userName = '';
+
+        if (session.userId && session.userId.toString() !== 'anonymous') {
+          try {
+            const user = await this.userModel.findById(session.userId).select('email name').lean();
+            if (user) {
+              userEmail = user.email;
+              userName = user.name || '';
+            }
+          } catch {
+            // ObjectId가 아닌 경우 무시
+          }
+        }
+
+        return {
+          id: session._id.toString(),
+          userId: session.userId?.toString() || 'anonymous',
+          userEmail,
+          userName,
+          category: session.category,
+          status: session.status,
+          summary: session.summary,
+          turnCount: session.turnCount,
+          counselorType: session.counselorType,
+          isSaved: session.isSaved,
+          savedName: session.savedName,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+        };
+      }),
+    );
+
+    return {
+      sessions: sessionsWithUser,
+      total,
+      hasMore: (filter?.offset || 0) + sessions.length < total,
+    };
+  }
+
+  /**
+   * 세션 상세 조회 (대화 내용 포함)
+   */
+  async getSessionDetail(sessionId: string) {
+    let session;
+    try {
+      session = await this.sessionModel.findById(sessionId).lean();
+    } catch {
+      throw new NotFoundException('세션을 찾을 수 없습니다.');
+    }
+
+    if (!session) {
+      throw new NotFoundException('세션을 찾을 수 없습니다.');
+    }
+
+    let userEmail = '비로그인';
+    let userName = '';
+
+    if (session.userId && session.userId.toString() !== 'anonymous') {
+      try {
+        const user = await this.userModel.findById(session.userId).select('email name').lean();
+        if (user) {
+          userEmail = user.email;
+          userName = user.name || '';
+        }
+      } catch {
+        // ObjectId가 아닌 경우 무시
+      }
+    }
+
+    return {
+      id: session._id.toString(),
+      userId: session.userId?.toString() || 'anonymous',
+      userEmail,
+      userName,
+      category: session.category,
+      status: session.status,
+      summary: session.summary,
+      rollingSummary: session.rollingSummary,
+      turnCount: session.turnCount,
+      counselorType: session.counselorType,
+      responseMode: session.responseMode,
+      isSaved: session.isSaved,
+      savedName: session.savedName,
+      alias: session.alias,
+      context: session.context || [],
+      fullContext: session.fullContext || [],
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+    };
+  }
+
+  /**
+   * 세션 삭제
+   */
+  async deleteSession(sessionId: string) {
+    let result;
+    try {
+      result = await this.sessionModel.findByIdAndDelete(sessionId);
+    } catch {
+      throw new NotFoundException('세션을 찾을 수 없습니다.');
+    }
+
+    if (!result) {
+      throw new NotFoundException('세션을 찾을 수 없습니다.');
+    }
+
+    return { success: true, sessionId };
+  }
+
+  /**
+   * 여러 세션 일괄 삭제
+   */
+  async deleteSessions(sessionIds: string[]) {
+    if (!sessionIds || !Array.isArray(sessionIds) || sessionIds.length === 0) {
+      return {
+        success: true,
+        deletedCount: 0,
+      };
+    }
+
+    const objectIds: Types.ObjectId[] = [];
+    for (const id of sessionIds) {
+      try {
+        if (id && typeof id === 'string') {
+          objectIds.push(new Types.ObjectId(id));
+        }
+      } catch {
+        // 유효하지 않은 ObjectId는 무시
+        console.log(`Invalid ObjectId: ${id}`);
+      }
+    }
+
+    if (objectIds.length === 0) {
+      return {
+        success: true,
+        deletedCount: 0,
+      };
+    }
+
+    const result = await this.sessionModel.deleteMany({
+      _id: { $in: objectIds },
+    });
+
+    return {
+      success: true,
+      deletedCount: result.deletedCount,
+    };
   }
 }
