@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   Res,
@@ -510,4 +512,60 @@ export class ChatController {
     return this.chatService.saveSession(sessionId, userId, dto.savedName);
   }
 
+  @Delete('sessions/:sessionId')
+  @ApiOperation({
+    summary: '상담 삭제',
+    description: '상담 내역을 삭제합니다. 로그인 필수.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '삭제 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+      },
+    },
+  })
+  async deleteSession(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+  ) {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.deleteSession(sessionId, userId);
+  }
+
+  @Patch('sessions/:sessionId/alias')
+  @ApiOperation({
+    summary: '상담 별칭 수정',
+    description: '상담의 별칭(이름)을 수정합니다. 로그인 필수.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['alias'],
+      properties: {
+        alias: { type: 'string', description: '새 별칭 (50자 이내)' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '수정 성공',
+    schema: {
+      type: 'object',
+      properties: {
+        sessionId: { type: 'string' },
+        alias: { type: 'string' },
+      },
+    },
+  })
+  async updateSessionAlias(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: { alias: string },
+  ) {
+    const userId = req.user?.userId || 'anonymous';
+    return this.chatService.updateSessionAlias(sessionId, userId, dto.alias);
+  }
 }

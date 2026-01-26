@@ -51,6 +51,10 @@ export class SessionDocument extends Document {
   @Prop()
   savedAt: Date;
 
+  // 사용자 지정 별칭
+  @Prop()
+  alias: string;
+
   createdAt: Date;
   updatedAt: Date;
 }
