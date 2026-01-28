@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { SessionDocument, SessionSchema } from './session.schema';
 import { UserDocument, UserSchema } from './user.schema';
 import { UserProfileDocument, UserProfileSchema } from './user-profile.schema';
+import { VisitorDocument, VisitorSchema } from './visitor.schema';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { UserProfileDocument, UserProfileSchema } from './user-profile.schema';
       { name: UserDocument.name, schema: UserSchema },
       { name: SessionDocument.name, schema: SessionSchema },
       { name: UserProfileDocument.name, schema: UserProfileSchema },
+      { name: VisitorDocument.name, schema: VisitorSchema },
     ]),
   ],
   exports: [MongooseModule],

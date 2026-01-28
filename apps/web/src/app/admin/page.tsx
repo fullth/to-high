@@ -10,13 +10,15 @@ import {
   getAdminSessionDetail,
   deleteAdminSession,
   deleteAdminSessions,
+  getAdminVisitors,
   DashboardStats,
   AdminUser,
   AdminSession,
   AdminSessionDetail,
+  AdminVisitor,
 } from "../../lib/api";
 
-type TabType = "dashboard" | "users" | "sessions";
+type TabType = "dashboard" | "sessions";
 type SessionFilter = "all" | "anonymous" | "logged-in";
 
 export default function AdminPage() {
@@ -34,6 +36,8 @@ export default function AdminPage() {
   const [sessionDetail, setSessionDetail] = useState<AdminSessionDetail | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [visitors, setVisitors] = useState<AdminVisitor[]>([]);
+  const [visitorsTotal, setVisitorsTotal] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,12 +53,15 @@ export default function AdminPage() {
   async function loadDashboard() {
     try {
       setLoading(true);
-      const [dashboardData, usersData] = await Promise.all([
+      const [dashboardData, usersData, visitorsData] = await Promise.all([
         getAdminDashboard(token!),
         getAdminUsers(token!),
+        getAdminVisitors(token!, { limit: 50 }),
       ]);
       setStats(dashboardData);
       setUsers(usersData.users);
+      setVisitors(visitorsData.visitors);
+      setVisitorsTotal(visitorsData.total);
     } catch (err: unknown) {
       console.error("Admin load error:", err);
       if (err instanceof Error && (err.message.includes("403") || err.message.includes("Forbidden"))) {
@@ -72,7 +79,7 @@ export default function AdminPage() {
       setLoading(true);
       const data = await getAdminSessions(token!, {
         anonymous: sessionFilter === "anonymous" ? true : sessionFilter === "logged-in" ? false : undefined,
-        limit: 100,
+        limit: 0, // 전체 세션 보기
       });
       setSessions(data.sessions);
       setSessionsTotal(data.total);
@@ -183,7 +190,7 @@ export default function AdminPage() {
 
         {/* 탭 네비게이션 */}
         <div className="flex gap-2 mb-6 border-b border-gray-700 pb-4">
-          {(["dashboard", "users", "sessions"] as TabType[]).map((tab) => (
+          {(["dashboard", "sessions"] as TabType[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -193,7 +200,7 @@ export default function AdminPage() {
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
-              {tab === "dashboard" ? "대시보드" : tab === "users" ? "사용자" : "세션 관리"}
+              {tab === "dashboard" ? "대시보드" : "세션 관리"}
             </button>
           ))}
         </div>
@@ -201,86 +208,144 @@ export default function AdminPage() {
         {/* 대시보드 탭 */}
         {activeTab === "dashboard" && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            {/* 통계 카드 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
+              <StatCard title="전체 방문자" value={stats?.totalVisitors ?? 0} />
+              <StatCard title="오늘 방문자" value={stats?.todayVisitors ?? 0} />
               <StatCard title="전체 사용자" value={stats?.totalUsers ?? 0} />
-              <StatCard title="전체 세션" value={stats?.totalSessions ?? 0} />
-              <StatCard title="활성 세션" value={stats?.activeSessions ?? 0} />
               <StatCard title="오늘 가입" value={stats?.todayUsers ?? 0} />
+              <StatCard title="전체 세션" value={stats?.totalSessions ?? 0} />
               <StatCard title="오늘 세션" value={stats?.todaySessions ?? 0} />
+              <StatCard title="활성 세션" value={stats?.activeSessions ?? 0} />
               <StatCard title="구독자" value={stats?.subscribers ?? 0} />
             </div>
-          </>
-        )}
 
-        {/* 사용자 탭 */}
-        {activeTab === "users" && (
-          <div className="bg-gray-800 rounded-lg overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-700">
-              <h2 className="text-xl font-semibold">사용자 목록 ({users.length}명)</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-700">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium">사용자</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">이메일</th>
-                    <th className="px-4 py-3 text-center text-sm font-medium">세션 수</th>
-                    <th className="px-4 py-3 text-center text-sm font-medium">구독</th>
-                    <th className="px-4 py-3 text-center text-sm font-medium">레거시</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">마지막 세션</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">가입일</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-750">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {user.picture && (
-                            <img src={user.picture} alt="" className="w-8 h-8 rounded-full" />
-                          )}
-                          <span className="font-medium">{user.name || "-"}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-300 text-sm">{user.email}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm font-medium">
-                          {user.sessionCount}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {user.isSubscribed ? (
-                          <span className="text-green-400">구독중</span>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {user.isGrandfathered ? (
-                          <span className="text-yellow-400">면제</span>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">
-                        {user.lastSessionAt ? (
-                          <div>
-                            <div>{formatDate(user.lastSessionAt)}</div>
-                            {user.lastCategory && (
-                              <div className="text-xs text-gray-500">{user.lastCategory}</div>
+            {/* 사용자 목록 */}
+            <div className="bg-gray-800 rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-700">
+                <h2 className="text-xl font-semibold">사용자 목록 ({users.length}명)</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium">사용자</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">이메일</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium">세션 수</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium">구독</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium">레거시</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">마지막 세션</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">가입일</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {users.map((user) => {
+                      const isPotentialCustomer = user.sessionCount >= 3 && !user.isSubscribed && !user.isGrandfathered;
+                      return (
+                      <tr key={user.id} className={`hover:bg-gray-750 ${isPotentialCustomer ? "bg-amber-900/20" : ""}`}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {user.picture && (
+                              <img src={user.picture} alt="" className="w-8 h-8 rounded-full" />
+                            )}
+                            <span className="font-medium">{user.name || "-"}</span>
+                            {isPotentialCustomer && (
+                              <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-xs font-bold">
+                                예비고객
+                              </span>
                             )}
                           </div>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">{formatDate(user.createdAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </td>
+                        <td className="px-4 py-3 text-gray-300 text-sm">{user.email}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-1 rounded text-sm font-medium ${
+                            isPotentialCustomer ? "bg-amber-500 text-black" : "bg-blue-600 text-white"
+                          }`}>
+                            {user.sessionCount}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {user.isSubscribed ? (
+                            <span className="text-green-400">구독중</span>
+                          ) : (
+                            <span className="text-gray-500">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {user.isGrandfathered ? (
+                            <span className="text-yellow-400">면제</span>
+                          ) : (
+                            <span className="text-gray-500">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-400">
+                          {user.lastSessionAt ? (
+                            <div>
+                              <div>{formatDate(user.lastSessionAt)}</div>
+                              {user.lastCategory && (
+                                <div className="text-xs text-gray-500">{user.lastCategory}</div>
+                              )}
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-400">{formatDate(user.createdAt)}</td>
+                      </tr>
+                    )})}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+
+            {/* 방문자 목록 */}
+            <div className="bg-gray-800 rounded-lg overflow-hidden mt-8">
+              <div className="px-6 py-4 border-b border-gray-700">
+                <h2 className="text-xl font-semibold">비로그인 방문자 ({visitorsTotal}명)</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium">방문자 ID</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">IP</th>
+                      <th className="px-4 py-3 text-center text-sm font-medium">방문 횟수</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">첫 방문</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">마지막 방문</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">브라우저</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {visitors.map((visitor) => (
+                      <tr key={visitor.id} className="hover:bg-gray-750">
+                        <td className="px-4 py-3 text-sm font-mono text-gray-300">
+                          {visitor.visitorId.substring(0, 20)}...
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-400">{visitor.ip || "-"}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="px-2 py-1 rounded text-sm font-medium bg-purple-600 text-white">
+                            {visitor.visitCount}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-400">{formatDate(visitor.firstVisitAt)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-400">{formatDate(visitor.lastVisitAt)}</td>
+                        <td className="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate">
+                          {visitor.userAgent ? parseUserAgent(visitor.userAgent) : "-"}
+                        </td>
+                      </tr>
+                    ))}
+                    {visitors.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                          아직 방문자 데이터가 없습니다
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
         {/* 세션 관리 탭 */}
@@ -586,4 +651,29 @@ function formatDate(dateString: string): string {
       day: "numeric",
     });
   }
+}
+
+function parseUserAgent(ua: string): string {
+  // 기기 타입
+  const isIPhone = ua.includes("iPhone");
+  const isIPad = ua.includes("iPad");
+  const isAndroid = ua.includes("Android");
+  const isMobile = ua.includes("Mobile") || isIPhone || isAndroid;
+
+  // OS
+  let os = "PC";
+  if (isIPhone) os = "iPhone";
+  else if (isIPad) os = "iPad";
+  else if (isAndroid) os = isMobile ? "Android" : "Android Tablet";
+  else if (ua.includes("Mac")) os = "Mac";
+  else if (ua.includes("Windows")) os = "Windows";
+
+  // 브라우저
+  let browser = "";
+  if (ua.includes("Chrome") && !ua.includes("Edg")) browser = "Chrome";
+  else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+  else if (ua.includes("Firefox")) browser = "Firefox";
+  else if (ua.includes("Edg")) browser = "Edge";
+
+  return `${os}${browser ? ` / ${browser}` : ""}`;
 }

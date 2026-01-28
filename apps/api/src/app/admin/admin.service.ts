@@ -3,24 +3,32 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UserDocument } from '../../database/user.schema';
 import { SessionDocument } from '../../database/session.schema';
+import { VisitorDocument } from '../../database/visitor.schema';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectModel(UserDocument.name) private userModel: Model<UserDocument>,
     @InjectModel(SessionDocument.name) private sessionModel: Model<SessionDocument>,
+    @InjectModel(VisitorDocument.name) private visitorModel: Model<VisitorDocument>,
   ) {}
 
   async getDashboardStats() {
-    const [totalUsers, totalSessions, activeSessions, todayUsers, todaySessions] = await Promise.all([
+    const today = new Date(new Date().setHours(0, 0, 0, 0));
+
+    const [totalUsers, totalSessions, activeSessions, todayUsers, todaySessions, totalVisitors, todayVisitors] = await Promise.all([
       this.userModel.countDocuments(),
       this.sessionModel.countDocuments(),
       this.sessionModel.countDocuments({ status: 'active' }),
       this.userModel.countDocuments({
-        createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        createdAt: { $gte: today },
       }),
       this.sessionModel.countDocuments({
-        createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        createdAt: { $gte: today },
+      }),
+      this.visitorModel.countDocuments(),
+      this.visitorModel.countDocuments({
+        lastVisitAt: { $gte: today },
       }),
     ]);
 
@@ -34,6 +42,8 @@ export class AdminService {
       todayUsers,
       todaySessions,
       subscribers,
+      totalVisitors,
+      todayVisitors,
     };
   }
 
@@ -87,13 +97,18 @@ export class AdminService {
       query.userId = { $ne: 'anonymous' };
     }
 
+    // limit이 0이면 전체 조회
+    const sessionQuery = this.sessionModel
+      .find(query)
+      .sort({ updatedAt: -1 })
+      .skip(filter?.offset || 0);
+
+    if (filter?.limit && filter.limit > 0) {
+      sessionQuery.limit(filter.limit);
+    }
+
     const [sessions, total] = await Promise.all([
-      this.sessionModel
-        .find(query)
-        .sort({ updatedAt: -1 })
-        .skip(filter?.offset || 0)
-        .limit(filter?.limit || 50)
-        .lean(),
+      sessionQuery.lean(),
       this.sessionModel.countDocuments(query),
     ]);
 
@@ -247,6 +262,62 @@ export class AdminService {
     return {
       success: true,
       deletedCount: result.deletedCount,
+    };
+  }
+
+  /**
+   * 방문자 기록/업데이트
+   */
+  async trackVisitor(visitorId: string, ip?: string, userAgent?: string) {
+    const now = new Date();
+
+    const visitor = await this.visitorModel.findOneAndUpdate(
+      { visitorId },
+      {
+        $set: {
+          ip,
+          userAgent,
+          lastVisitAt: now,
+        },
+        $setOnInsert: {
+          firstVisitAt: now,
+        },
+        $inc: { visitCount: 1 },
+      },
+      { upsert: true, new: true },
+    );
+
+    return {
+      visitorId: visitor.visitorId,
+      visitCount: visitor.visitCount,
+      isNew: visitor.visitCount === 1,
+    };
+  }
+
+  /**
+   * 방문자 목록 조회
+   */
+  async getVisitors(filter?: { limit?: number; offset?: number }) {
+    const visitors = await this.visitorModel
+      .find()
+      .sort({ lastVisitAt: -1 })
+      .skip(filter?.offset || 0)
+      .limit(filter?.limit || 50)
+      .lean();
+
+    const total = await this.visitorModel.countDocuments();
+
+    return {
+      visitors: visitors.map((v) => ({
+        id: v._id.toString(),
+        visitorId: v.visitorId,
+        ip: v.ip,
+        userAgent: v.userAgent,
+        visitCount: v.visitCount,
+        firstVisitAt: v.firstVisitAt,
+        lastVisitAt: v.lastVisitAt,
+      })),
+      total,
     };
   }
 }
