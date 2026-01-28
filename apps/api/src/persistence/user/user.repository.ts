@@ -40,4 +40,19 @@ export class UserRepository {
   async countAll(): Promise<number> {
     return this.userModel.countDocuments();
   }
+
+  async updateSubscription(
+    userId: string,
+    data: {
+      isSubscribed?: boolean;
+      subscriptionTier?: string;
+      subscriptionStartDate?: Date;
+      subscriptionEndDate?: Date;
+      lastPaymentDate?: Date;
+      lastPaymentAmount?: number;
+      billingKey?: string;
+    },
+  ): Promise<UserDocument | null> {
+    return this.userModel.findByIdAndUpdate(userId, data, { new: true });
+  }
 }

@@ -514,3 +514,92 @@ export function deleteAdminSessions(sessionIds: string[], token: string) {
     token,
   });
 }
+
+// ============ Payment API ============
+
+export type SubscriptionTier = "basic" | "premium";
+
+export interface SubscriptionPlan {
+  tier: string;
+  name: string;
+  price: number;
+  sessionLimit: number;
+  description: string;
+}
+
+export interface SubscriptionInfo {
+  isSubscribed: boolean;
+  tier: string | null;
+  plan: SubscriptionPlan | null;
+  startDate: string | null;
+  endDate: string | null;
+  isGrandfathered: boolean;
+}
+
+export interface PaymentHistory {
+  orderId: string;
+  amount: number;
+  tier: string;
+  status: string;
+  method: string;
+  cardCompany: string;
+  cardNumber: string;
+  receiptUrl: string;
+  createdAt: string;
+}
+
+// 요금제 목록 조회
+export function getPlans() {
+  return fetchApi<{ plans: SubscriptionPlan[] }>("/payment/plans");
+}
+
+// 주문 생성
+export function createOrder(tier: SubscriptionTier, token: string) {
+  return fetchApi<{ orderId: string; tier: string }>("/payment/order", {
+    method: "POST",
+    body: JSON.stringify({ tier }),
+    token,
+  });
+}
+
+// 결제 승인
+export function confirmPayment(
+  paymentKey: string,
+  orderId: string,
+  amount: number,
+  tier: SubscriptionTier,
+  token: string
+) {
+  return fetchApi<{ success: boolean; payment: any }>("/payment/confirm", {
+    method: "POST",
+    body: JSON.stringify({ paymentKey, orderId, amount, tier }),
+    token,
+  });
+}
+
+// 구독 정보 조회
+export function getSubscription(token: string) {
+  return fetchApi<SubscriptionInfo>("/payment/subscription", { token });
+}
+
+// 구독 취소
+export function cancelSubscription(token: string) {
+  return fetchApi<{ success: boolean; message: string }>("/payment/cancel-subscription", {
+    method: "POST",
+    token,
+  });
+}
+
+// 결제 환불
+export function refundPayment(paymentKey: string, cancelReason: string, token: string) {
+  return fetchApi<{ success: boolean; message: string }>("/payment/refund", {
+    method: "POST",
+    body: JSON.stringify({ paymentKey, cancelReason }),
+    token,
+  });
+}
+
+// 결제 내역 조회
+export function getPaymentHistory(token: string) {
+  return fetchApi<{ payments: PaymentHistory[] }>("/payment/history", { token });
+}
