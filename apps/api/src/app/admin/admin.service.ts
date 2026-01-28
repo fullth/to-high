@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { UserDocument } from '../../database/user.schema';
 import { SessionDocument } from '../../database/session.schema';
 import { VisitorDocument } from '../../database/visitor.schema';
+import { NotificationService } from '../../common/notification.service';
 
 @Injectable()
 export class AdminService {
@@ -11,6 +12,7 @@ export class AdminService {
     @InjectModel(UserDocument.name) private userModel: Model<UserDocument>,
     @InjectModel(SessionDocument.name) private sessionModel: Model<SessionDocument>,
     @InjectModel(VisitorDocument.name) private visitorModel: Model<VisitorDocument>,
+    private notificationService: NotificationService,
   ) {}
 
   async getDashboardStats() {
@@ -319,5 +321,22 @@ export class AdminService {
       })),
       total,
     };
+  }
+
+  /**
+   * 테스트 알림 발송
+   */
+  async sendTestNotification() {
+    const totalUsers = await this.userModel.countDocuments();
+
+    await this.notificationService.notifyNewUser(
+      {
+        email: 'test@example.com',
+        name: '테스트 사용자',
+      },
+      totalUsers,
+    );
+
+    return { success: true, message: '테스트 알림이 발송되었습니다.' };
   }
 }
