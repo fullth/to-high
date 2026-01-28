@@ -433,6 +433,7 @@ export class ChatService {
       counselorType: session.counselorType,
       createdAt: session.createdAt.toISOString(),
       updatedAt: session.updatedAt.toISOString(),
+      alias: session.alias,
     }));
   }
 

@@ -604,15 +604,10 @@ export class ChatController {
   async updateSessionAlias(
     @Req() req: any,
     @Param('sessionId') sessionId: string,
-    @Body() dto: { alias: string },
+    @Body() body: { alias: string },
   ) {
     const userId = req.user?.userId || 'anonymous';
-    // Debug: raw body 확인
-    console.log('updateSessionAlias - req.body:', req.body);
-    console.log('updateSessionAlias - dto:', dto);
-    console.log('updateSessionAlias - Content-Type:', req.headers['content-type']);
-    const alias = dto?.alias ?? req.body?.alias ?? '';
-    console.log('updateSessionAlias - final alias:', alias);
+    const alias = body?.alias || '';
     return this.chatService.updateSessionAlias(sessionId, userId, alias);
   }
 }
