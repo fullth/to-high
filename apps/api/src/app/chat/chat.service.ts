@@ -7,6 +7,7 @@ import { UserProfileRepository } from '../../persistence/user-profile/user-profi
 import { RESPONSE_MODE_OPTIONS } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
 import { SessionService } from '../session/session.service';
+import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../../database/payment.schema';
 import type { SessionListItem, SessionDetailResponse } from '../../controller/chat/dto/chat.response';
 
 // 토큰 낭비 방지 제한
@@ -74,22 +75,39 @@ export class ChatService {
       }
     }
 
-    // 무료 사용자 세션 제한 체크
+    // 세션 제한 체크
     if (userId !== 'anonymous') {
       const user = await this.userRepository.findById(userId);
 
-      // 구독자 또는 레거시 사용자는 제한 없음
-      const isExempt = user?.isSubscribed || user?.isGrandfathered;
-
-      if (!isExempt) {
+      // 레거시 사용자는 무제한
+      if (user?.isGrandfathered) {
+        // 무제한 이용 가능
+      } else {
         const sessionCount = await this.sessionRepository.countUserSessions(userId);
-        if (sessionCount >= FREE_USER_SESSION_LIMIT) {
-          throw new ForbiddenException({
-            code: 'SESSION_LIMIT_EXCEEDED',
-            message: '상담 일지를 적을 공책이 가득 찼어요.',
-            sessionCount,
-            limit: FREE_USER_SESSION_LIMIT,
-          });
+
+        // 구독자인 경우 구독 티어에 따른 제한
+        if (user?.isSubscribed && user?.subscriptionTier) {
+          const plan = SUBSCRIPTION_PLANS[user.subscriptionTier as SubscriptionTier];
+          const limit = FREE_USER_SESSION_LIMIT + (plan?.sessionLimit || 0);
+
+          if (sessionCount >= limit) {
+            throw new ForbiddenException({
+              code: 'SESSION_LIMIT_EXCEEDED',
+              message: '이번 달 공책을 모두 사용했어요.',
+              sessionCount,
+              limit,
+            });
+          }
+        } else {
+          // 무료 사용자
+          if (sessionCount >= FREE_USER_SESSION_LIMIT) {
+            throw new ForbiddenException({
+              code: 'SESSION_LIMIT_EXCEEDED',
+              message: '상담 일지를 적을 공책이 가득 찼어요.',
+              sessionCount,
+              limit: FREE_USER_SESSION_LIMIT,
+            });
+          }
         }
       }
     }
