@@ -72,29 +72,29 @@
   --popover: oklch(0.995 0.003 90);
   --popover-foreground: oklch(0.25 0.02 60);
 
-  /* 프라이머리: 세이지 그린 - 치유와 성장의 상징 */
-  --primary: oklch(0.55 0.08 160);
+  /* 프라이머리: 세이지 그린 - 치유와 성장의 상징 (더 진하게) */
+  --primary: oklch(0.48 0.12 160);
   --primary-foreground: oklch(0.98 0.005 90);
 
   /* 세컨더리: 연한 세이지 */
-  --secondary: oklch(0.94 0.02 160);
-  --secondary-foreground: oklch(0.35 0.05 160);
+  --secondary: oklch(0.92 0.03 160);
+  --secondary-foreground: oklch(0.30 0.06 160);
 
   /* 뮤트: 베이지/토프 톤 - 차분하고 중립적 */
-  --muted: oklch(0.95 0.01 80);
-  --muted-foreground: oklch(0.45 0.02 60);
+  --muted: oklch(0.93 0.015 80);
+  --muted-foreground: oklch(0.40 0.03 60);
 
-  /* 액센트: 따뜻한 테라코타 (매우 연한) - 대지의 안정감 */
-  --accent: oklch(0.92 0.03 50);
-  --accent-foreground: oklch(0.35 0.05 50);
+  /* 액센트: 따뜻한 테라코타 - 대지의 안정감 */
+  --accent: oklch(0.90 0.04 50);
+  --accent-foreground: oklch(0.30 0.06 50);
 
   /* 위험/경고: 부드러운 코랄 (덜 자극적인 빨강) */
-  --destructive: oklch(0.65 0.15 25);
+  --destructive: oklch(0.60 0.18 25);
 
-  /* 테두리: 매우 연한 세이지 */
-  --border: oklch(0.90 0.015 160);
-  --input: oklch(0.92 0.01 160);
-  --ring: oklch(0.60 0.06 160);
+  /* 테두리: 더 진한 세이지 */
+  --border: oklch(0.85 0.025 160);
+  --input: oklch(0.88 0.02 160);
+  --ring: oklch(0.55 0.10 160);
 
   /* 차트 색상: 자연에서 영감받은 팔레트 */
   --chart-1: oklch(0.55 0.08 160);
@@ -183,5 +183,33 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* 펜 쓰는 애니메이션 */
+@keyframes writing {
+  0%, 100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  25% {
+    transform: rotate(-5deg) translateY(-1px);
+  }
+  50% {
+    transform: rotate(0deg) translateY(0);
+  }
+  75% {
+    transform: rotate(5deg) translateY(-1px);
+  }
+}
+
+@keyframes dot {
+  0%, 20% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
   }
 }

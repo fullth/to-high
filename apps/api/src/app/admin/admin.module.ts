@@ -5,6 +5,7 @@ import {
   SessionDocument,
   SessionSchema,
 } from '../../database/session.schema';
+import { VisitorDocument, VisitorSchema } from '../../database/visitor.schema';
 import { AdminService } from './admin.service';
 
 @Module({
@@ -12,6 +13,7 @@ import { AdminService } from './admin.service';
     MongooseModule.forFeature([
       { name: UserDocument.name, schema: UserSchema },
       { name: SessionDocument.name, schema: SessionSchema },
+      { name: VisitorDocument.name, schema: VisitorSchema },
     ]),
   ],
   providers: [AdminService],

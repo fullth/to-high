@@ -111,6 +111,7 @@ export interface SelectOptionResponse {
   crisisMessage?: string;
   contextSummary?: string;
   empathyComment?: string;
+  counselorFeedback?: string;  // 상담가 피드백 (경청모드 제외)
   contextCount?: number;
 }
 
@@ -423,6 +424,8 @@ export interface DashboardStats {
   todayUsers: number;
   todaySessions: number;
   subscribers: number;
+  totalVisitors: number;
+  todayVisitors: number;
 }
 
 export function getAdminDashboard(token: string) {
@@ -513,6 +516,37 @@ export function deleteAdminSessions(sessionIds: string[], token: string) {
     body: JSON.stringify({ sessionIds }),
     token,
   });
+}
+
+// 방문자 추적 (인증 불필요)
+export function trackVisitor(visitorId: string) {
+  return fetchApi<{ visitorId: string; visitCount: number; isNew: boolean }>("/health/track", {
+    method: "POST",
+    body: JSON.stringify({ visitorId }),
+  });
+}
+
+// 방문자 목록 조회 (Admin)
+export interface AdminVisitor {
+  id: string;
+  visitorId: string;
+  ip?: string;
+  userAgent?: string;
+  visitCount: number;
+  firstVisitAt: string;
+  lastVisitAt: string;
+}
+
+export function getAdminVisitors(token: string, options?: { limit?: number; offset?: number }) {
+  const params = new URLSearchParams();
+  if (options?.limit !== undefined) {
+    params.set("limit", options.limit.toString());
+  }
+  if (options?.offset !== undefined) {
+    params.set("offset", options.offset.toString());
+  }
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return fetchApi<{ visitors: AdminVisitor[]; total: number }>(`/admin/visitors${query}`, { token });
 }
 
 // ============ Payment API ============

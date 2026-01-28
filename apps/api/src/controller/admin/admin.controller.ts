@@ -149,4 +149,27 @@ export class AdminController {
     this.checkAdmin(req.user.email);
     return this.adminService.deleteSession(sessionId);
   }
+
+  @Get('visitors')
+  @ApiOperation({
+    summary: '방문자 목록',
+    description: '비로그인 방문자 목록을 조회합니다.',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: '조회 개수 (기본 50)' })
+  @ApiQuery({ name: 'offset', required: false, type: Number, description: '시작 위치' })
+  @ApiResponse({
+    status: 200,
+    description: '방문자 목록',
+  })
+  async getVisitors(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    this.checkAdmin(req.user.email);
+    return this.adminService.getVisitors({
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    });
+  }
 }
