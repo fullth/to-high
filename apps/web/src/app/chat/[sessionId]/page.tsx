@@ -342,15 +342,15 @@ function ChatContent() {
 
   if (phase === "chatting") {
     return (
-      <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/10">
-        <header className="border-b border-border/50 p-4 flex justify-between items-center bg-background/80 backdrop-blur-sm">
+      <main className="h-screen max-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/10 overflow-hidden">
+        <header className="flex-shrink-0 border-b border-border/50 p-4 flex justify-between items-center bg-background/80 backdrop-blur-sm">
           <h1 className="font-medium text-foreground/90">이야기 중</h1>
           <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
             여기까지
           </Button>
         </header>
 
-        <div className="flex-1 overflow-auto p-4 space-y-4">
+        <div className="flex-1 min-h-0 overflow-auto p-4 space-y-4">
           {messages.map((msg, idx) => (
             <div
               key={idx}
@@ -388,7 +388,7 @@ function ChatContent() {
           )}
         </div>
 
-        <div className="border-t border-border/50 p-4 bg-background/80 backdrop-blur-sm">
+        <div className="flex-shrink-0 border-t border-border/50 p-4 bg-background/80 backdrop-blur-sm">
           <div className="flex gap-2">
             <input
               type="text"
