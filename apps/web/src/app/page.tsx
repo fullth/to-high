@@ -193,7 +193,7 @@ function getTimeAgo(date: Date): string {
 }
 
 // 비로그인 사용자 최대 대화 횟수
-const MAX_ANONYMOUS_SELECTIONS = 5;
+const MAX_ANONYMOUS_SELECTIONS = 10;
 
 // 마음 돌봄 콘텐츠 데이터
 const mindfulnessContents = [
