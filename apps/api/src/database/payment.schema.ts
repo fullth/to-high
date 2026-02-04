@@ -5,16 +5,16 @@ export type SubscriptionTier = 'basic' | 'premium';
 
 export const SUBSCRIPTION_PLANS = {
   basic: {
-    name: 'Basic',
+    name: '3권',
     price: 2900,
     sessionLimit: 3,
-    description: '월 3개 공책 추가',
+    description: '월 3권 공책 추가',
   },
   premium: {
-    name: 'Premium',
-    price: 8900,
+    name: '10권',
+    price: 7900,
     sessionLimit: 10,
-    description: '월 10개 공책 추가',
+    description: '월 10권 공책 추가',
   },
 } as const;
 

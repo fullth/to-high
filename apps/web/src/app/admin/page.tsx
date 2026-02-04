@@ -65,7 +65,8 @@ export default function AdminPage() {
     } catch (err: unknown) {
       console.error("Admin load error:", err);
       if (err instanceof Error && (err.message.includes("403") || err.message.includes("Forbidden"))) {
-        setError("관리자 권한이 필요합니다.");
+        // 권한 없으면 404처럼 처리
+        setError("not-found");
       } else {
         setError("데이터를 불러오는데 실패했습니다.");
       }
@@ -176,6 +177,16 @@ export default function AdminPage() {
   }
 
   if (error) {
+    // 권한 없으면 404 페이지처럼 보이게
+    if (error === "not-found") {
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center text-foreground">
+          <h1 className="text-6xl font-bold mb-4">404</h1>
+          <p className="text-xl text-muted-foreground mb-6">페이지를 찾을 수 없습니다</p>
+          <a href="/" className="text-primary hover:underline">홈으로 돌아가기</a>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-red-400 text-lg">{error}</div>

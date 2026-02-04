@@ -261,6 +261,67 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
   }
 
   /**
+   * 상담가 유형에 따른 피드백 생성 (경청모드 제외)
+   * 선택 시 공감 코멘트와 함께 상담가 의견을 제공
+   */
+  async generateCounselorFeedback(
+    selectedOption: string,
+    context: string[],
+    counselorType: CounselorType,
+  ): Promise<string> {
+    // 경청모드는 피드백 제공하지 않음
+    if (counselorType === 'listening') {
+      return '';
+    }
+
+    // 컨텍스트가 충분하지 않으면 피드백 생성하지 않음 (최소 2턴)
+    if (context.length < 2) {
+      return '';
+    }
+
+    // 기본 피드백 (API 키 없을 때)
+    const fallbackFeedbacks: Record<Exclude<CounselorType, 'listening'>, string> = {
+      T: '상황을 정리해보면, 지금 겪고 계신 상황이 조금 복잡해 보여요. 핵심을 하나씩 풀어가면 좋을 것 같아요.',
+      F: '많이 힘드셨겠어요. 그런 마음이 드는 건 충분히 자연스러운 거예요. 혼자 감당하지 않으셔도 돼요.',
+      reaction: '아... 그런 일이 있으셨군요.',
+    };
+
+    if (!this.hasApiKey) {
+      return fallbackFeedbacks[counselorType];
+    }
+
+    const counselorPrompt = COUNSELOR_TYPE_PROMPTS[counselorType];
+
+    const response = await this.openai.chat.completions.create({
+      model: PROMPT_CONFIG.MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: `${counselorPrompt}
+
+사용자가 이야기한 내용에 대해 상담가로서 간단한 의견이나 생각을 제시해주세요.
+- 2~3문장으로 짧게
+- 질문하지 않기
+- 상담가 유형에 맞는 스타일로`,
+        },
+        {
+          role: 'user',
+          content: `현재까지 대화:
+${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+
+마지막 사용자 선택: "${selectedOption}"
+
+상담가로서 짧게 의견을 제시해주세요.`,
+        },
+      ],
+      temperature: PROMPT_CONFIG.TEMPERATURE_RESPONSE,
+      max_tokens: 150,
+    });
+
+    return response.choices[0].message.content || '';
+  }
+
+  /**
    * "말하기 어려워요" 선택 시 현재까지 수집된 컨텍스트를 따뜻하게 요약
    */
   async summarizeContextForDifficultToTalk(context: string[]): Promise<string> {
