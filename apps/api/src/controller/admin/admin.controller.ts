@@ -150,6 +150,17 @@ export class AdminController {
     return this.adminService.deleteSession(sessionId);
   }
 
+  @Post('test-notification')
+  @ApiOperation({
+    summary: '알림 테스트',
+    description: '이메일 알림 테스트를 발송합니다.',
+  })
+  async testNotification(@Req() req: any) {
+    this.checkAdmin(req.user.email);
+    // NotificationService를 직접 호출하기 위해 AdminService에 메서드 추가 필요
+    return this.adminService.sendTestNotification();
+  }
+
   @Get('visitors')
   @ApiOperation({
     summary: '방문자 목록',

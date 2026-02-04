@@ -265,11 +265,23 @@ export class ChatService {
       };
     }
 
+    const counselorType = (session as any).counselorType as CounselorType;
+
     // 공감 코멘트 생성
     const empathyComment = await this.openaiAgent.generateEmpathyComment(
       selectedOption,
       session.context,
     );
+
+    // 경청모드가 아닌 경우 상담가 피드백 생성 (AI 의견)
+    let counselorFeedback = '';
+    if (counselorType && counselorType !== 'listening') {
+      counselorFeedback = await this.openaiAgent.generateCounselorFeedback(
+        selectedOption,
+        session.context,
+        counselorType,
+      );
+    }
 
     await this.sessionService.addContext(sessionId, selectedOption);
 
@@ -286,6 +298,7 @@ export class ChatService {
       return {
         sessionId,
         empathyComment,
+        counselorFeedback,
         canProceedToResponse: true,
         canRequestFeedback: options.canRequestFeedback,
         responseModes: RESPONSE_MODE_OPTIONS,
@@ -296,6 +309,7 @@ export class ChatService {
     return {
       sessionId,
       empathyComment,
+      counselorFeedback,
       contextCount: updatedSession!.context.length,
       ...options,
     };

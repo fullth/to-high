@@ -186,7 +186,7 @@ function SubscribeContent() {
           <div className="mb-8 p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-2xl">
             <h2 className="text-xl font-bold mb-2">현재 구독 중</h2>
             <p className="text-slate-300">
-              {subscription.plan?.name} 플랜 · 월 {subscription.plan?.sessionLimit}개 공책
+              {subscription.plan?.name} 플랜 · 월 {subscription.plan?.sessionLimit}권 공책
             </p>
             <p className="text-sm text-slate-400 mt-2">
               다음 결제일: {subscription.endDate ? new Date(subscription.endDate).toLocaleDateString("ko-KR") : "-"}
@@ -203,8 +203,14 @@ function SubscribeContent() {
 
         {/* 타이틀 */}
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold mb-4">더 많은 이야기를 나눠보세요</h1>
+          <h1 className="text-3xl font-bold mb-4">공책 구독하기</h1>
           <p className="text-slate-400">공책을 추가하고 마음을 더 자유롭게 표현하세요</p>
+        </div>
+
+        {/* 준비중 안내 */}
+        <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-center">
+          <p className="text-amber-400 font-medium text-lg mb-2">서비스 준비중</p>
+          <p className="text-slate-400 text-sm">결제 시스템을 준비하고 있어요. 조금만 기다려주세요!</p>
         </div>
 
         {/* 요금제 카드 */}
@@ -238,7 +244,7 @@ function SubscribeContent() {
                   <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  월 {plan.sessionLimit}개 공책 추가
+                  월 {plan.sessionLimit}권 공책 추가
                 </li>
                 <li className="flex items-center gap-2 text-slate-300">
                   <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -255,24 +261,55 @@ function SubscribeContent() {
               </ul>
 
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSubscribe(plan.tier as SubscriptionTier);
-                }}
-                disabled={isProcessing || subscription?.isSubscribed}
-                className={`w-full py-3 rounded-xl font-medium transition-all ${
-                  subscription?.isSubscribed
-                    ? "bg-slate-600 text-slate-400 cursor-not-allowed"
-                    : plan.tier === "premium"
-                    ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                    : "bg-slate-600 hover:bg-slate-500"
-                }`}
+                disabled={true}
+                className="w-full py-3 rounded-xl font-medium transition-all bg-slate-600 text-slate-400 cursor-not-allowed"
               >
-                {isProcessing ? "처리 중..." : subscription?.isSubscribed ? "이미 구독 중" : "구독하기"}
+                준비중
               </button>
             </div>
           ))}
         </div>
+
+        {/* 요금제 정책 */}
+        <div className="bg-slate-800/50 rounded-2xl p-6 mb-8">
+          <h3 className="text-lg font-semibold mb-4">요금제 정책</h3>
+          <div className="space-y-4 text-sm text-slate-400">
+            <div>
+              <h4 className="text-slate-300 font-medium mb-1">구독 혜택</h4>
+              <ul className="list-disc list-inside space-y-1">
+                <li>3권: 매월 3권의 새 공책이 추가됩니다</li>
+                <li>10권: 매월 10권의 새 공책이 추가됩니다</li>
+                <li>모든 공책에서 무제한 대화가 가능합니다</li>
+                <li>대화 기록은 영구 저장됩니다</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-slate-300 font-medium mb-1">결제 안내</h4>
+              <ul className="list-disc list-inside space-y-1">
+                <li>매월 결제일에 자동 결제됩니다</li>
+                <li>요금제 변경은 다음 결제일부터 적용됩니다</li>
+                <li>미사용 공책은 다음 달로 이월되지 않습니다</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-slate-300 font-medium mb-1">해지 안내</h4>
+              <ul className="list-disc list-inside space-y-1">
+                <li>언제든지 구독을 해지할 수 있습니다</li>
+                <li>해지 시 남은 기간까지 서비스 이용이 가능합니다</li>
+                <li>해지 후에도 기존 대화 기록은 보존됩니다</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* TODO: 법적 고지사항 - 결제 연동 시 추가 필요
+            - 청약철회: 전자상거래법에 따른 7일 이내 청약철회 권리 안내
+            - 환불정책: 이용기간에 따른 환불 계산 방식
+            - 자동결제 동의: 정기결제 동의 및 해지 방법 명시
+            - 개인정보 제3자 제공: 결제사(토스페이먼츠 등)에 대한 정보 제공 동의
+            - 통신판매업 신고번호 표시
+            - 사업자 정보 (상호, 대표자, 주소, 연락처)
+        */}
 
         {/* 안내 */}
         <div className="text-center text-sm text-slate-500">
