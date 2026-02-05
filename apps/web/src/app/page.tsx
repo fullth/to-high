@@ -19,9 +19,11 @@ import {
   updateSessionAlias,
   deleteSession,
   trackVisitor,
+  getPublicStats,
   SelectOptionResponse,
   SessionListItem,
   CounselorType,
+  PublicStats,
 } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption } from "@/types/chat";
 
@@ -362,6 +364,9 @@ export default function Home() {
   // 선택 히스토리
   const [selectionHistory, setSelectionHistory] = useState<HistoryItem[]>([]);
 
+  // 공개 통계
+  const [publicStats, setPublicStats] = useState<PublicStats | null>(null);
+
   // 스크롤 ref
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -467,6 +472,13 @@ export default function Home() {
     trackVisitor(visitorId).catch((err) => {
       console.error("Failed to track visitor:", err);
     });
+
+    // 공개 통계 불러오기
+    getPublicStats()
+      .then(setPublicStats)
+      .catch((err) => {
+        console.error("Failed to get public stats:", err);
+      });
   }, []);
 
   // 한도 에러 처리
@@ -1256,6 +1268,16 @@ export default function Home() {
         {/* 메인 콘텐츠 */}
         <div className="flex-1 flex flex-col items-center justify-start sm:justify-center p-4 sm:p-6 pt-4">
           <div className="max-w-lg w-full space-y-4 sm:space-y-8">
+            {/* 익명 감정 통계 - 0명일 때는 숨김 */}
+            {publicStats && publicStats.todayConversations > 0 && (
+              <div className="flex justify-center gap-6 text-center">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span>오늘 <strong className="text-foreground">{publicStats.todayConversations.toLocaleString()}</strong>명이 위로받았어요</span>
+                </div>
+              </div>
+            )}
+
             <div className="text-center space-y-2 sm:space-y-3">
               <p className="text-base sm:text-xl text-foreground/90 tracking-wide" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
                 오늘 하루 어땠어요?

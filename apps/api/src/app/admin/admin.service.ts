@@ -324,6 +324,25 @@ export class AdminService {
   }
 
   /**
+   * 공개 통계 (익명 - 로그인 불필요)
+   */
+  async getPublicStats() {
+    const today = new Date(new Date().setHours(0, 0, 0, 0));
+
+    const [totalSessions, todaySessions] = await Promise.all([
+      this.sessionModel.countDocuments(),
+      this.sessionModel.countDocuments({
+        createdAt: { $gte: today },
+      }),
+    ]);
+
+    return {
+      totalConversations: totalSessions,
+      todayConversations: todaySessions,
+    };
+  }
+
+  /**
    * 테스트 알림 발송
    */
   async sendTestNotification() {
