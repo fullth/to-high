@@ -951,25 +951,38 @@ export default function Home() {
         });
       }
 
-      // 이전 대화 일부 표시 (선택적)
+      // 이전 대화 일부 표시
       if (res.previousContext && res.previousContext.length > 0) {
-        // 최근 몇 개만 표시
-        res.previousContext.slice(-4).forEach((ctx: string) => {
-          if (ctx.startsWith("나:")) {
-            historyItems.push({ type: "user", content: ctx.replace("나: ", ""), timestamp: new Date() });
-          } else if (ctx.startsWith("상담사:")) {
-            historyItems.push({ type: "assistant", content: ctx.replace("상담사: ", ""), timestamp: new Date() });
+        // 최근 대화만 표시
+        res.previousContext.slice(-6).forEach((ctx: string, idx: number) => {
+          // 새 형식: "나: ", "상담사: " 접두사
+          if (ctx.startsWith("나:") || ctx.startsWith("나: ")) {
+            historyItems.push({ type: "user", content: ctx.replace(/^나:\s*/, ""), timestamp: new Date() });
+          } else if (ctx.startsWith("상담사:") || ctx.startsWith("상담사: ")) {
+            historyItems.push({ type: "assistant", content: ctx.replace(/^상담사:\s*/, ""), timestamp: new Date() });
+          } else if (!ctx.startsWith("[")) {
+            // 기존 형식: 접두사 없음 - 짝수는 사용자, 홀수는 AI로 추정
+            // 단, 시스템 메시지([로 시작)는 제외
+            historyItems.push({
+              type: idx % 2 === 0 ? "user" : "assistant",
+              content: ctx,
+              timestamp: new Date()
+            });
           }
         });
       }
 
-      // 새 질문 추가
-      historyItems.push({
-        type: "assistant",
-        content: res.question,
-        isQuestion: true,
-        timestamp: new Date(),
-      });
+      // 새 질문 추가 (이전 컨텍스트 마지막이 상담사 응답이 아닐 때만)
+      const lastContext = res.previousContext?.[res.previousContext.length - 1];
+      const lastWasAssistant = lastContext?.startsWith("상담사:") || lastContext?.startsWith("상담사: ");
+      if (!lastWasAssistant) {
+        historyItems.push({
+          type: "assistant",
+          content: res.question,
+          isQuestion: true,
+          timestamp: new Date(),
+        });
+      }
 
       setSelectionHistory(historyItems);
     } catch (err) {

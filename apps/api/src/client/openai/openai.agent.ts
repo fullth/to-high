@@ -148,8 +148,33 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
+
+    // 5회 이상 연속 질문 방지: context에서 최근 AI 응답들이 모두 질문인지 확인
+    let question = result.question || '';
+    const recentAiResponses = context
+      .filter(c => c.startsWith('상담사:') || c.startsWith('상담사: '))
+      .slice(-4); // 최근 4개 AI 응답
+
+    const allQuestionsRecently = recentAiResponses.length >= 4 &&
+      recentAiResponses.every(r => r.includes('?'));
+
+    // 이번 응답도 질문으로 끝나고, 최근 4개가 모두 질문이면 → 질문 제거
+    if (allQuestionsRecently && question.trim().endsWith('?')) {
+      // 물음표 문장 제거하고 공감 부분만 남기기
+      const sentences = question.split(/(?<=[.!?])\s*/);
+      const nonQuestionSentences = sentences.filter((s: string) => !s.trim().endsWith('?'));
+
+      if (nonQuestionSentences.length > 0) {
+        question = nonQuestionSentences.join(' ').trim();
+      } else {
+        // 전부 질문이면 기본 공감 멘트로 대체
+        question = '네, 잘 들었어요. 천천히 이야기해주세요.';
+      }
+    }
+
     return {
       ...result,
+      question,
       canRequestFeedback,
     };
   }
