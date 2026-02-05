@@ -13,8 +13,8 @@ import type { SessionListItem, SessionDetailResponse } from '../../controller/ch
 // 토큰 낭비 방지 제한
 const MAX_INPUT_LENGTH = 500; // 최대 입력 길이 (일반)
 const MAX_IMPORT_LENGTH = 100000; // 불러오기 최대 길이 (10만자)
-const MAX_CONTEXT_COUNT = 30; // 세션당 최대 대화 턴 수
-const MAX_CHAT_MESSAGES = 20; // 채팅 모드 최대 메시지 수
+const MAX_CONTEXT_COUNT = 200; // 세션당 최대 대화 턴 수 (롤링 요약으로 토큰 절약)
+const MAX_CHAT_MESSAGES = 100; // 채팅 모드 최대 메시지 수
 
 // 무료 사용자 세션 제한
 const FREE_USER_SESSION_LIMIT = 3;
@@ -283,16 +283,32 @@ export class ChatService {
       );
     }
 
-    await this.sessionService.addContext(sessionId, selectedOption);
+    // 사용자 선택 저장 (나: 접두사 추가)
+    await this.sessionService.addContext(sessionId, `나: ${selectedOption}`);
 
     const updatedSession = await this.sessionService.findById(sessionId);
 
+    // 롤링 요약이 있으면 context 앞에 추가
+    const rollingSummary = (updatedSession as any).rollingSummary || '';
+    const contextForAI = rollingSummary
+      ? [`[이전 대화 요약] ${rollingSummary}`, ...updatedSession!.context]
+      : updatedSession!.context;
+
     const options = await this.openaiAgent.generateOptions(
-      updatedSession!.context,
+      contextForAI,
       'collecting',
       updatedSession!.category as Category,
       (updatedSession as any).counselorType as CounselorType,
     );
+
+    // AI 응답(질문) 저장
+    await this.sessionService.addContext(sessionId, `상담사: ${options.question}`);
+
+    // 롤링 요약: context가 20개 이상이면 오래된 것 요약
+    const finalSession = await this.sessionService.findById(sessionId);
+    if (finalSession && finalSession.context.length >= 20) {
+      await this.performRollingSummary(sessionId, finalSession);
+    }
 
     if (options.canProceedToResponse) {
       return {
@@ -302,7 +318,7 @@ export class ChatService {
         canProceedToResponse: true,
         canRequestFeedback: options.canRequestFeedback,
         responseModes: RESPONSE_MODE_OPTIONS,
-        contextCount: updatedSession!.context.length,
+        contextCount: updatedSession!.context.length + 1,
       };
     }
 
@@ -310,7 +326,7 @@ export class ChatService {
       sessionId,
       empathyComment,
       counselorFeedback,
-      contextCount: updatedSession!.context.length,
+      contextCount: updatedSession!.context.length + 1,
       ...options,
     };
   }
@@ -647,5 +663,38 @@ export class ChatService {
       sessionId: session._id.toString(),
       alias: session.alias,
     };
+  }
+
+  /**
+   * 롤링 요약 수행 - 오래된 context를 요약하고 최근 10개만 유지
+   */
+  private async performRollingSummary(sessionId: string, session: any) {
+    const context = session.context;
+    const existingSummary = session.rollingSummary || '';
+
+    // 요약할 부분 (오래된 것들, 최근 10개 제외)
+    const contextToSummarize = context.slice(0, -10);
+    // 유지할 부분 (최근 10개)
+    const recentContext = context.slice(-10);
+
+    if (contextToSummarize.length === 0) return;
+
+    try {
+      // 롤링 요약 생성
+      const newSummary = await this.openaiAgent.generateRollingSummary(
+        existingSummary,
+        contextToSummarize,
+      );
+
+      // DB 업데이트: 요약 저장 + context를 최근 10개만 남김
+      await this.sessionRepository.updateRollingSummary(
+        sessionId,
+        newSummary,
+        recentContext,
+      );
+    } catch (error) {
+      console.error('Rolling summary failed:', error);
+      // 실패해도 대화는 계속 진행
+    }
   }
 }
