@@ -526,6 +526,18 @@ export function trackVisitor(visitorId: string) {
   });
 }
 
+// 공개 통계 (인증 불필요)
+export interface PublicStats {
+  totalConversations: number;
+  todayConversations: number;
+}
+
+export function getPublicStats() {
+  return fetchApi<PublicStats>("/health/stats", {
+    method: "GET",
+  });
+}
+
 // 방문자 목록 조회 (Admin)
 export interface AdminVisitor {
   id: string;

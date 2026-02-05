@@ -16,6 +16,12 @@ export class HealthController {
     };
   }
 
+  @Get('stats')
+  @ApiOperation({ summary: '공개 통계 (익명)' })
+  async getPublicStats() {
+    return this.adminService.getPublicStats();
+  }
+
   @Post('track')
   @ApiOperation({ summary: '방문자 추적' })
   @ApiBody({
