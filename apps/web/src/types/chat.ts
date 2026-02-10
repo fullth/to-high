@@ -29,7 +29,17 @@ export interface ChatState {
   summary?: string;
 }
 
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+export type TopLevelMode = "mbti" | "reaction" | "listening" | null;
+
+export interface HistoryItem {
+  type: "user" | "assistant" | "system";
+  content: string;
+  isQuestion?: boolean;
+  timestamp?: Date;
 }

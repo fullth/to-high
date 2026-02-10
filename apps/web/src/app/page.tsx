@@ -33,39 +33,39 @@ type TopLevelMode = "mbti" | "reaction" | "listening" | null;
 const topLevelModes = [
   {
     id: "mbti" as TopLevelMode,
-    label: "MBTI 모드",
-    description: "T/F 성향에 맞는 상담",
+    label: "MBTI 성향 상담",
+    description: "성향 맞춤 대화",
     color: "#6366F1",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M12 2a7 7 0 0 0 0 14 7 7 0 0 0 0-14"/>
-        <path d="M12 8v8"/>
-        <path d="M8 12h8"/>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 2a7 7 0 0 0 0 14 7 7 0 0 0 0-14" />
+        <path d="M12 8v8" />
+        <path d="M8 12h8" />
       </svg>
     ),
   },
   {
     id: "reaction" as TopLevelMode,
-    label: "리액션 모드",
-    description: "짧은 반응, 가볍게 대화",
+    label: "따뜻한 공감",
+    description: "진심 어린 호응으로",
     color: "#9B8AA4",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
     ),
   },
   {
     id: "listening" as TopLevelMode,
-    label: "경청 모드",
-    description: "그냥 들어줄게요",
+    label: "깊은 경청",
+    description: "당신의 모든 이야기를",
     color: "#7C9885",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M9 18V5l12-2v13"/>
-        <circle cx="6" cy="18" r="3"/>
-        <circle cx="18" cy="16" r="3"/>
+        <path d="M9 18V5l12-2v13" />
+        <circle cx="6" cy="18" r="3" />
+        <circle cx="18" cy="16" r="3" />
       </svg>
     ),
   },
@@ -75,24 +75,24 @@ const topLevelModes = [
 const mbtiSubTypes = [
   {
     id: "F" as CounselorType,
-    label: "F - 감정형",
-    description: "따뜻한 위로가 필요할 때",
+    label: "F 감정형",
+    description: "따뜻한 위로가 필요해요",
     color: "#E8A0BF",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
       </svg>
     ),
   },
   {
     id: "T" as CounselorType,
-    label: "T - 사고형",
-    description: "현실적인 조언이 필요할 때",
+    label: "T 사고형",
+    description: "현실적인 조언이 필요해요",
     color: "#5B8FB9",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
       </svg>
     ),
   },
@@ -107,8 +107,8 @@ const categories = [
     description: "마음, 감정",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
       </svg>
     )
   },
@@ -119,7 +119,7 @@ const categories = [
     description: "진로, 선택",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+        <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
       </svg>
     )
   },
@@ -130,8 +130,8 @@ const categories = [
     description: "업무, 직장",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <rect x="2" y="7" width="20" height="14" rx="2"/>
-        <path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/>
+        <rect x="2" y="7" width="20" height="14" rx="2" />
+        <path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3" />
       </svg>
     )
   },
@@ -142,9 +142,9 @@ const categories = [
     description: "가족, 친구",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <circle cx="9" cy="7" r="3"/>
-        <circle cx="15" cy="7" r="3"/>
-        <path d="M3 21v-2a4 4 0 0 1 4-4h2m6 0h2a4 4 0 0 1 4 4v2"/>
+        <circle cx="9" cy="7" r="3" />
+        <circle cx="15" cy="7" r="3" />
+        <path d="M3 21v-2a4 4 0 0 1 4-4h2m6 0h2a4 4 0 0 1 4 4v2" />
       </svg>
     )
   },
@@ -155,7 +155,7 @@ const categories = [
     description: "사랑, 이별",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
       </svg>
     )
   },
@@ -166,7 +166,7 @@ const categories = [
     description: "그냥 얘기",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
     )
   },
@@ -370,6 +370,25 @@ export default function Home() {
   // 스크롤 ref
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const statusBadge = (
+    <div className="fixed right-0 top-32 z-50 pointer-events-none hidden lg:flex">
+      <div className="bg-white/60 backdrop-blur-md border border-white/50 border-r-0 rounded-l-full py-2.5 px-5 shadow-xl ring-1 ring-white/60 flex items-center gap-3 group hover:bg-white/80 transition-all duration-300 pointer-events-auto">
+        <div className="flex items-center gap-1.5 px-0.5">
+          <div className="relative">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+            <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
+          </div>
+          {/* 초록색 점등 앞에 */}
+          <span className="text-[10px] font-black text-emerald-600 tracking-tighter uppercase leading-none"></span>
+        </div>
+        <div className="w-px h-4 bg-border/20" />
+        <p className="text-[12px] font-bold text-foreground/70 whitespace-nowrap group-hover:text-primary transition-colors duration-300">
+          24시간 언제든 찾아주세요
+        </p>
+      </div>
+    </div>
+  );
+
   // 세션 상태 저장 함수 (로그인 전)
   const saveSessionState = useCallback(() => {
     const stateToSave = {
@@ -515,7 +534,7 @@ export default function Home() {
       const res = await startSession(categoryId, token || undefined, selectedCounselorType || undefined);
       setSessionId(res.sessionId);
       setQuestion(res.question);
-      setOptions(res.options);
+      setOptions(res.options || []);
       setCanRequestFeedback(res.canRequestFeedback || false);
       setContextCount(res.contextCount || 0);
       setHasHistory(res.hasHistory || false);
@@ -563,7 +582,7 @@ export default function Home() {
       const res = await startSessionWithText(directInput.trim(), undefined, token || undefined, selectedCounselorType || undefined);
       setSessionId(res.sessionId);
       setQuestion(res.question);
-      setOptions(res.options);
+      setOptions(res.options || []);
       setCanRequestFeedback(res.canRequestFeedback || false);
       setContextCount(res.contextCount || 0);
       setHasHistory(res.hasHistory || false);
@@ -1095,10 +1114,10 @@ export default function Home() {
                 }}
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
                 Google로 로그인하기
               </Button>
@@ -1111,7 +1130,7 @@ export default function Home() {
                 }}
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#191919">
-                  <path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.76 1.84 5.18 4.6 6.54-.2.72-.74 2.62-.85 3.02-.13.5.18.49.39.36.16-.1 2.59-1.76 3.64-2.48.73.1 1.48.16 2.22.16 5.52 0 10-3.48 10-7.8S17.52 3 12 3z"/>
+                  <path d="M12 3C6.48 3 2 6.48 2 10.8c0 2.76 1.84 5.18 4.6 6.54-.2.72-.74 2.62-.85 3.02-.13.5.18.49.39.36.16-.1 2.59-1.76 3.64-2.48.73.1 1.48.16 2.22.16 5.52 0 10-3.48 10-7.8S17.52 3 12 3z" />
                 </svg>
                 카카오로 로그인하기
               </Button>
@@ -1278,6 +1297,8 @@ export default function Home() {
           </div>
         </header>
 
+        {statusBadge}
+
         {/* 메인 콘텐츠 */}
         <div className="flex-1 flex flex-col items-center justify-start sm:justify-center p-4 sm:p-6 pt-4">
           <div className="max-w-lg w-full space-y-4 sm:space-y-8">
@@ -1292,15 +1313,18 @@ export default function Home() {
             )}
 
             <div className="text-center space-y-3 sm:space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium animate-fade-in-up">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                24시간 언제든 이야기해요
-              </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground/90 tracking-tight animate-fade-in-up stagger-1" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
-                오늘 하루 어땠어요?
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground/90 tracking-tight animate-fade-in-up stagger-1" style={{ fontFamily: '"Pretendard Variable", Pretendard, sans-serif' }}>
+                {user?.name ? (
+                  <>
+                    <span className="text-primary">{user.name}</span>님, <br className="hidden sm:block" />
+                    오늘 하루도 정말 수고 많으셨어요.
+                  </>
+                ) : (
+                  "오늘 하루도 정말 수고 많으셨어요."
+                )}
               </h1>
-              <p className="text-base sm:text-lg text-muted-foreground animate-fade-in-up stagger-2" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
-                마음에 걸리는 게 있다면 얘기해줄래요?
+              <p className="text-base sm:text-lg text-muted-foreground animate-fade-in-up stagger-2" style={{ fontFamily: '"Pretendard Variable", Pretendard, sans-serif' }}>
+                마음에 걸리는 게 있다면 편하게 말씀해 주세요.
               </p>
             </div>
 
@@ -1317,8 +1341,8 @@ export default function Home() {
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <p className="text-base font-semibold text-foreground/90">나만의 상담사를 키워보세요</p>
-                    <p className="text-sm text-muted-foreground mt-1">로그인하면 대화가 저장되고, 당신을 기억해요</p>
+                    <p className="text-base font-semibold text-foreground/90">나만의 상담사를 만들어보세요</p>
+                    <p className="text-sm text-muted-foreground mt-1">로그인하시면 대화가 저장되고, 회원님을 기억합니다</p>
                   </div>
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                     <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1353,7 +1377,7 @@ export default function Home() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-foreground/90">다른 곳에서 상담하셨나요?</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">이전 상담 내용을 붙여넣으면 맥락을 이해해요</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">이전 상담 내용을 입력하시면 맥락을 더 잘 이해할 수 있습니다</p>
                 </div>
                 <svg className="w-5 h-5 text-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1499,7 +1523,7 @@ export default function Home() {
               <div className="space-y-3">
                 <div className="text-center">
                   <p className="text-sm font-medium text-foreground/90 mb-1">먼저, 어떤 방식으로 대화할까요?</p>
-                  <p className="text-xs text-muted-foreground">(선택하지 않아도 괜찮아요)</p>
+                  <p className="text-xs text-muted-foreground">(선택하지 않으셔도 괜찮습니다)</p>
                 </div>
 
                 {/* 상위 모드 선택 */}
@@ -1507,11 +1531,10 @@ export default function Home() {
                   {topLevelModes.map((mode) => (
                     <button
                       key={mode.id}
-                      className={`p-3 rounded-xl border text-center transition-all duration-200 ${
-                        selectedTopMode === mode.id
-                          ? "border-primary bg-primary/10 shadow-sm"
-                          : "border-border/50 hover:border-primary/40 hover:bg-secondary/30"
-                      } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                      className={`group relative flex flex-col items-center justify-center p-4 rounded-[24px] border transition-all duration-300 ${selectedTopMode === mode.id
+                        ? "bg-primary/10 border-primary shadow-md"
+                        : "bg-card border-border/50 hover:border-primary/30 hover:bg-secondary/30 hover:-translate-y-1 hover:shadow-lg"
+                        } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
                       onClick={() => {
                         if (selectedTopMode === mode.id) {
                           setSelectedTopMode(null);
@@ -1529,13 +1552,26 @@ export default function Home() {
                       disabled={isLoading}
                     >
                       <div
-                        className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center text-white"
-                        style={{ backgroundColor: mode.color }}
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-md ${selectedTopMode === mode.id ? "scale-110 rotate-3" : ""}`}
+                        style={{
+                          background: `linear-gradient(135deg, ${mode.color}20 0%, ${mode.color}10 100%)`,
+                          color: mode.color,
+                          boxShadow: `
+                            inset 0 2px 4px 0 rgba(255, 255, 255, 0.7), 
+                            inset 0 -2px 4px 0 rgba(0, 0, 0, 0.05),
+                            0 4px 8px ${mode.color}15
+                          `,
+                          border: `1px solid ${mode.color}10`
+                        }}
                       >
                         {mode.icon}
                       </div>
-                      <div className="text-xs font-medium">{mode.label}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{mode.description}</div>
+                      <div className="text-sm font-semibold mb-0.5">{mode.label}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-1">{mode.description}</div>
+
+                      {selectedTopMode === mode.id && (
+                        <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1548,22 +1584,30 @@ export default function Home() {
                       {mbtiSubTypes.map((subType) => (
                         <button
                           key={subType.id}
-                          className={`p-3 rounded-xl border text-center transition-all duration-200 ${
-                            selectedCounselorType === subType.id
-                              ? "border-primary bg-background shadow-sm"
-                              : "border-border/30 bg-background/50 hover:border-primary/40"
-                          } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                          className={`group relative flex flex-col items-center justify-center p-5 rounded-[24px] border transition-all duration-300 ${selectedCounselorType === subType.id
+                            ? "border-primary bg-background shadow-md"
+                            : "border-border/30 bg-background/50 hover:border-primary/40 hover:-translate-y-1 hover:shadow-lg"
+                            } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
                           onClick={() => setSelectedCounselorType(selectedCounselorType === subType.id ? null : subType.id)}
                           disabled={isLoading}
                         >
                           <div
-                            className="w-8 h-8 rounded-full mx-auto mb-1.5 flex items-center justify-center text-white"
-                            style={{ backgroundColor: subType.color }}
+                            className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-md ${selectedCounselorType === subType.id ? "scale-110 rotate-3" : ""}`}
+                            style={{
+                              background: `linear-gradient(135deg, ${subType.color}20 0%, ${subType.color}10 100%)`,
+                              color: subType.color,
+                              boxShadow: `
+                                inset 0 2px 4px 0 rgba(255, 255, 255, 0.7), 
+                                inset 0 -2px 4px 0 rgba(0, 0, 0, 0.05),
+                                0 4px 8px ${subType.color}15
+                              `,
+                              border: `1px solid ${subType.color}10`
+                            }}
                           >
                             {subType.icon}
                           </div>
-                          <div className="text-xs font-medium">{subType.label}</div>
-                          <div className="text-[10px] text-muted-foreground mt-0.5">{subType.description}</div>
+                          <div className="text-sm font-semibold mb-1">{subType.label}</div>
+                          <div className="text-xs text-muted-foreground">{subType.description}</div>
                         </button>
                       ))}
                     </div>
@@ -1575,10 +1619,10 @@ export default function Home() {
                   <div className="flex items-center justify-center gap-2 text-xs text-primary">
                     <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                     <span>
-                      {selectedCounselorType === "T" && "현실적인 조언 모드로 대화해요"}
-                      {selectedCounselorType === "F" && "따뜻한 위로 모드로 대화해요"}
-                      {selectedCounselorType === "reaction" && "가볍게 리액션하며 대화해요"}
-                      {selectedCounselorType === "listening" && "말없이 들어드릴게요"}
+                      {selectedCounselorType === "T" && "현실적인 조언 모드로 대화합니다"}
+                      {selectedCounselorType === "F" && "따뜻한 위로 모드로 대화합니다"}
+                      {selectedCounselorType === "reaction" && "가볍게 리액션하며 대화합니다"}
+                      {selectedCounselorType === "listening" && "말없이 경청하겠습니다"}
                     </span>
                   </div>
                 )}
@@ -1595,21 +1639,41 @@ export default function Home() {
                 {categories.map((category, idx) => (
                   <button
                     key={category.id}
-                    className={`category-card p-4 sm:p-5 rounded-2xl border border-border/30 bg-card text-center shadow-sm hover:border-primary/50 hover:shadow-lg ${isLoading ? "opacity-50 pointer-events-none" : ""} animate-fade-in-up stagger-${idx + 1}`}
+                    className={`group relative flex flex-col items-center justify-center p-6 rounded-[32px] bg-card border-none transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] ${isLoading ? "opacity-50 pointer-events-none" : ""
+                      } animate-fade-in-up stagger-${idx + 1}`}
+                    style={{
+                      boxShadow: "0 10px 30px -10px rgba(0,0,0,0.05)",
+                    }}
                     onClick={() => handleCategorySelect(category.id)}
                     disabled={isLoading}
                   >
                     <div
-                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl mx-auto mb-2 sm:mb-3 flex items-center justify-center text-white shadow-md"
+                      className="w-16 h-16 rounded-[24px] mb-4 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-md"
                       style={{
-                        backgroundColor: category.color,
-                        boxShadow: `0 4px 12px -2px ${category.color}40`
+                        background: `linear-gradient(135deg, ${category.color}20 0%, ${category.color}10 100%)`,
+                        color: category.color,
+                        boxShadow: `
+                          inset 0 2px 4px 0 rgba(255, 255, 255, 0.7), 
+                          inset 0 -2px 4px 0 rgba(0, 0, 0, 0.05),
+                          0 4px 12px ${category.color}20
+                        `,
+                        border: `1px solid ${category.color}10`
                       }}
                     >
                       {category.icon}
                     </div>
-                    <div className="text-sm sm:text-base font-semibold text-foreground/90 whitespace-nowrap">{category.label}</div>
-                    <div className="text-xs sm:text-sm text-muted-foreground mt-1 whitespace-nowrap">{category.description}</div>
+                    <div className="space-y-2 text-center">
+                      <div className="font-bold text-lg text-foreground/90">{category.label}</div>
+                      <div className="text-sm text-muted-foreground line-clamp-2 px-2">{category.description}</div>
+                    </div>
+
+                    {/* Hover Effect - Border Glow */}
+                    <div
+                      className="absolute inset-0 rounded-[32px] opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+                      style={{
+                        boxShadow: `inset 0 0 0 2px ${category.color}40`
+                      }}
+                    />
                   </button>
                 ))}
               </div>
@@ -1617,14 +1681,14 @@ export default function Home() {
 
             {/* 직접 입력 영역 */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-4 sm:p-5 space-y-3 shadow-sm animate-fade-in-up stagger-5">
-              <p className="text-sm text-muted-foreground text-center">또는 직접 얘기해주세요</p>
+              <p className="text-sm text-muted-foreground text-center">또는 직접 말씀해 주세요</p>
               <div className="flex gap-3 items-stretch">
                 <input
                   type="text"
                   value={directInput}
                   onChange={(e) => setDirectInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleDirectInputSubmit()}
-                  placeholder="무슨 일이 있었는지 말해주세요..."
+                  placeholder="무슨 일이 있었는지 말씀해 주세요..."
                   className="flex-1 px-4 sm:px-5 h-12 sm:h-14 text-sm sm:text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all shadow-sm"
                   disabled={isLoading}
                 />
@@ -1633,7 +1697,7 @@ export default function Home() {
                   onClick={handleDirectInputSubmit}
                   disabled={isLoading || !directInput.trim()}
                 >
-                  시작
+                  상담 시작
                 </Button>
               </div>
             </div>
@@ -1665,258 +1729,260 @@ export default function Home() {
         <SessionSwitchingOverlay />
 
         {/* 이전 상담 불러오기 모달 */}
-        {showImportModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <Card className="max-w-md w-full border-primary/30 bg-card shadow-xl max-h-[90vh] overflow-auto">
-              <CardHeader className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-medium text-foreground/90">
-                    {importStep === "category" ? "어떤 주제의 상담이었나요?" :
-                     importStep === "text" ? "이전 상담 내용 붙여넣기" :
-                     "요약 확인 및 수정"}
-                  </CardTitle>
-                  <button
-                    onClick={() => setShowImportModal(false)}
-                    className="p-1 rounded-full hover:bg-secondary/50 transition-colors"
-                  >
-                    <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
+        {
+          showImportModal && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <Card className="max-w-md w-full border-primary/30 bg-card shadow-xl max-h-[90vh] overflow-auto">
+                <CardHeader className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-medium text-foreground/90">
+                      {importStep === "category" ? "어떤 주제의 상담이었나요?" :
+                        importStep === "text" ? "이전 상담 내용 붙여넣기" :
+                          "요약 확인 및 수정"}
+                    </CardTitle>
+                    <button
+                      onClick={() => setShowImportModal(false)}
+                      className="p-1 rounded-full hover:bg-secondary/50 transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
 
-                {importStep === "category" ? (
-                  <>
-                    <CardDescription className="text-sm text-muted-foreground">
-                      카테고리를 선택하면 맥락을 더 잘 이해할 수 있어요
-                    </CardDescription>
-                    <div className="grid grid-cols-2 gap-2 pt-2">
-                      {categories.map((cat) => (
+                  {importStep === "category" ? (
+                    <>
+                      <CardDescription className="text-sm text-muted-foreground">
+                        카테고리를 선택하면 맥락을 더 잘 이해할 수 있어요
+                      </CardDescription>
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        {categories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            onClick={() => {
+                              setImportCategory(cat.id);
+                              setImportStep("text");
+                            }}
+                            className="p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                                style={{ backgroundColor: cat.color }}
+                              >
+                                {cat.icon}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{cat.label}</p>
+                                <p className="text-xs text-muted-foreground">{cat.description}</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : importStep === "text" ? (
+                    <>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <button
-                          key={cat.id}
-                          onClick={() => {
-                            setImportCategory(cat.id);
-                            setImportStep("text");
-                          }}
-                          className="p-3 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left"
+                          onClick={() => setImportStep("category")}
+                          className="hover:text-foreground transition-colors"
                         >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-white"
-                              style={{ backgroundColor: cat.color }}
-                            >
-                              {cat.icon}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{cat.label}</p>
-                              <p className="text-xs text-muted-foreground">{cat.description}</p>
-                            </div>
-                          </div>
+                          &larr; 카테고리 변경
                         </button>
-                      ))}
-                    </div>
-                  </>
-                ) : importStep === "text" ? (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <button
-                        onClick={() => setImportStep("category")}
-                        className="hover:text-foreground transition-colors"
-                      >
-                        &larr; 카테고리 변경
-                      </button>
-                      <span>|</span>
-                      <span>
-                        {categories.find(c => c.id === importCategory)?.label || "선택됨"}
-                      </span>
-                    </div>
-                    <CardDescription className="text-sm text-muted-foreground">
-                      ChatGPT 등에서 나눈 상담 내용을 복사해서 붙여넣어 주세요. (최대 10만자)
-                    </CardDescription>
-                    <textarea
-                      value={importText}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value.length > 100000) {
-                          setImportText(value.slice(0, 100000));
-                          setImportError("10만자를 초과하여 뒷부분이 잘렸어요");
-                        } else {
-                          setImportText(value);
-                          setImportError(null);
-                        }
-                      }}
-                      placeholder="이전 상담 내용을 붙여넣어 주세요...
+                        <span>|</span>
+                        <span>
+                          {categories.find(c => c.id === importCategory)?.label || "선택됨"}
+                        </span>
+                      </div>
+                      <CardDescription className="text-sm text-muted-foreground">
+                        ChatGPT 등에서 나눈 상담 내용을 복사해서 붙여넣어 주세요. (최대 10만자)
+                      </CardDescription>
+                      <textarea
+                        value={importText}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value.length > 100000) {
+                            setImportText(value.slice(0, 100000));
+                            setImportError("10만자를 초과하여 뒷부분이 잘렸어요");
+                          } else {
+                            setImportText(value);
+                            setImportError(null);
+                          }
+                        }}
+                        placeholder="이전 상담 내용을 붙여넣어 주세요...
 
 예시:
 - ChatGPT와 나눈 대화
 - 노트에 적어둔 고민
 - 일기나 메모 등"
-                      className="w-full h-48 p-3 text-sm rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all resize-none"
-                      disabled={isImporting}
-                    />
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{importText.length.toLocaleString()} / 100,000자</span>
-                      {importText.length > 90000 && (
-                        <span className="text-amber-500">거의 다 찼어요</span>
-                      )}
-                    </div>
-                    {/* 안심 문구 */}
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/30 border border-secondary/50">
-                      <svg className="w-4 h-4 text-primary/70 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                      <div className="text-xs text-muted-foreground">
-                        <p className="font-medium text-foreground/80">안심하세요</p>
-                        <p className="mt-0.5">입력하신 내용은 암호화되어 안전하게 전송되며, 핵심 내용만 요약되어 상담에 활용됩니다. 원본 텍스트는 저장되지 않아요.</p>
+                        className="w-full h-48 p-3 text-sm rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all resize-none"
+                        disabled={isImporting}
+                      />
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{importText.length.toLocaleString()} / 100,000자</span>
+                        {importText.length > 90000 && (
+                          <span className="text-amber-500">거의 다 찼어요</span>
+                        )}
                       </div>
-                    </div>
-                    {importError && (
-                      <p className="text-sm text-red-500">{importError}</p>
-                    )}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => setShowImportModal(false)}
+                      {/* 안심 문구 */}
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/30 border border-secondary/50">
+                        <svg className="w-4 h-4 text-primary/70 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <div className="text-xs text-muted-foreground">
+                          <p className="font-medium text-foreground/80">안심하세요</p>
+                          <p className="mt-0.5">입력하신 내용은 암호화되어 안전하게 전송되며, 핵심 내용만 요약되어 상담에 활용됩니다. 원본 텍스트는 저장되지 않아요.</p>
+                        </div>
+                      </div>
+                      {importError && (
+                        <p className="text-sm text-red-500">{importError}</p>
+                      )}
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setShowImportModal(false)}
+                          disabled={isImporting}
+                        >
+                          취소
+                        </Button>
+                        <Button
+                          className="flex-1"
+                          onClick={async () => {
+                            if (!importText.trim()) {
+                              setImportError("내용을 입력해주세요");
+                              return;
+                            }
+                            if (importText.length < 50) {
+                              setImportError("최소 50자 이상 입력해주세요");
+                              return;
+                            }
+                            setIsImporting(true);
+                            setImportError(null);
+                            try {
+                              const result = await summarizeText(importText, token || undefined);
+                              setImportSummary(result.summary);
+                              setImportStep("summary");
+                            } catch (error) {
+                              console.error("Summarize failed:", error);
+                              setImportError("상담 내용을 분석하는 중 오류가 발생했어요. 다시 시도해주세요.");
+                            } finally {
+                              setIsImporting(false);
+                            }
+                          }}
+                          disabled={isImporting || !importText.trim()}
+                        >
+                          {isImporting ? (
+                            <span className="flex items-center gap-2">
+                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              분석 중...
+                            </span>
+                          ) : (
+                            "내용 분석하기"
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <button
+                          onClick={() => setImportStep("text")}
+                          className="hover:text-foreground transition-colors"
+                        >
+                          &larr; 원문으로 돌아가기
+                        </button>
+                        <span>|</span>
+                        <span>
+                          {categories.find(c => c.id === importCategory)?.label || "선택됨"}
+                        </span>
+                      </div>
+                      <CardDescription className="text-sm text-muted-foreground">
+                        AI가 핵심 내용을 요약했어요. 필요하면 수정해주세요.
+                      </CardDescription>
+                      <textarea
+                        value={importSummary}
+                        onChange={(e) => setImportSummary(e.target.value)}
+                        className="w-full h-48 p-3 text-sm rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all resize-none"
                         disabled={isImporting}
-                      >
-                        취소
-                      </Button>
-                      <Button
-                        className="flex-1"
-                        onClick={async () => {
-                          if (!importText.trim()) {
-                            setImportError("내용을 입력해주세요");
-                            return;
-                          }
-                          if (importText.length < 50) {
-                            setImportError("최소 50자 이상 입력해주세요");
-                            return;
-                          }
-                          setIsImporting(true);
-                          setImportError(null);
-                          try {
-                            const result = await summarizeText(importText, token || undefined);
-                            setImportSummary(result.summary);
-                            setImportStep("summary");
-                          } catch (error) {
-                            console.error("Summarize failed:", error);
-                            setImportError("상담 내용을 분석하는 중 오류가 발생했어요. 다시 시도해주세요.");
-                          } finally {
-                            setIsImporting(false);
-                          }
-                        }}
-                        disabled={isImporting || !importText.trim()}
-                      >
-                        {isImporting ? (
-                          <span className="flex items-center gap-2">
-                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            분석 중...
-                          </span>
-                        ) : (
-                          "내용 분석하기"
-                        )}
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <button
-                        onClick={() => setImportStep("text")}
-                        className="hover:text-foreground transition-colors"
-                      >
-                        &larr; 원문으로 돌아가기
-                      </button>
-                      <span>|</span>
-                      <span>
-                        {categories.find(c => c.id === importCategory)?.label || "선택됨"}
-                      </span>
-                    </div>
-                    <CardDescription className="text-sm text-muted-foreground">
-                      AI가 핵심 내용을 요약했어요. 필요하면 수정해주세요.
-                    </CardDescription>
-                    <textarea
-                      value={importSummary}
-                      onChange={(e) => setImportSummary(e.target.value)}
-                      className="w-full h-48 p-3 text-sm rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all resize-none"
-                      disabled={isImporting}
-                    />
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{importSummary.length.toLocaleString()}자</span>
-                    </div>
-                    {importError && (
-                      <p className="text-sm text-red-500">{importError}</p>
-                    )}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => setShowImportModal(false)}
-                        disabled={isImporting}
-                      >
-                        취소
-                      </Button>
-                      <Button
-                        className="flex-1"
-                        onClick={async () => {
-                          if (!importSummary.trim()) {
-                            setImportError("요약 내용을 입력해주세요");
-                            return;
-                          }
-                          setIsImporting(true);
-                          setImportError(null);
-                          try {
-                            const result = await startSessionWithImportSummary(
-                              importSummary,
-                              importCategory || undefined,
-                              token || undefined
-                            );
-                            setSessionId(result.sessionId);
-                            setQuestion(result.question);
-                            setOptions(result.options);
-                            setPhase("selecting");
-                            setSelectionHistory([
-                              { type: "assistant", content: result.question, isQuestion: true },
-                            ]);
-                            setShowImportModal(false);
-                            setImportText("");
-                            setImportSummary("");
-                            setImportCategory(null);
-                            setImportStep("category");
-                          } catch (error) {
-                            console.error("Import failed:", error);
-                            setImportError("상담을 시작하는 중 오류가 발생했어요. 다시 시도해주세요.");
-                          } finally {
-                            setIsImporting(false);
-                          }
-                        }}
-                        disabled={isImporting || !importSummary.trim()}
-                      >
-                        {isImporting ? (
-                          <span className="flex items-center gap-2">
-                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            시작 중...
-                          </span>
-                        ) : (
-                          "상담 시작하기"
-                        )}
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </CardHeader>
-            </Card>
-          </div>
-        )}
+                      />
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{importSummary.length.toLocaleString()}자</span>
+                      </div>
+                      {importError && (
+                        <p className="text-sm text-red-500">{importError}</p>
+                      )}
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => setShowImportModal(false)}
+                          disabled={isImporting}
+                        >
+                          취소
+                        </Button>
+                        <Button
+                          className="flex-1"
+                          onClick={async () => {
+                            if (!importSummary.trim()) {
+                              setImportError("요약 내용을 입력해주세요");
+                              return;
+                            }
+                            setIsImporting(true);
+                            setImportError(null);
+                            try {
+                              const result = await startSessionWithImportSummary(
+                                importSummary,
+                                importCategory || undefined,
+                                token || undefined
+                              );
+                              setSessionId(result.sessionId);
+                              setQuestion(result.question);
+                              setOptions(result.options);
+                              setPhase("selecting");
+                              setSelectionHistory([
+                                { type: "assistant", content: result.question, isQuestion: true },
+                              ]);
+                              setShowImportModal(false);
+                              setImportText("");
+                              setImportSummary("");
+                              setImportCategory(null);
+                              setImportStep("category");
+                            } catch (error) {
+                              console.error("Import failed:", error);
+                              setImportError("상담을 시작하는 중 오류가 발생했어요. 다시 시도해주세요.");
+                            } finally {
+                              setIsImporting(false);
+                            }
+                          }}
+                          disabled={isImporting || !importSummary.trim()}
+                        >
+                          {isImporting ? (
+                            <span className="flex items-center gap-2">
+                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              시작 중...
+                            </span>
+                          ) : (
+                            "상담 시작하기"
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </CardHeader>
+              </Card>
+            </div>
+          )
+        }
         <LoginPromptModal />
-      </main>
+      </main >
     );
   }
 
@@ -1948,89 +2014,96 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col p-4 lg:p-6 overflow-hidden relative">
+        {statusBadge}
+
+        <div className="flex-1 flex flex-col lg:flex-row justify-center lg:gap-6 xl:gap-8 overflow-hidden relative p-4 lg:p-0">
           {/* 오른쪽 사이드바 - 상담 기록 (로그인한 사용자만) - 채팅 영역 근처 */}
           {user && previousSessions.length > 0 && (
-            <aside className="w-full lg:w-[calc(50%-300px-48px)] lg:absolute lg:right-6 lg:top-6 lg:z-10 space-y-4 overflow-auto lg:max-h-[calc(100vh-120px)] mb-4 lg:mb-0">
+            <aside className="w-full lg:w-80 shrink-0 space-y-4 overflow-auto p-4 lg:p-6 z-10 order-2 lg:order-3">
               {/* 상담 기록 */}
-              <div className="rounded-2xl border border-gray-200 bg-gray-50/50 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground/90 flex items-center gap-2">
+              <div className="rounded-2xl border border-border/40 bg-white/40 backdrop-blur-md p-4 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-sm font-semibold text-foreground/80 flex items-center gap-2">
                     <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     상담 기록
                   </p>
-                  <span className="text-xs text-muted-foreground">{previousSessions.length}개</span>
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">{previousSessions.length}</span>
                 </div>
-                  <div className="space-y-2 h-[180px] overflow-auto">
-                    {previousSessions.map((session) => {
-                      const categoryInfo = categories.find(c => c.id === session.category) || {
-                        label: session.category === 'direct' ? '직접 입력' : session.category,
-                        color: '#8B9BAA',
-                      };
-                      const isActive = session.status === 'active';
-                      const displayName = session.alias || (session.category === 'direct' ? '직접 입력' : categoryInfo.label);
-                      const date = new Date(session.updatedAt);
-                      const timeAgo = getTimeAgo(date);
+                <div className="space-y-2.5 h-[180px] overflow-auto pr-1 scrollbar-hide">
+                  {previousSessions.map((session) => {
+                    const categoryInfo = categories.find(c => c.id === session.category) || {
+                      label: session.category === 'direct' ? '직접 입력' : session.category,
+                      color: '#8B9BAA',
+                    };
+                    const isActive = session.status === 'active';
+                    const displayName = session.alias || (session.category === 'direct' ? '직접 입력' : categoryInfo.label);
+                    const date = new Date(session.updatedAt);
+                    const timeAgo = getTimeAgo(date);
 
-                      return (
-                        <div
-                          key={session.sessionId}
-                          className="relative w-full p-3 rounded-xl border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200"
-                        >
+                    return (
+                      <div
+                        key={session.sessionId}
+                        className="relative w-full p-3 rounded-2xl border border-border/40 bg-white/60 hover:bg-white hover:border-primary/30 hover:shadow-md transition-all duration-300 group cursor-pointer"
+                      >
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                           <button
                             onClick={async (e) => {
                               e.stopPropagation();
-                              if (!confirm('이 상담을 삭제할까요? 삭제된 상담은 복구할 수 없어요.')) return;
+                              if (!confirm('정말 삭제하시겠습니까?')) return;
                               try {
                                 await deleteSession(session.sessionId, token!);
                                 setPreviousSessions(prev => prev.filter(s => s.sessionId !== session.sessionId));
                               } catch (error) {
                                 console.error('Delete session failed:', error);
-                                alert('삭제에 실패했어요. 다시 시도해주세요.');
+                                alert('삭제에 실패했습니다.');
                               }
                             }}
-                            className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-muted-foreground hover:text-red-500 transition-all duration-200"
+                            className="p-1.5 rounded-full hover:bg-red-50 text-muted-foreground/50 hover:text-red-500 transition-colors"
                             title="삭제"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
-                          <button
-                            onClick={() => handleResumeSession(session.sessionId)}
-                            disabled={isLoading}
-                            className="w-full text-left"
-                          >
-                            <div className="flex items-start gap-2 pr-6">
-                              <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white text-xs"
-                                style={{ backgroundColor: categoryInfo.color }}
-                              >
-                                {categoryInfo.label.charAt(0)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-sm font-medium truncate">{displayName}</span>
-                                  {isActive && (
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/20 text-primary">진행중</span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                  {session.summary || '대화를 이어가보세요'}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <p className="text-[10px] text-muted-foreground/70">{timeAgo}</p>
-                              </div>
-                            </div>
-                          </button>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <button
+                          onClick={() => handleResumeSession(session.sessionId)}
+                          disabled={isLoading}
+                          className="w-full text-left"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm group-hover:scale-105 transition-transform duration-300"
+                              style={{
+                                background: `linear-gradient(135deg, ${categoryInfo.color}, ${categoryInfo.color}dd)`,
+                                boxShadow: `0 2px 5px ${categoryInfo.color}40`
+                              }}
+                            >
+                              {categoryInfo.label.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0 pt-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-semibold truncate text-foreground/90 group-hover:text-primary transition-colors">{displayName}</span>
+                                {isActive && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate opacity-80 mt-0.5">
+                                {session.summary || '이어하기...'}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0 pt-1">
+                              <p className="text-[10px] text-muted-foreground/60">{timeAgo}</p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
+              </div>
 
               {/* 다른 주제 상담하기 버튼 */}
               <button
@@ -2047,58 +2120,61 @@ export default function Home() {
             </aside>
           )}
 
-          {/* 왼쪽 사이드바 - 마음 돌봄 콘텐츠 (데스크톱만) */}
-          <aside className="hidden xl:block w-[calc(50%-300px-48px)] absolute left-6 top-6 z-10">
+          {/* 왼쪽 사이드바 - 마음 돌봄 콘텐츠 (데스크톱만/XL이상) */}
+          <aside className="hidden xl:block w-80 shrink-0 p-6 z-10 overflow-y-auto order-1">
             <MindfulnessCard />
           </aside>
 
-          {/* 메인 영역 - 대화 */}
-          <div className="flex-1 flex flex-col items-center overflow-auto">
-            <div className="max-w-[600px] w-full space-y-4 mx-auto">
-            {/* 대화 히스토리 - 상담 기록과 동일한 높이의 고정 영역 */}
-            <div className="rounded-2xl border border-primary/30 bg-primary/5 shadow-sm overflow-hidden">
-              {/* 상담 진행 중 표시 */}
-              {sessionId && (
-                <div className="px-4 py-2 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                  <span className="text-xs text-muted-foreground">상담 진행 중</span>
-                </div>
-              )}
-              <div className="h-[45vh] min-h-[320px] overflow-auto p-4">
-                <div className="space-y-3 min-h-full flex flex-col justify-end">
+          {/* 메인 영역 - 대화 + 옵션 */}
+          {/* 메인 영역 - 대화 + 옵션 */}
+          <div className="flex-1 max-w-2xl flex flex-col relative overflow-hidden bg-white/30 backdrop-blur-xl rounded-[32px] border border-white/50 shadow-2xl my-4 lg:my-6 z-20 ring-1 ring-white/60 order-1 lg:order-2">
+            {/* 스크롤 가능한 대화 및 선택지 영역 */}
+            <div className="flex-1 overflow-y-auto px-4 pb-32 pt-4 scrollbar-hide">
+              <div className="max-w-2xl mx-auto space-y-6">
+
+                {/* 대화 히스토리 */}
+                <div className="space-y-4">
                   {selectionHistory.length === 0 && !isLoading && (
-                    <div className="flex-1 flex items-center justify-center text-muted-foreground/40 text-sm">
-                      대화가 여기에 표시됩니다
+                    <div className="py-12 flex flex-col items-center justify-center text-muted-foreground/60 text-sm gap-3">
+                      <div className="w-12 h-12 rounded-full bg-secondary/50 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      </div>
+                      <p>편안하게 이야기를 시작해보세요</p>
                     </div>
                   )}
+
                   {selectionHistory.map((item, idx) => (
                     item.type === "system" ? (
                       // 시스템 메시지 (이전 상담 요약 카드)
-                      <div key={idx} className="flex justify-center">
-                        <div className="w-full rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/10 px-3 py-3">
-                          <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/70">{item.content}</p>
+                      <div key={idx} className="flex justify-center py-4">
+                        <div className="w-full max-w-lg rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/5 to-secondary/10 px-5 py-4 shadow-sm">
+                          <p className="text-sm font-medium text-primary mb-1">지난 이야기 요약</p>
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">{item.content}</p>
                         </div>
                       </div>
                     ) : (
                       <div
                         key={idx}
-                        className={`flex ${item.type === "user" ? "flex-row-reverse" : "flex-row"} gap-2`}
+                        className={`flex ${item.type === "user" ? "flex-row-reverse" : "flex-row"} gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300`}
                       >
                         {item.type !== "user" && (
-                          <img src="/logo.png" alt="위로" className="w-8 h-8 rounded-full shrink-0 mt-1" />
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/50">
+                            <img src="/logo.png" alt="위로" className="w-full h-full object-cover rounded-full opacity-90" />
+                          </div>
                         )}
                         <div className={`flex flex-col gap-1 max-w-[85%] ${item.type === "user" ? "items-end" : "items-start"}`}>
                           <div
-                            className={`rounded-2xl px-4 py-3 shadow-sm ${
-                              item.type === "user"
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-background border border-border/50 text-foreground/90"
-                            }`}
+                            className={`rounded-[24px] px-5 py-3.5 shadow-sm transition-all duration-300 hover:shadow-md ${item.type === "user"
+                              ? "bg-gradient-to-br from-primary to-violet-500 text-white rounded-tr-sm shadow-primary/20"
+                              : "bg-white/90 border border-border/40 text-foreground/90 rounded-tl-sm backdrop-blur-sm shadow-gray-100"
+                              }`}
                           >
-                            <p className="text-sm leading-relaxed">{item.content}</p>
+                            <p className="text-[15px] leading-relaxed font-medium">{item.content}</p>
                           </div>
                           {item.timestamp && (
-                            <span className="text-[10px] text-muted-foreground/60">
+                            <span className="text-[10px] text-muted-foreground/60 px-1">
                               {item.timestamp.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
                             </span>
                           )}
@@ -2107,12 +2183,15 @@ export default function Home() {
                     )
                   ))}
 
+                  {/* 로딩 인디케이터 */}
                   {isLoading && !isLoadingNewOptions && (
-                    <div className="flex justify-start gap-2">
-                      <img src="/logo.png" alt="위로" className="w-8 h-8 rounded-full shrink-0 mt-1" />
-                      <div className="bg-background border border-border/50 rounded-2xl px-4 py-3 max-w-[85%] shadow-sm">
+                    <div className="flex justify-start gap-3 animate-in fade-in slide-in-from-bottom-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/50">
+                        <img src="/logo.png" alt="위로" className="w-full h-full object-cover rounded-full opacity-90" />
+                      </div>
+                      <div className="bg-white/80 border border-border/40 rounded-[24px] rounded-tl-sm px-5 py-4 max-w-[85%] shadow-sm backdrop-blur-sm">
                         {streamingContent ? (
-                          <p className="text-sm whitespace-pre-wrap leading-relaxed">{streamingContent}</p>
+                          <p className="text-[15px] whitespace-pre-wrap leading-relaxed font-medium text-foreground/90">{streamingContent}</p>
                         ) : (
                           <WritingIndicator />
                         )}
@@ -2121,106 +2200,122 @@ export default function Home() {
                   )}
                   <div ref={chatEndRef} />
                 </div>
+
+                {/* 선택지 영역 (대화 흐름에 이어짐) */}
+                {!isLoading && (
+                  <div className="pt-4 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+                    {showModeSelection ? (
+                      <div className="grid gap-3">
+                        <div className="text-center pb-2">
+                          <span className="inline-block px-3 py-1 rounded-full bg-secondary/50 text-xs text-muted-foreground">
+                            어떻게 반응해드릴까요?
+                          </span>
+                        </div>
+                        {responseModes.map((modeOption) => {
+                          const modeStyle = {
+                            comfort: { bg: "bg-rose-100", text: "text-rose-600", label: "따뜻하게 안아드릴게요" },
+                            listen: { bg: "bg-sky-100", text: "text-sky-600", label: "모든 이야기를 들어드릴게요" },
+                            organize: { bg: "bg-amber-100", text: "text-amber-600", label: "머릿속을 함께 비워요" },
+                            validate: { bg: "bg-violet-100", text: "text-violet-600", label: "당신의 마음이 맞아요" },
+                            direction: { bg: "bg-emerald-100", text: "text-emerald-600", label: "나아갈 길을 찾아봐요" },
+                            similar: { bg: "bg-indigo-100", text: "text-indigo-600", label: "혼자가 아니에요" },
+                          }[modeOption.mode];
+
+                          return (
+                            <button
+                              key={modeOption.mode}
+                              onClick={() => handleSelectModeInChat(modeOption.mode)}
+                              disabled={isLoading}
+                              className="w-full p-4 rounded-2xl border border-border/40 bg-white/60 hover:bg-white hover:border-primary/30 hover:shadow-md transition-all duration-300 text-left group relative overflow-hidden backdrop-blur-sm"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                              <div className="flex items-center gap-4 relative z-10">
+                                <div className={`w-12 h-12 rounded-2xl ${modeStyle.bg} ${modeStyle.text} flex items-center justify-center text-lg font-bold shrink-0 shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                                  {modeOption.emoji}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-foreground/90 group-hover:text-primary transition-colors">{modeOption.label}</p>
+                                  <p className="text-sm text-muted-foreground group-hover:text-foreground/70 transition-colors">{modeOption.description}</p>
+                                </div>
+                                <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-primary">
+                                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/80 py-2">
+                          <span className="h-px w-8 bg-border/60"></span>
+                          <span>답변을 선택하거나 직접 입력해주세요</span>
+                          <span className="h-px w-8 bg-border/60"></span>
+                        </div>
+
+                        <div className="grid gap-2.5">
+                          {options.map((option, idx) => (
+                            <button
+                              key={idx}
+                              className="w-full py-4 px-6 text-left text-[15px] font-medium rounded-[20px] border border-primary/10 bg-white/70 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-white transition-all duration-200 active:scale-[0.99] group text-foreground/90"
+                              onClick={() => handleSelectOption(option)}
+                              disabled={isLoading}
+                            >
+                              <span className="group-hover:text-primary transition-colors">{option}</span>
+                            </button>
+                          ))}
+
+                          <Button
+                            variant="outline"
+                            className="w-full h-auto py-3.5 border-dashed border-secondary bg-secondary/10 text-muted-foreground hover:bg-secondary/30 hover:text-foreground hover:border-secondary transition-all duration-200 rounded-[20px] mt-2"
+                            onClick={handleRequestNewOptions}
+                            disabled={isLoading}
+                          >
+                            <span className="flex items-center gap-2 text-sm">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              {isLoadingNewOptions ? "다른 표현을 찾는 중..." : "다른 답변 보기"}
+                            </span>
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* 모드 선택 UI (채팅창 내에서) */}
-            {showModeSelection ? (
-              <div className="grid gap-3">
-                {responseModes.map((modeOption) => {
-                  const modeStyle = {
-                    comfort: { bg: "bg-rose-100", text: "text-rose-600", label: "위로" },
-                    listen: { bg: "bg-sky-100", text: "text-sky-600", label: "경청" },
-                    organize: { bg: "bg-amber-100", text: "text-amber-600", label: "정리" },
-                    validate: { bg: "bg-violet-100", text: "text-violet-600", label: "확인" },
-                    direction: { bg: "bg-emerald-100", text: "text-emerald-600", label: "방향" },
-                    similar: { bg: "bg-indigo-100", text: "text-indigo-600", label: "공감" },
-                  }[modeOption.mode];
-                  return (
-                    <button
-                      key={modeOption.mode}
-                      onClick={() => handleSelectModeInChat(modeOption.mode)}
-                      disabled={isLoading}
-                      className="w-full p-4 rounded-xl border border-border/50 bg-background hover:border-primary/40 hover:bg-secondary/30 transition-all duration-200 text-left disabled:opacity-50"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-full ${modeStyle.bg} ${modeStyle.text} flex items-center justify-center text-xs font-bold shrink-0`}>
-                          {modeStyle.label}
-                        </div>
-                        <div>
-                          <p className="font-medium">{modeOption.label}</p>
-                          <p className="text-sm text-muted-foreground">{modeOption.description}</p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <>
-                {/* 선택 영역 */}
-                <div className="rounded-2xl border border-border/50 p-4 space-y-3 bg-card/30">
-                  {/* 안내 문구 */}
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-                    </svg>
-                    말씀하시기 번거롭다면, 제공드리는 답변을 선택해주세요
-                  </p>
-                  {/* 옵션 */}
-                  <div className="grid gap-2">
-                    {options.map((option, idx) => (
-                      <button
-                        key={idx}
-                        className="w-full py-3 px-4 text-left text-sm rounded-xl border border-border/50 bg-background transition-all duration-200 hover:border-primary hover:bg-primary/10 hover:shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => handleSelectOption(option)}
-                        disabled={isLoading}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                    {/* 다른 옵션 보기 버튼 */}
-                    <Button
-                      variant="outline"
-                      className="w-full h-auto py-3 border-secondary bg-secondary/30 text-muted-foreground hover:bg-secondary/50 hover:border-secondary transition-all duration-200"
-                      onClick={handleRequestNewOptions}
-                      disabled={isLoading}
-                    >
-                      {isLoadingNewOptions ? "잠시만요, 이건 어떨까요?" : "내 상황에 맞는 표현이 없어"}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* 직접 입력 */}
-                <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4 space-y-2">
-                  <p className="text-xs text-primary/80 font-medium flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                    직접 말씀해 주셔도 좋아요
-                  </p>
-                  <div className="flex gap-3 items-stretch">
+            {/* 하단 고정 입력창 (Glassmorphism) */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 pt-8 bg-gradient-to-t from-background via-background/95 to-transparent z-20 pointer-events-none">
+              <div className="max-w-2xl mx-auto w-full pointer-events-auto">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-primary/20 rounded-[28px] blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                  <div className="relative bg-white/80 backdrop-blur-md rounded-[28px] border border-white/50 shadow-lg flex items-center p-1.5 gap-2 transition-all duration-300 group-hover:shadow-xl group-hover:border-primary/30">
                     <input
                       type="text"
                       value={supplementInput}
                       onChange={(e) => setSupplementInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
-                      placeholder="하고 싶은 말을 자유롭게 적어주세요"
-                      className="flex-1 px-4 h-12 text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
+                      placeholder="직접 말씀해 주셔도 좋아요..."
+                      className="flex-1 px-5 h-11 bg-transparent text-base focus:outline-none placeholder:text-muted-foreground/60 text-foreground/90"
                       disabled={isLoading}
                     />
                     <Button
-                      className="h-12 px-6"
+                      className="h-10 px-5 rounded-[22px] bg-gradient-to-r from-primary to-violet-600 hover:opacity-90 transition-all shadow-md active:scale-95 disabled:opacity-50"
                       onClick={handleSupplementSubmit}
                       disabled={isLoading || !supplementInput.trim()}
                     >
-                      전송
+                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
                     </Button>
                   </div>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
           </div>
         </div>
         <LimitErrorModal />
@@ -2259,6 +2354,8 @@ export default function Home() {
           </div>
         </header>
 
+        {statusBadge}
+
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="max-w-md w-full space-y-6">
             {crisisMessage && (
@@ -2277,7 +2374,7 @@ export default function Home() {
             <div className="text-center space-y-2">
               <h2 className="text-xl font-medium text-foreground/90">어떻게 이야기할까요?</h2>
               <p className="text-muted-foreground text-sm">
-                이야기 잘 들었어요. 어떤 방식이 좋을까요?
+                이야기를 잘 들었습니다. 어떤 방식으로 진행할까요?
               </p>
             </div>
 
@@ -2360,77 +2457,79 @@ export default function Home() {
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                   </svg>
-                  로그인하고 저장
+                  로그인 후 저장
                 </button>
               )}
               <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
-                여기까지
+                상담 종료
               </Button>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {statusBadge}
+
+        <div className="flex-1 flex flex-col lg:flex-row justify-center lg:gap-6 xl:gap-8 overflow-hidden relative p-4 lg:p-0">
           {/* 왼쪽 사이드바 - 상담 기록 (로그인한 사용자만) */}
           {user && previousSessions.length > 0 && (
-            <aside className="hidden lg:block w-72 shrink-0 border-r border-border/30 overflow-auto p-4 space-y-4">
+            <aside className="hidden lg:block w-72 shrink-0 border-r border-border/30 overflow-auto p-4 lg:p-6 lg:pr-0 space-y-4 order-2 lg:order-1">
               {/* 상담 기록 */}
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-foreground/90 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <div className="rounded-2xl border border-border/40 bg-white/40 backdrop-blur-md p-3 space-y-2 shadow-sm">
+                <div className="flex items-center justify-between px-1">
+                  <p className="text-xs font-semibold text-foreground/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-primary/50" />
                     상담 기록
                   </p>
-                  <span className="text-[10px] text-muted-foreground">{previousSessions.length}개</span>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{previousSessions.length}</span>
                 </div>
-                  <div className="space-y-1.5 max-h-[180px] overflow-auto">
-                    {previousSessions.map((session) => {
-                      const categoryInfo = categories.find(c => c.id === session.category) || {
-                        label: session.category === 'direct' ? '직접 입력' : session.category,
-                        color: '#8B9BAA',
-                      };
-                      const isActive = session.status === 'active';
-                      const isCurrent = session.sessionId === sessionId;
-                      const displayName = session.alias || (session.category === 'direct' ? '직접 입력' : categoryInfo.label);
+                <div className="space-y-1.5 max-h-[180px] overflow-auto pr-1 scrollbar-hide">
+                  {previousSessions.map((session) => {
+                    const categoryInfo = categories.find(c => c.id === session.category) || {
+                      label: session.category === 'direct' ? '직접 입력' : session.category,
+                      color: '#8B9BAA',
+                    };
+                    const isActive = session.status === 'active';
+                    const isCurrent = session.sessionId === sessionId;
+                    const displayName = session.alias || (session.category === 'direct' ? '직접 입력' : categoryInfo.label);
 
-                      return (
-                        <button
-                          key={session.sessionId}
-                          onClick={() => !isCurrent && handleResumeSession(session.sessionId)}
-                          disabled={isLoading || isCurrent}
-                          className={`w-full p-2 rounded-lg text-left transition-all duration-200 ${
-                            isCurrent
-                              ? 'bg-primary/20 border border-primary/40'
-                              : 'border border-border/30 bg-background/50 hover:border-primary/40 hover:bg-secondary/30'
+                    return (
+                      <button
+                        key={session.sessionId}
+                        onClick={() => !isCurrent && handleResumeSession(session.sessionId)}
+                        disabled={isLoading || isCurrent}
+                        className={`w-full p-2.5 rounded-2xl text-left transition-all duration-200 group relative overflow-hidden ${isCurrent
+                          ? 'bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 shadow-inner'
+                          : 'border border-border/40 bg-white/60 hover:bg-white hover:border-primary/30 hover:shadow-sm'
                           }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white text-[10px]"
-                              style={{ backgroundColor: categoryInfo.color }}
-                            >
-                              {categoryInfo.label.charAt(0)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs font-medium truncate">{displayName}</span>
-                                {isActive && !isCurrent && (
-                                  <span className="px-1 py-0.5 rounded text-[8px] bg-primary/20 text-primary">진행중</span>
-                                )}
-                                {isCurrent && (
-                                  <span className="px-1 py-0.5 rounded text-[8px] bg-primary text-primary-foreground">현재</span>
-                                )}
-                              </div>
-                              <p className="text-[10px] text-muted-foreground truncate">
-                                {session.summary || '대화를 이어가보세요'}
-                              </p>
-                            </div>
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-white text-[10px] font-bold shadow-sm transition-transform duration-300 ${!isCurrent && 'group-hover:scale-105'}`}
+                            style={{
+                              background: `linear-gradient(135deg, ${categoryInfo.color}, ${categoryInfo.color}dd)`,
+                              boxShadow: `0 2px 5px ${categoryInfo.color}40`,
+                              opacity: isCurrent ? 1 : 0.9
+                            }}
+                          >
+                            {categoryInfo.label.charAt(0)}
                           </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1">
+                              <span className={`text-xs font-semibold truncate transition-colors ${isCurrent ? 'text-primary' : 'text-foreground/90 group-hover:text-primary'}`}>{displayName}</span>
+                              {isCurrent && (
+                                <span className="px-1.5 py-0.5 rounded-full text-[8px] bg-primary text-primary-foreground font-medium shadow-sm">현재</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground truncate opacity-80 mt-0.5">
+                              {session.summary || '이어하기...'}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
 
               {/* 다른 주제 상담하기 */}
               <button
@@ -2448,37 +2547,47 @@ export default function Home() {
           )}
 
           {/* 오른쪽 메인 영역 - 채팅 */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-auto p-4 space-y-4">
+          <div className="flex-1 max-w-2xl flex flex-col overflow-hidden relative bg-white/30 backdrop-blur-xl rounded-[32px] border border-white/50 shadow-2xl z-0 ring-1 ring-white/60 order-1 lg:order-2">
+            <div className="flex-1 overflow-y-auto px-4 pb-32 pt-4 scrollbar-hide space-y-4">
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start gap-3"}`}
                 >
+                  {msg.role !== "user" && (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/50">
+                      <img src="/logo.png" alt="위로" className="w-full h-full object-cover rounded-full opacity-90" />
+                    </div>
+                  )}
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary/50 text-foreground/90"
-                    }`}
+                    className={`max-w-[85%] rounded-[24px] px-5 py-3.5 shadow-sm transition-all duration-300 hover:shadow-md ${msg.role === "user"
+                      ? "bg-gradient-to-br from-primary to-violet-500 text-white rounded-tr-sm shadow-primary/20"
+                      : "bg-white/90 border border-border/40 text-foreground/90 rounded-tl-sm backdrop-blur-sm shadow-gray-100"
+                      }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                    <p className="text-[15px] whitespace-pre-wrap leading-relaxed font-medium">{msg.content}</p>
                   </div>
                 </div>
               ))}
               {isLoading && streamingContent && (
-                <div className="flex justify-start">
-                  <div className="bg-secondary/50 rounded-2xl px-4 py-3 max-w-[80%]">
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">
+                <div className="flex justify-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/50">
+                    <img src="/logo.png" alt="위로" className="w-full h-full object-cover rounded-full opacity-90" />
+                  </div>
+                  <div className="bg-white/80 border border-border/40 rounded-[24px] rounded-tl-sm px-5 py-4 max-w-[85%] shadow-sm backdrop-blur-sm">
+                    <p className="text-[15px] whitespace-pre-wrap leading-relaxed font-medium text-foreground/90">
                       {streamingContent}
-                      <span className="animate-pulse">▋</span>
+                      <span className="animate-pulse text-primary">▋</span>
                     </p>
                   </div>
                 </div>
               )}
               {isLoading && !streamingContent && (
-                <div className="flex justify-start">
-                  <div className="bg-secondary/50 rounded-2xl px-4 py-3">
+                <div className="flex justify-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/50">
+                    <img src="/logo.png" alt="위로" className="w-full h-full object-cover rounded-full opacity-90" />
+                  </div>
+                  <div className="bg-white/80 border border-border/40 rounded-[24px] rounded-tl-sm px-5 py-4 shadow-sm backdrop-blur-sm">
                     <WritingIndicator />
                   </div>
                 </div>
@@ -2486,20 +2595,32 @@ export default function Home() {
               <div ref={chatEndRef} />
             </div>
 
-            <div className="border-t border-border/50 p-4 bg-background/80 backdrop-blur-sm">
-              <div className="flex gap-2 max-w-2xl mx-auto">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                  placeholder="메시지를 입력하세요..."
-                  className="flex-1 px-4 py-2 border border-border/50 rounded-full bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
-                  disabled={isLoading}
-                />
-                <Button onClick={handleSendMessage} disabled={isLoading || !inputMessage.trim()}>
-                  전송
-                </Button>
+            {/* 하단 고정 입력창 (Glassmorphism) - 채팅 중 */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 pt-8 bg-gradient-to-t from-background via-background/95 to-transparent z-20 pointer-events-none">
+              <div className="max-w-3xl mx-auto w-full pointer-events-auto">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-primary/20 rounded-[28px] blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                  <div className="relative bg-white/80 backdrop-blur-md rounded-[28px] border border-white/50 shadow-lg flex items-center p-1.5 gap-2 transition-all duration-300 group-hover:shadow-xl group-hover:border-primary/30">
+                    <input
+                      type="text"
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                      placeholder="메시지를 입력하세요..."
+                      className="flex-1 px-5 h-11 bg-transparent text-base focus:outline-none placeholder:text-muted-foreground/60 text-foreground/90"
+                      disabled={isLoading}
+                    />
+                    <Button
+                      className="h-10 px-5 rounded-[22px] bg-gradient-to-r from-primary to-violet-600 hover:opacity-90 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                      onClick={handleSendMessage}
+                      disabled={isLoading || !inputMessage.trim()}
+                    >
+                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                      </svg>
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2522,11 +2643,10 @@ export default function Home() {
                 <div className="space-y-3 pt-2">
                   <button
                     onClick={() => setSaveType("category")}
-                    className={`w-full p-4 rounded-xl border text-left transition-all ${
-                      saveType === "category"
-                        ? "border-primary bg-primary/10"
-                        : "border-border/50 hover:border-primary/40"
-                    }`}
+                    className={`w-full p-4 rounded-xl border text-left transition-all ${saveType === "category"
+                      ? "border-primary bg-primary/10"
+                      : "border-border/50 hover:border-primary/40"
+                      }`}
                   >
                     <div className="font-medium">카테고리별 저장</div>
                     <div className="text-sm text-muted-foreground">자동으로 카테고리에 분류됩니다</div>
@@ -2534,11 +2654,10 @@ export default function Home() {
 
                   <button
                     onClick={() => setSaveType("custom")}
-                    className={`w-full p-4 rounded-xl border text-left transition-all ${
-                      saveType === "custom"
-                        ? "border-primary bg-primary/10"
-                        : "border-border/50 hover:border-primary/40"
-                    }`}
+                    className={`w-full p-4 rounded-xl border text-left transition-all ${saveType === "custom"
+                      ? "border-primary bg-primary/10"
+                      : "border-border/50 hover:border-primary/40"
+                      }`}
                   >
                     <div className="font-medium">나만의 상담</div>
                     <div className="text-sm text-muted-foreground">직접 이름을 지정해서 저장합니다</div>
@@ -2604,11 +2723,13 @@ export default function Home() {
           </div>
         </header>
 
+        {statusBadge}
+
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="max-w-md w-full space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-xl font-medium text-foreground/90">오늘 이야기는 여기까지</h2>
-              <p className="text-muted-foreground text-sm">이야기 나눠줘서 고마워요. 언제든 다시 와요.</p>
+              <p className="text-muted-foreground text-sm">이야기 나눠주셔서 감사합니다. 언제든 다시 찾아주세요.</p>
             </div>
 
             <Card className="border-primary/20 bg-card/80">
@@ -2639,7 +2760,7 @@ export default function Home() {
                       setShowLoginPrompt(true);
                     }}
                   >
-                    로그인하고 상담 저장하기
+                    로그인 후 상담 저장하기
                   </Button>
                 )}
               </div>
@@ -2653,7 +2774,7 @@ export default function Home() {
             )}
 
             <Button className="w-full transition-all" onClick={handleNewSession}>
-              다시 이야기하기
+              처음으로 돌아가기
             </Button>
 
             {/* 저장 모달 */}
@@ -2670,11 +2791,10 @@ export default function Home() {
                       {/* 카테고리별 저장 */}
                       <button
                         onClick={() => setSaveType("category")}
-                        className={`w-full p-4 rounded-xl border text-left transition-all ${
-                          saveType === "category"
-                            ? "border-primary bg-primary/10"
-                            : "border-border/50 hover:border-primary/40"
-                        }`}
+                        className={`w-full p-4 rounded-xl border text-left transition-all ${saveType === "category"
+                          ? "border-primary bg-primary/10"
+                          : "border-border/50 hover:border-primary/40"
+                          }`}
                       >
                         <div className="font-medium">카테고리별 저장</div>
                         <div className="text-sm text-muted-foreground">자동으로 카테고리에 분류됩니다</div>
@@ -2683,11 +2803,10 @@ export default function Home() {
                       {/* 나만의 상담 */}
                       <button
                         onClick={() => setSaveType("custom")}
-                        className={`w-full p-4 rounded-xl border text-left transition-all ${
-                          saveType === "custom"
-                            ? "border-primary bg-primary/10"
-                            : "border-border/50 hover:border-primary/40"
-                        }`}
+                        className={`w-full p-4 rounded-xl border text-left transition-all ${saveType === "custom"
+                          ? "border-primary bg-primary/10"
+                          : "border-border/50 hover:border-primary/40"
+                          }`}
                       >
                         <div className="font-medium">나만의 상담</div>
                         <div className="text-sm text-muted-foreground">직접 이름을 지정해서 저장합니다</div>
