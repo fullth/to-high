@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "to-high-api": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "apidog-mcp-server@latest",
+        "--oas=./apps/api/openapi.json"
+      ]
+    }
+  }
+}

@@ -36,9 +36,46 @@
       "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch:*)",
       "Bash(git stash:*)",
       "Bash(git for-each-ref:*)",
-      "Bash(xargs -r -n 1 git update-ref -d)"
+      "Bash(xargs -r -n 1 git update-ref -d)",
+      "Bash(xargs:*)",
+      "Bash(mongo:*)",
+      "Bash(brew list:*)",
+      "Bash(node -e:*)",
+      "WebSearch",
+      "WebFetch(domain:www.tosspayments.com)",
+      "WebFetch(domain:imweb.me)",
+      "Bash(npx @sentry/wizard@latest:*)",
+      "Bash(apps/api/.env.example )",
+      "Bash(apps/api/package.json )",
+      "Bash(apps/api/src/app.module.ts )",
+      "Bash(apps/api/src/main.ts )",
+      "Bash(apps/api/src/instrument.ts )",
+      "Bash(apps/web/.env.example )",
+      "Bash(apps/web/next.config.ts )",
+      "Bash(apps/web/package.json )",
+      "Bash(apps/web/sentry.client.config.ts )",
+      "Bash(apps/web/sentry.edge.config.ts )",
+      "Bash(apps/web/sentry.server.config.ts )",
+      "Bash(apps/web/src/app/global-error.tsx )",
+      "Bash(apps/web/src/instrumentation.ts )",
+      "Bash(package-lock.json)",
+      "Bash(apps/api/src/app/chat/chat.service.ts )",
+      "Bash(apps/api/src/client/openai/openai.agent.ts )",
+      "Bash(apps/api/src/controller/admin/admin.controller.ts )",
+      "Bash(apps/api/src/database/payment.schema.ts )",
+      "Bash(apps/web/src/app/admin/page.tsx )",
+      "Bash(apps/web/src/app/subscribe/page.tsx)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(kill:*)",
+      "WebFetch(domain:sangnyang.ai)",
+      "Bash(lsof:*)"
     ]
   },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "to-high-api"
+  ],
   "hooks": {
     "PostToolUse": [
       {
