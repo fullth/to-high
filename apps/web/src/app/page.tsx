@@ -1246,7 +1246,7 @@ export default function Home() {
   // 초기 화면 (카테고리 선택)
   if (!sessionId) {
     return (
-      <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20">
+      <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-secondary/10 to-accent/10">
         {/* 헤더 */}
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
@@ -1291,12 +1291,16 @@ export default function Home() {
               </div>
             )}
 
-            <div className="text-center space-y-2 sm:space-y-3">
-              <p className="text-base sm:text-xl text-foreground/90 tracking-wide" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
+            <div className="text-center space-y-3 sm:space-y-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium animate-fade-in-up">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                24시간 언제든 이야기해요
+              </div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-foreground/90 tracking-tight animate-fade-in-up stagger-1" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
                 오늘 하루 어땠어요?
-              </p>
-              <p className="text-base sm:text-xl text-foreground/90 tracking-wide" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
-                요즘 마음에 걸리는 게 있다면 얘기해줄래요?
+              </h1>
+              <p className="text-base sm:text-lg text-muted-foreground animate-fade-in-up stagger-2" style={{fontFamily: '"Pretendard Variable", Pretendard, sans-serif'}}>
+                마음에 걸리는 게 있다면 얘기해줄래요?
               </p>
             </div>
 
@@ -1304,21 +1308,23 @@ export default function Home() {
             {!authLoading && !user && (
               <button
                 onClick={() => setShowLoginPrompt(true)}
-                className="w-full rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 p-4 text-left hover:border-primary/50 hover:from-primary/10 hover:to-primary/15 transition-all duration-200"
+                className="w-full rounded-2xl border-2 border-primary/40 bg-gradient-to-r from-primary/5 via-primary/10 to-accent/10 p-5 text-left hover:border-primary/60 hover:shadow-lg transition-all duration-300 animate-fade-in-up stagger-3"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0 shadow-sm">
+                    <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground/90">나만의 심리 전문가를 키워보세요</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">로그인하면 대화가 저장되고, 당신을 기억해요</p>
+                    <p className="text-base font-semibold text-foreground/90">나만의 상담사를 키워보세요</p>
+                    <p className="text-sm text-muted-foreground mt-1">로그인하면 대화가 저장되고, 당신을 기억해요</p>
                   </div>
-                  <svg className="w-5 h-5 text-primary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               </button>
             )}
@@ -1488,7 +1494,7 @@ export default function Home() {
             )}
 
             {/* 선택 영역 */}
-            <div className="rounded-2xl border border-border/50 p-4 sm:p-5 space-y-4 sm:space-y-5 bg-card/30">
+            <div className="rounded-3xl border border-border/30 p-5 sm:p-6 space-y-5 sm:space-y-6 bg-card/50 shadow-sm animate-fade-in-up stagger-4">
               {/* 상담 모드 선택 - 2단계 구조 */}
               <div className="space-y-3">
                 <div className="text-center">
@@ -1585,41 +1591,45 @@ export default function Home() {
                 <div className="flex-1 h-px bg-border/50" />
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                {categories.map((category) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                {categories.map((category, idx) => (
                   <button
                     key={category.id}
-                    className={`p-3 sm:p-4 rounded-xl border bg-card text-center transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30 hover:scale-[1.02] ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                    className={`category-card p-4 sm:p-5 rounded-2xl border border-border/30 bg-card text-center shadow-sm hover:border-primary/50 hover:shadow-lg ${isLoading ? "opacity-50 pointer-events-none" : ""} animate-fade-in-up stagger-${idx + 1}`}
                     onClick={() => handleCategorySelect(category.id)}
                     disabled={isLoading}
                   >
                     <div
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full mx-auto mb-1.5 sm:mb-2 flex items-center justify-center text-white"
-                      style={{ backgroundColor: category.color }}
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl mx-auto mb-2 sm:mb-3 flex items-center justify-center text-white shadow-md"
+                      style={{
+                        backgroundColor: category.color,
+                        boxShadow: `0 4px 12px -2px ${category.color}40`
+                      }}
                     >
                       {category.icon}
                     </div>
-                    <div className="text-xs sm:text-sm font-medium whitespace-nowrap">{category.label}</div>
-                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 whitespace-nowrap">{category.description}</div>
+                    <div className="text-sm sm:text-base font-semibold text-foreground/90 whitespace-nowrap">{category.label}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground mt-1 whitespace-nowrap">{category.description}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* 직접 입력 영역 */}
-            <div className="rounded-2xl border border-secondary bg-secondary/30 p-4 space-y-2">
-              <div className="flex gap-2 sm:gap-3 items-stretch">
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-4 sm:p-5 space-y-3 shadow-sm animate-fade-in-up stagger-5">
+              <p className="text-sm text-muted-foreground text-center">또는 직접 얘기해주세요</p>
+              <div className="flex gap-3 items-stretch">
                 <input
                   type="text"
                   value={directInput}
                   onChange={(e) => setDirectInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleDirectInputSubmit()}
-                  placeholder="직접 얘기해주셔도 좋아요"
-                  className="flex-1 px-3 sm:px-4 h-11 sm:h-12 text-sm sm:text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
+                  placeholder="무슨 일이 있었는지 말해주세요..."
+                  className="flex-1 px-4 sm:px-5 h-12 sm:h-14 text-sm sm:text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all shadow-sm"
                   disabled={isLoading}
                 />
                 <Button
-                  className="h-11 sm:h-12 px-4 sm:px-6"
+                  className="h-12 sm:h-14 px-5 sm:px-7 rounded-xl shadow-sm"
                   onClick={handleDirectInputSubmit}
                   disabled={isLoading || !directInput.trim()}
                 >
