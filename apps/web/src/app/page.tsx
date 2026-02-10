@@ -1,5 +1,6 @@
 "use client";
 
+import { ContactSidebar } from "@/components/contact-sidebar";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1266,6 +1267,9 @@ export default function Home() {
   if (!sessionId) {
     return (
       <main className="min-h-screen flex flex-col bg-gradient-to-b from-background via-secondary/10 to-accent/10">
+        {/* 오른쪽 사이드바 - 문의 링크 */}
+        <ContactSidebar />
+
         {/* 헤더 */}
         <header className="p-4 border-b border-border/30">
           <div className="flex justify-between items-center">
