@@ -11,6 +11,10 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "To high; 위로 | AI 기반 심리 상담 서비스",
   description: "처음부터 힘든 점을 다 말하기 어려울 때, 점진적으로 함께 이야기해요",
+  icons: {
+    icon: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

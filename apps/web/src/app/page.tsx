@@ -1475,10 +1475,12 @@ export default function Home() {
                           disabled={isLoading}
                         >
                           <div
-                            className={`mb-2 transition-transform duration-500 group-hover:scale-110 ${selectedTopMode === mode.id ? "scale-110" : ""}`}
+                            className={`mb-2 transition-all duration-500 group-hover:scale-110 ${selectedTopMode === mode.id ? "scale-110" : ""}`}
                             style={{ color: mode.color }}
                           >
-                            {mode.icon}
+                            <div className={`p-2 rounded-xl backdrop-blur-sm transition-all duration-500 ${selectedTopMode === mode.id ? "bg-white/20 border border-white/30" : "bg-white/5 border border-white/10"}`}>
+                              {mode.icon}
+                            </div>
                           </div>
                           <div className="text-[10px] sm:text-xs font-semibold text-white/90">{mode.label}</div>
                         </button>
@@ -1502,7 +1504,9 @@ export default function Home() {
                               className="mb-1.5 flex justify-center transition-transform group-hover:scale-110"
                               style={{ color: subType.color }}
                             >
-                              {subType.icon}
+                              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm">
+                                {subType.icon}
+                              </div>
                             </div>
                             <div className="text-[10px] sm:text-xs font-semibold text-white/90 text-center">{subType.label}</div>
                           </button>
@@ -1537,10 +1541,12 @@ export default function Home() {
                           disabled={isLoading}
                         >
                           <div
-                            className="mb-2 flex justify-center group-hover:scale-110 transition-transform"
+                            className="mb-2 flex justify-center group-hover:scale-110 transition-transform duration-500 ease-out"
                             style={{ color: category.color }}
                           >
-                            {category.icon}
+                            <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/10 group-hover:border-white/30 transition-all duration-500">
+                              {category.icon}
+                            </div>
                           </div>
                           <div className="text-center">
                             <div className="text-xs font-bold text-white/95 leading-tight">{category.label}</div>
