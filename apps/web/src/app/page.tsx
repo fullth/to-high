@@ -655,6 +655,64 @@ export default function Home() {
     }
   };
 
+  // 이전 상담 내용 요약
+  const handleSummarizeText = async () => {
+    if (!importText.trim()) {
+      setImportError("내용을 입력해주세요");
+      return;
+    }
+    if (importText.length < 50) {
+      setImportError("최소 50자 이상 입력해주세요");
+      return;
+    }
+    setIsImporting(true);
+    setImportError(null);
+    try {
+      const result = await summarizeText(importText, token || undefined);
+      setImportSummary(result.summary);
+      setImportStep("summary");
+    } catch (error: any) {
+      console.error("Summarize failed:", error);
+      setImportError("상담 내용을 분석하는 중 오류가 발생했어요. 다시 시도해주세요.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // 요약된 내용으로 상담 시작
+  const handleImportStart = async () => {
+    if (!importSummary.trim()) {
+      setImportError("요약 내용을 입력해주세요");
+      return;
+    }
+    setIsImporting(true);
+    setImportError(null);
+    try {
+      const result = await startSessionWithImportSummary(
+        importSummary,
+        importCategory || undefined,
+        token || undefined
+      );
+      setSessionId(result.sessionId);
+      setQuestion(result.question);
+      setOptions(result.options);
+      setPhase("selecting");
+      setSelectionHistory([
+        { type: "assistant", content: result.question, isQuestion: true },
+      ]);
+      setShowImportModal(false);
+      setImportText("");
+      setImportSummary("");
+      setImportCategory(null);
+      setImportStep("category");
+    } catch (error: any) {
+      console.error("Import failed:", error);
+      setImportError("상담을 시작하는 중 오류가 발생했어요. 다시 시도해주세요.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   // 옵션 선택
   const handleSelectOption = useCallback(
     async (selected: string) => {
