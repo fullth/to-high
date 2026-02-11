@@ -26,6 +26,8 @@ import {
   CounselorType,
   PublicStats,
 } from "@/lib/api";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption } from "@/types/chat";
 
 // 상위 상담 모드 정의
@@ -1662,7 +1664,11 @@ export default function Home() {
                           </div>
                         )}
                         <div className={`p-4 rounded-[1.5rem] ${item.type === "user" ? "bg-primary/30 text-white border border-primary/40 rounded-tr-sm shadow-lg shadow-primary/10" : "bg-white/12 border border-white/20 text-white/95 rounded-tl-sm backdrop-blur-xl shadow-md"}`}>
-                          <p className="text-sm leading-relaxed">{item.content}</p>
+                          <div className="markdown-content text-sm leading-relaxed">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {item.content}
+                            </ReactMarkdown>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2080,7 +2086,11 @@ export default function Home() {
                       : "bg-white/95 border border-white/40 text-foreground rounded-tl-sm backdrop-blur-sm shadow-gray-100"
                       }`}
                   >
-                    <p className="text-[15px] whitespace-pre-wrap leading-relaxed font-medium">{msg.content}</p>
+                    <div className="markdown-content text-[15px] leading-relaxed font-medium">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2090,10 +2100,12 @@ export default function Home() {
                     <Logo size="sm" showText={false} />
                   </div>
                   <div className="bg-white/80 border border-border/40 rounded-[24px] rounded-tl-sm px-5 py-4 max-w-[85%] shadow-sm backdrop-blur-sm">
-                    <p className="text-[15px] whitespace-pre-wrap leading-relaxed font-medium text-foreground/90">
-                      {streamingContent}
-                      <span className="animate-pulse text-primary">▋</span>
-                    </p>
+                    <div className="markdown-content text-[15px] leading-relaxed font-medium text-foreground/90">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {streamingContent}
+                      </ReactMarkdown>
+                      <span className="animate-pulse text-primary ml-1">▋</span>
+                    </div>
                   </div>
                 </div>
               )}

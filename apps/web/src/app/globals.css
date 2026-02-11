@@ -208,3 +208,40 @@
 .stagger-6 {
   animation-delay: 0.3s;
 }
+/* 마크다운 콘텐츠 스타일 */
+.markdown-content {
+  @apply leading-relaxed;
+}
+
+.markdown-content strong {
+  @apply font-bold text-primary underline decoration-primary/30 decoration-2 underline-offset-4;
+}
+
+.markdown-content ul, 
+.markdown-content ol {
+  @apply my-3 ml-4 space-y-1.5;
+}
+
+.markdown-content ul {
+  @apply list-disc;
+}
+
+.markdown-content ol {
+  @apply list-decimal;
+}
+
+.markdown-content li {
+  @apply text-[14px] sm:text-[15px];
+}
+
+.markdown-content blockquote {
+  @apply border-l-4 border-primary/40 pl-4 py-1 my-3 bg-primary/5 rounded-r-lg italic text-foreground/80;
+}
+
+.markdown-content hr {
+  @apply my-4 border-border/50;
+}
+
+.markdown-content p:not(:last-child) {
+  @apply mb-3;
+}
