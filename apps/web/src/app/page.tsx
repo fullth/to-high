@@ -38,11 +38,9 @@ const topLevelModes = [
     id: "mbti" as TopLevelMode,
     label: "MBTI 성향 상담",
     description: "성향 맞춤 대화",
-    color: "#6366F1",
-    gradient: "from-indigo-500/20 to-purple-500/10",
-    glowColor: "rgba(99, 102, 241, 0.4)",
+    color: "#818cf8",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <circle cx="12" cy="12" r="10" />
         <path d="M12 2a7 7 0 0 0 0 14 7 7 0 0 0 0-14" />
         <path d="M12 8v8" />
@@ -54,11 +52,9 @@ const topLevelModes = [
     id: "reaction" as TopLevelMode,
     label: "따뜻한 공감",
     description: "진심 어린 호응으로",
-    color: "#F87171",
-    gradient: "from-rose-500/20 to-orange-500/10",
-    glowColor: "rgba(248, 113, 113, 0.4)",
+    color: "#fb7185",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
       </svg>
     ),
@@ -67,11 +63,9 @@ const topLevelModes = [
     id: "listening" as TopLevelMode,
     label: "깊은 경청",
     description: "당신의 모든 이야기를",
-    color: "#34D399",
-    gradient: "from-emerald-500/20 to-teal-500/10",
-    glowColor: "rgba(52, 211, 153, 0.4)",
+    color: "#34d399",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <path d="M9 18V5l12-2v13" />
         <circle cx="6" cy="18" r="3" />
         <circle cx="18" cy="16" r="3" />
@@ -86,11 +80,9 @@ const mbtiSubTypes = [
     id: "F" as CounselorType,
     label: "F 감정형",
     description: "따뜻한 위로가 필요해요",
-    color: "#F472B6",
-    gradient: "from-pink-500/20 to-rose-500/10",
-    glowColor: "rgba(244, 114, 182, 0.4)",
+    color: "#f472b6",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
       </svg>
     ),
@@ -99,11 +91,9 @@ const mbtiSubTypes = [
     id: "T" as CounselorType,
     label: "T 사고형",
     description: "현실적인 조언이 필요해요",
-    color: "#60A5FA",
-    gradient: "from-blue-500/20 to-indigo-500/10",
-    glowColor: "rgba(96, 165, 250, 0.4)",
+    color: "#38bdf8",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
       </svg>
@@ -115,13 +105,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const categories = [
   {
     id: "self",
-    color: "#A78BFA",
-    gradient: "from-purple-400/30 to-indigo-400/20",
-    glowColor: "rgba(167, 139, 250, 0.6)",
+    color: "#a78bfa",
     label: "나",
     description: "마음, 감정",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
         <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
         <path d="M12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
         <path d="M7 21v-2a5 5 0 0 1 10 0v2" />
@@ -131,13 +119,11 @@ const categories = [
   },
   {
     id: "future",
-    color: "#34D399",
-    gradient: "from-emerald-400/30 to-teal-400/20",
-    glowColor: "rgba(52, 211, 153, 0.6)",
+    color: "#34d399",
     label: "미래",
     description: "진로, 선택",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
         <circle cx="12" cy="12" r="10" />
         <path d="M12 2v20M2 12h20" />
         <path d="m16 8-8 8M16 16 8 8" />
@@ -147,13 +133,11 @@ const categories = [
   },
   {
     id: "work",
-    color: "#60A5FA",
-    gradient: "from-blue-400/30 to-cyan-400/20",
-    glowColor: "rgba(96, 165, 250, 0.6)",
+    color: "#38bdf8",
     label: "일",
     description: "업무, 직장",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
         <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
         <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
         <path d="M2 12h20" />
@@ -162,44 +146,36 @@ const categories = [
   },
   {
     id: "relationship",
-    color: "#FBBF24",
-    gradient: "from-amber-400/30 to-orange-400/20",
-    glowColor: "rgba(251, 191, 36, 0.6)",
+    color: "#fbbf24",
     label: "관계",
     description: "가족, 친구",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
         <circle cx="9" cy="7" r="4" />
         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        <path d="M9 13h1" />
       </svg>
     )
   },
   {
     id: "love",
-    color: "#F87171",
-    gradient: "from-rose-400/30 to-pink-400/20",
-    glowColor: "rgba(248, 113, 113, 0.6)",
+    color: "#fb7185",
     label: "연애",
     description: "사랑, 이별",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
         <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-        <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="currentColor" fillOpacity="0.1" />
       </svg>
     )
   },
   {
     id: "daily",
-    color: "#818CF8",
-    gradient: "from-indigo-400/30 to-slate-400/20",
-    glowColor: "rgba(129, 140, 248, 0.6)",
+    color: "#818cf8",
     label: "일상",
     description: "그냥 얘기",
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
         <path d="M3 6h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" />
         <path d="M3 10h18" />
         <path d="M7 14h.01" />
@@ -410,17 +386,15 @@ export default function Home() {
 
   const statusBadge = (
     <div className="fixed right-0 top-32 z-50 pointer-events-none hidden lg:flex">
-      <div className="bg-white/60 backdrop-blur-md border border-white/50 border-r-0 rounded-l-full py-2.5 px-5 shadow-xl ring-1 ring-white/60 flex items-center gap-3 group hover:bg-white/80 transition-all duration-300 pointer-events-auto">
-        <div className="flex items-center gap-1.5 px-0.5">
+      <div className="bg-card border-2 border-border border-r-0 rounded-l-2xl py-3 px-6 shadow-2xl shadow-black/30 flex items-center gap-4 group hover:border-primary/50 transition-all duration-300 pointer-events-auto">
+        <div className="flex items-center gap-2">
           <div className="relative">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-            <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
+            <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
+            <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-primary animate-ping opacity-75" />
           </div>
-          {/* 초록색 점등 앞에 */}
-          <span className="text-[10px] font-black text-emerald-600 tracking-tighter uppercase leading-none"></span>
         </div>
-        <div className="w-px h-4 bg-border/20" />
-        <p className="text-[12px] font-bold text-foreground/70 whitespace-nowrap group-hover:text-primary transition-colors duration-300">
+        <div className="w-px h-5 bg-border" />
+        <p className="text-sm font-semibold text-foreground whitespace-nowrap">
           24시간 언제든 찾아주세요
         </p>
       </div>
@@ -1361,33 +1335,33 @@ export default function Home() {
   // 상담 대기/선택 단계 (기본 화면)
   if (!sessionId || phase === "selecting") {
     return (
-      <main className="min-h-screen flex flex-col bg-background bg-[radial-gradient(circle_at_top_left,rgba(255,255,230,0.08)_0%,transparent_40%),radial-gradient(circle_at_top_right,rgba(52,211,153,0.15)_0%,transparent_50%),radial-gradient(circle_at_bottom_left,rgba(5,150,105,0.1)_0%,transparent_70%)]">
+      <main className="min-h-screen flex flex-col bg-background">
         {/* 오른쪽 사이드바 - 문의 링크 */}
         <ContactSidebar />
 
-        {/* 헤더 */}
-        <header className="p-4 border-b border-white/5 backdrop-blur-md sticky top-0 z-50">
-          <div className="flex justify-between items-center max-w-6xl mx-auto w-full">
+        {/* 헤더 - 더 넓고 깔끔하게 */}
+        <header className="px-6 py-5 border-b border-border sticky top-0 z-50 bg-background/95 backdrop-blur-sm">
+          <div className="flex justify-between items-center max-w-5xl mx-auto w-full">
             <Logo size="md" onClick={handleNewSession} />
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               {authLoading ? (
-                <div className="h-9 w-20 bg-white/5 rounded-full animate-pulse" />
+                <div className="h-10 w-24 bg-muted rounded-xl animate-pulse" />
               ) : user ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
-                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card border border-border">
+                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
                       {(user.name || user.email)?.[0]?.toUpperCase()}
                     </div>
-                    <span className="text-sm text-white/80 hidden sm:inline">
+                    <span className="text-sm font-medium text-foreground hidden sm:inline">
                       {user.name || user.email.split('@')[0]}
                     </span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={logout} className="text-white/40 hover:text-white hover:bg-white/5">
+                  <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground">
                     로그아웃
                   </Button>
                 </div>
               ) : (
-                <Button variant="outline" size="sm" onClick={() => setShowLoginPrompt(true)} className="border-primary/50 text-primary hover:bg-primary/10 rounded-full">
+                <Button variant="outline" size="sm" onClick={() => setShowLoginPrompt(true)}>
                   로그인
                 </Button>
               )}
@@ -1396,7 +1370,6 @@ export default function Home() {
                   variant="ghost"
                   size="sm"
                   onClick={handleNewSession}
-                  className="text-white/40 hover:text-white hover:bg-white/5 rounded-full"
                 >
                   처음으로
                 </Button>
@@ -1407,118 +1380,123 @@ export default function Home() {
 
         {statusBadge}
 
-        {/* 메인 콘텐츠 리스트 (스크롤 가능) */}
-        <div className="flex-1 overflow-y-auto relative">
-          <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10">
+        {/* 메인 콘텐츠 */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-6 py-12 sm:py-20">
             {!sessionId ? (
-              <div className="space-y-10 sm:space-y-14">
+              <div className="space-y-16 sm:space-y-24">
 
-                {/* 1. 웰컴 히어로 섹션 */}
-                <div className="text-center space-y-3 sm:space-y-5">
-                  {publicStats && publicStats.todayConversations > 0 && !sessionId && (
-                    <div className="flex justify-center animate-fade-in-up mb-4">
-                      <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl shadow-lg">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                {/* 1. 히어로 섹션 - 토스 스타일 대형 타이포 */}
+                <section className="text-center space-y-6">
+                  {publicStats && publicStats.todayConversations > 0 && (
+                    <div className="flex justify-center animate-fade-in-up">
+                      <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-card border border-border">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
                         </span>
-                        <span className="text-sm text-white/60">오늘 <strong className="text-primary">{publicStats.todayConversations.toLocaleString()}</strong>명이 위로받았어요</span>
+                        <span className="text-sm font-medium text-muted-foreground">오늘 <strong className="text-primary font-bold">{publicStats.todayConversations.toLocaleString()}</strong>명이 위로받았어요</span>
                       </div>
                     </div>
                   )}
-                  <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white tracking-tight animate-fade-in-up stagger-1 leading-tight" style={{ fontFamily: '"Pretendard Variable", Pretendard, sans-serif' }}>
+
+                  <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground tracking-tight animate-fade-in-up stagger-1 leading-[1.15]">
                     {user?.name ? (
                       <>
-                        <span className="text-primary">{user.name}</span>님, <br className="hidden sm:block" />
-                        오늘 하루도 정말 수고 많으셨어요.
+                        <span className="text-primary">{user.name}</span>님,<br />
+                        오늘 하루도<br className="sm:hidden" /> 수고 많으셨어요
                       </>
                     ) : (
-                      "오늘 하루도 정말 수고 많으셨어요."
+                      <>오늘 하루도<br className="sm:hidden" /> 수고 많으셨어요</>
                     )}
                   </h1>
-                  <p className="text-base sm:text-lg text-white/50 animate-fade-in-up stagger-2 leading-relaxed" style={{ fontFamily: '"Pretendard Variable", Pretendard, sans-serif' }}>
-                    마음에 걸리는 게 있다면 편하게 말씀해 주세요.<br className="hidden sm:block" />
-                    당신의 고요한 숲이 되어 드릴게요.
+
+                  <p className="text-lg sm:text-xl text-muted-foreground animate-fade-in-up stagger-2 max-w-md mx-auto">
+                    마음에 걸리는 게 있다면<br className="sm:hidden" /> 편하게 말씀해 주세요
                   </p>
-                </div>
+                </section>
 
                 {/* 2. 로그인 유도 (비회원) */}
                 {!authLoading && !user && !sessionId && (
-                  <button
-                    onClick={() => setShowLoginPrompt(true)}
-                    className="group w-full max-w-xl mx-auto flex rounded-[1.5rem] border border-white/10 bg-white/5 p-4 sm:p-5 text-left hover:border-primary/50 hover:bg-white/[0.08] transition-all duration-500 animate-fade-in-up stagger-3"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500">
-                        <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  <section className="animate-fade-in-up stagger-3">
+                    <button
+                      onClick={() => setShowLoginPrompt(true)}
+                      className="group w-full p-6 rounded-2xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 text-left"
+                    >
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-lg font-bold text-foreground">나만의 상담사를 만들어보세요</p>
+                          <p className="text-sm text-muted-foreground mt-1">로그인하시면 대화가 저장되고, 회원님을 기억합니다</p>
+                        </div>
+                        <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-base font-semibold text-white/90">나만의 상담사를 만들어보세요</p>
-                        <p className="text-xs text-white/50 mt-0.5">로그인하시면 대화가 저장되고, 회원님을 기억합니다</p>
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                  </section>
                 )}
 
                 {/* 3. 최근 상담 기록 (회원) */}
                 {user && previousSessions.length > 0 && !sessionId && (
-                  <div className="max-w-xl mx-auto w-full rounded-[2rem] border border-white/5 bg-white/[0.03] p-6 space-y-4 animate-fade-in-up stagger-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-white/80">최근 상담 기록</p>
-                      <span className="text-xs text-white/30">{previousSessions.length}개의 대화</span>
+                  <section className="animate-fade-in-up stagger-3 space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <h3 className="text-lg font-bold text-foreground">최근 상담</h3>
+                      <span className="text-sm text-muted-foreground">{previousSessions.length}개</span>
                     </div>
                     <div className="grid gap-3">
-                      {previousSessions.slice(0, 2).map((session) => {
+                      {previousSessions.slice(0, 3).map((session) => {
                         const categoryInfo = categories.find(c => c.id === session.category) || {
                           label: session.category === 'direct' ? '직접 입력' : session.category,
-                          color: '#10B981',
+                          color: '#34d399',
                         };
                         return (
                           <button
                             key={session.sessionId}
                             onClick={() => handleResumeSession(session.sessionId)}
-                            className="group w-full p-4 rounded-2xl border border-white/5 bg-white/5 hover:border-primary/40 hover:bg-white/[0.08] transition-all duration-300 text-left flex items-center gap-3"
+                            className="group w-full p-5 rounded-2xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 text-left flex items-center gap-4"
                           >
                             <div
-                              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white/90 text-xs border border-white/10"
-                              style={{ background: `linear-gradient(135deg, ${categoryInfo.color}40, ${categoryInfo.color}20)` }}
+                              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
+                              style={{ backgroundColor: `${categoryInfo.color}20`, color: categoryInfo.color }}
                             >
                               {categoryInfo.label[0]}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-white/90 truncate group-hover:text-primary">{session.alias || categoryInfo.label}</p>
-                              <p className="text-[11px] text-white/40">{getTimeAgo(new Date(session.updatedAt))}</p>
+                              <p className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors">{session.alias || categoryInfo.label}</p>
+                              <p className="text-sm text-muted-foreground mt-0.5">{getTimeAgo(new Date(session.updatedAt))}</p>
                             </div>
+                            <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
                           </button>
                         );
                       })}
                     </div>
-                  </div>
+                  </section>
                 )}
 
                 {/* 4. 카테고리 선택 영역 (메인) */}
-                <div className="space-y-4 animate-fade-in-up stagger-4">
-                  <div className="text-center space-y-1">
-                    <h2 className="text-lg sm:text-xl font-bold text-white">어떤 대화를 시작할까요?</h2>
-                    <p className="text-xs text-white/40">당신의 이야기를 들을 준비가 되어 있습니다.</p>
+                <section className="space-y-10 animate-fade-in-up stagger-4">
+                  <div className="text-center space-y-3">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-foreground">어떤 대화를 시작할까요?</h2>
+                    <p className="text-lg text-muted-foreground">당신의 이야기를 들을 준비가 되어 있습니다</p>
                   </div>
 
-                  <div className="rounded-[2rem] border border-white/20 p-4 sm:p-6 space-y-6 bg-white/10 backdrop-blur-2xl shadow-2xl">
+                  <div className="rounded-3xl border-2 border-border p-8 sm:p-10 space-y-10 bg-card">
                     {/* 모드 선택 */}
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-4">
                       {topLevelModes.map((mode) => (
                         <button
                           key={mode.id}
-                          className={`group relative flex flex-col items-center justify-center p-3 rounded-[1.5rem] border transition-all duration-500 bg-gradient-to-br ${mode.gradient} ${selectedTopMode === mode.id
-                            ? "bg-white/20 shadow-[0_0_30px_" + mode.glowColor + "]"
-                            : "bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/15"
+                          className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all duration-300 ${selectedTopMode === mode.id
+                            ? "bg-secondary border-primary shadow-lg shadow-primary/20"
+                            : "bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-black/20"
                             } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
-                          style={{
-                            borderColor: selectedTopMode === mode.id ? mode.color : undefined,
-                            boxShadow: selectedTopMode === mode.id ? `0 0 30px ${mode.glowColor}` : undefined
-                          }}
                           onClick={() => {
                             if (selectedTopMode === mode.id) {
                               setSelectedTopMode(null);
@@ -1535,136 +1513,133 @@ export default function Home() {
                           disabled={isLoading}
                         >
                           <div
-                            className={`mb-2 transition-all duration-500 group-hover:scale-110 ${selectedTopMode === mode.id ? "scale-110" : ""}`}
+                            className={`mb-3 transition-all duration-300 group-hover:scale-110 ${selectedTopMode === mode.id ? "scale-110" : ""}`}
                             style={{ color: mode.color }}
                           >
-                            <div className={`p-2 rounded-xl backdrop-blur-sm transition-all duration-500 ${selectedTopMode === mode.id ? "bg-white/20 border border-white/30" : "bg-white/5 border border-white/10"}`}>
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300" style={{ backgroundColor: `${mode.color}20` }}>
                               {mode.icon}
                             </div>
                           </div>
-                          <div className="text-[10px] sm:text-xs font-semibold text-white/90">{mode.label}</div>
+                          <div className="text-sm font-semibold text-foreground">{mode.label}</div>
                         </button>
                       ))}
                     </div>
 
                     {/* MBTI 하위 선택 */}
                     {selectedTopMode === "mbti" && (
-                      <div className="bg-white/5 rounded-[1.25rem] border border-white/20 p-3 grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-2">
+                      <div className="bg-secondary rounded-2xl border-2 border-border p-4 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                         {mbtiSubTypes.map((subType) => (
                           <button
                             key={subType.id}
-                            className={`group p-3 rounded-[1.25rem] border transition-all duration-300 bg-gradient-to-br ${subType.gradient} ${selectedCounselorType === subType.id ? "bg-white/20 shadow-[0_0_20px_" + subType.glowColor + "]" : "bg-white/5 border-white/10 hover:bg-white/15"}`}
-                            style={{
-                              borderColor: selectedCounselorType === subType.id ? subType.color : undefined,
-                              boxShadow: selectedCounselorType === subType.id ? `0 0 20px ${subType.glowColor}` : undefined
-                            }}
+                            className={`group p-5 rounded-xl border-2 transition-all duration-300 ${selectedCounselorType === subType.id ? "bg-card border-primary shadow-lg shadow-primary/20" : "bg-card border-border hover:border-primary/50"}`}
                             onClick={() => setSelectedCounselorType(selectedCounselorType === subType.id ? null : subType.id)}
                           >
                             <div
-                              className="mb-1.5 flex justify-center transition-transform group-hover:scale-110"
+                              className="mb-2 flex justify-center transition-transform group-hover:scale-110"
                               style={{ color: subType.color }}
                             >
-                              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm">
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${subType.color}20` }}>
                                 {subType.icon}
                               </div>
                             </div>
-                            <div className="text-[10px] sm:text-xs font-semibold text-white/90 text-center">{subType.label}</div>
+                            <div className="text-sm font-semibold text-foreground text-center">{subType.label}</div>
                           </button>
                         ))}
                       </div>
                     )}
 
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-px bg-white/10" />
-                      <span className="text-[9px] font-medium text-white/30 uppercase tracking-widest">Topic</span>
-                      <div className="flex-1 h-px bg-white/10" />
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 h-px bg-border" />
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Topic</span>
+                      <div className="flex-1 h-px bg-border" />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                       {categories.map((category) => (
                         <button
                           key={category.id}
-                          className={`group p-3.5 rounded-[1.25rem] bg-gradient-to-br ${category.gradient} bg-white/[0.08] border border-white/20 transition-all duration-500 hover:bg-white/[0.18] hover:border-white/50 shadow-sm`}
-                          style={{
-                            '--glow-color': category.glowColor,
-                            '--accent-color': category.color
-                          } as any}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.boxShadow = `0 6px 25px ${category.glowColor}`;
-                            e.currentTarget.style.borderColor = `${category.color}80`;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.boxShadow = 'none';
-                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-                          }}
+                          className="group p-6 rounded-2xl bg-secondary border-2 border-transparent hover:border-primary/50 transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
                           onClick={() => handleCategorySelect(category.id)}
                           disabled={isLoading}
                         >
                           <div
-                            className="mb-2 flex justify-center group-hover:scale-110 transition-transform duration-500 ease-out"
+                            className="mb-4 flex justify-center"
                             style={{ color: category.color }}
                           >
-                            <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/10 group-hover:border-white/30 transition-all duration-500">
+                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110" style={{ backgroundColor: `${category.color}15` }}>
                               {category.icon}
                             </div>
                           </div>
                           <div className="text-center">
-                            <div className="text-xs font-bold text-white/95 leading-tight">{category.label}</div>
-                            <div className="text-[10px] text-white/40 mt-0.5">{category.description}</div>
+                            <div className="text-base font-bold text-foreground">{category.label}</div>
+                            <div className="text-sm text-muted-foreground mt-1">{category.description}</div>
                           </div>
                         </button>
                       ))}
                     </div>
                   </div>
-                </div>
+                </section>
 
-                {/* 5. 직접 입력 및 기타 도구 */}
-                <div className="grid sm:grid-cols-2 gap-4 animate-fade-in-up stagger-5 pb-20">
-                  <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 flex flex-col justify-between space-y-4">
-                    <p className="text-sm text-white/40">마음에 담아둔 이야기를 바로 들려주세요</p>
-                    <div className="flex gap-2">
+                {/* 5. 직접 입력 */}
+                <section className="animate-fade-in-up stagger-5 space-y-4">
+                  <h3 className="text-lg font-bold text-foreground px-1">직접 이야기하기</h3>
+                  <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
+                    <p className="text-muted-foreground">마음에 담아둔 이야기를 바로 들려주세요</p>
+                    <div className="flex gap-3">
                       <input
                         type="text"
                         value={directInput}
                         onChange={(e) => setDirectInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && directInput.trim() && handleDirectInputSubmit()}
                         placeholder="무슨 일이 있었나요?..."
-                        className="flex-1 px-4 h-12 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        className="flex-1 px-5 h-14 rounded-xl bg-secondary border-2 border-transparent text-foreground text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
                       />
-                      <Button onClick={handleDirectInputSubmit} disabled={!directInput.trim() || isLoading} className="h-12 px-4 rounded-xl bg-primary">시작</Button>
+                      <Button onClick={handleDirectInputSubmit} disabled={!directInput.trim() || isLoading} size="lg">
+                        시작
+                      </Button>
                     </div>
                   </div>
+                </section>
+
+                {/* 6. 대화 불러오기 */}
+                <section className="animate-fade-in-up stagger-6 pb-20">
                   <button
                     onClick={() => setShowImportModal(true)}
-                    className="rounded-[2rem] border border-white/5 bg-white/[0.02] p-6 text-left hover:bg-white/5 transition-all group"
+                    className="w-full p-6 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 transition-all duration-300 group text-left flex items-center gap-5"
                   >
-                    <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:border-primary/30 transition-colors">
-                      <svg className="w-5 h-5 text-white/40 group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+                      <svg className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
                     </div>
-                    <p className="text-sm font-medium text-white/80">다른 곳에서의 대화 불러오기</p>
-                    <p className="text-xs text-white/30 mt-1">이전 상담의 맥락을 연결할 수 있습니다</p>
+                    <div className="flex-1">
+                      <p className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">다른 곳에서의 대화 불러오기</p>
+                      <p className="text-sm text-muted-foreground mt-1">이전 상담의 맥락을 연결할 수 있습니다</p>
+                    </div>
+                    <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
-                </div>
+                </section>
               </div>
             ) : (
-              <div className="max-w-2xl mx-auto space-y-8 pb-32">
+              <div className="space-y-6 pb-32">
                 {/* 진단 대화 히스토리 */}
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {selectionHistory.map((item, idx) => (
                     <div
                       key={idx}
                       className={`flex ${item.type === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
-                      style={{ animationDelay: `${idx * 100}ms` }}
+                      style={{ animationDelay: `${idx * 80}ms` }}
                     >
-                      <div className={`flex gap-3 max-w-[85%] ${item.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                      <div className={`flex gap-4 max-w-[90%] ${item.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
                         {item.type !== "user" && (
-                          <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 mt-1 backdrop-blur-xl">
+                          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
                             <Logo size="sm" showText={false} />
                           </div>
                         )}
-                        <div className={`p-4 rounded-[1.5rem] ${item.type === "user" ? "bg-primary/30 text-white border border-primary/40 rounded-tr-sm shadow-lg shadow-primary/10" : "bg-white/12 border border-white/20 text-white/95 rounded-tl-sm backdrop-blur-xl shadow-md"}`}>
-                          <div className="markdown-content text-sm leading-relaxed">
+                        <div className={`p-5 rounded-2xl ${item.type === "user" ? "bg-primary text-primary-foreground rounded-tr-md" : "bg-card border-2 border-border text-foreground rounded-tl-md"}`}>
+                          <div className="markdown-content text-base leading-relaxed">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {item.content}
                             </ReactMarkdown>
@@ -1675,9 +1650,9 @@ export default function Home() {
                   ))}
                   {isLoading && !isLoadingNewOptions && (
                     <div className="flex justify-start animate-pulse">
-                      <div className="flex gap-3 max-w-[85%]">
-                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 shrink-0" />
-                        <div className="p-4 rounded-[1.5rem] bg-white/5 border border-white/10 rounded-tl-sm w-32 h-12" />
+                      <div className="flex gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-muted shrink-0" />
+                        <div className="p-5 rounded-2xl bg-muted rounded-tl-md w-40 h-14" />
                       </div>
                     </div>
                   )}
@@ -1686,33 +1661,33 @@ export default function Home() {
 
                 {/* 진단 옵션 버튼 그리드 */}
                 {!isLoading && options.length > 0 && (
-                  <div className="space-y-4 animate-fade-in stagger-1">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-px bg-white/5" />
-                      <span className="text-[10px] font-medium text-white/20 uppercase tracking-widest">Select an Option</span>
-                      <div className="flex-1 h-px bg-white/5" />
+                  <div className="space-y-5 animate-fade-in">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 h-px bg-border" />
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">선택하기</span>
+                      <div className="flex-1 h-px bg-border" />
                     </div>
-                    <div className="grid gap-2.5">
+                    <div className="grid gap-3">
                       {options.map((option, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleSelectOption(option)}
-                          className="w-full p-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left text-sm text-white/80 hover:bg-white/[0.08] hover:border-primary/40 hover:text-white transition-all duration-300 group"
+                          className="w-full p-5 rounded-2xl bg-card border-2 border-border text-left hover:border-primary/50 transition-all duration-300 group"
                         >
-                          <div className="flex items-center justify-between">
-                            <span>{option}</span>
-                            <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-base text-foreground">{option}</span>
+                            <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                             </svg>
                           </div>
                         </button>
                       ))}
                       <button
                         onClick={handleRequestNewOptions}
-                        className="w-full p-3 rounded-2xl border border-dashed border-white/10 text-white/30 text-xs hover:border-white/20 hover:text-white/50 transition-all flex items-center justify-center gap-2"
+                        className="w-full p-4 rounded-2xl border-2 border-dashed border-border text-muted-foreground text-sm hover:border-primary/50 hover:text-foreground transition-all flex items-center justify-center gap-2"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         {isLoadingNewOptions ? "추천 답변을 찾는 중..." : "다른 답변 보기"}
                       </button>
@@ -1726,28 +1701,25 @@ export default function Home() {
 
         {/* 진단 단계 하단 고정 입력창 */}
         {sessionId && phase === "selecting" && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 pb-8 sm:pb-10 bg-gradient-to-t from-background via-background/95 to-transparent z-40">
-            <div className="max-w-2xl mx-auto">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-40 transition-opacity" />
-                <div className="relative flex gap-2 p-1.5 rounded-2xl bg-white/[0.08] border border-white/10 backdrop-blur-2xl focus-within:border-primary/40 transition-all">
-                  <input
-                    type="text"
-                    value={supplementInput}
-                    onChange={(e) => setSupplementInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSelectOption(supplementInput.trim())}
-                    placeholder="직접 말씀해 주셔도 좋아요..."
-                    className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder-white/20 focus:outline-none"
-                    disabled={isLoading}
-                  />
-                  <button
-                    onClick={() => handleSelectOption(supplementInput.trim())}
-                    disabled={isLoading || !supplementInput.trim()}
-                    className="px-5 rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 disabled:opacity-50 hover:bg-primary/80 transition-all"
-                  >
-                    전송
-                  </button>
-                </div>
+          <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 sm:pb-8 bg-gradient-to-t from-background via-background to-transparent z-40">
+            <div className="max-w-3xl mx-auto">
+              <div className="flex gap-3 p-2 rounded-2xl bg-card border-2 border-border">
+                <input
+                  type="text"
+                  value={supplementInput}
+                  onChange={(e) => setSupplementInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && supplementInput.trim() && handleSelectOption(supplementInput.trim())}
+                  placeholder="직접 말씀해 주셔도 좋아요..."
+                  className="flex-1 bg-transparent px-4 py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
+                  disabled={isLoading}
+                />
+                <Button
+                  onClick={() => handleSelectOption(supplementInput.trim())}
+                  disabled={isLoading || !supplementInput.trim()}
+                  size="lg"
+                >
+                  전송
+                </Button>
               </div>
             </div>
           </div>
