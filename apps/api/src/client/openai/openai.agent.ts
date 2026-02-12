@@ -21,6 +21,7 @@ import {
   COUNSELOR_MODE_PROMPTS,
   COUNSELOR_MODE_OPTIONS_PROMPTS,
   IMPORT_TEXT_SUMMARY_PROMPT,
+  getCategoryExpertise,
 } from '../../prompts';
 import { GenerateOptionsResult } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
@@ -115,6 +116,9 @@ export class OpenAIAgent {
     const modePrompt = counselorType ? COUNSELOR_MODE_PROMPTS[counselorType] : '';
     const modeOptionsPrompt = counselorType ? COUNSELOR_MODE_OPTIONS_PROMPTS[counselorType] : '';
 
+    // 카테고리별 전문 프롬프트 추가
+    const categoryExpertise = getCategoryExpertise(category);
+
     const systemPrompt = `${GENERATE_OPTIONS_SYSTEM_PROMPT}
 
 ${modePrompt}
@@ -122,6 +126,8 @@ ${modePrompt}
 ${modeOptionsPrompt}
 
 ${categoryContext}
+
+${categoryExpertise}
 
 ${QUESTION_DEPTH_GUIDE}
 
