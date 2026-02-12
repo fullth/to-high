@@ -69,7 +69,14 @@
       "WebFetch(domain:github.com)",
       "Bash(kill:*)",
       "WebFetch(domain:sangnyang.ai)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "WebFetch(domain:www.calm.com)",
+      "WebFetch(domain:www.headspace.com)",
+      "WebFetch(domain:www.betterhelp.com)",
+      "WebFetch(domain:www.behance.net)",
+      "WebFetch(domain:mobbin.com)",
+      "WebFetch(domain:colorswall.com)",
+      "WebFetch(domain:channel.io)"
     ]
   },
   "enableAllProjectMcpServers": true,
