@@ -1744,6 +1744,38 @@ export default function Home() {
               </div>
             ) : (
               <div className="space-y-6 pb-32">
+                {/* 오늘의 위로 + 최근 상담 (세션 중에도 표시) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <MindfulnessCard />
+                  {user && previousSessions.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-card border-2 border-border">
+                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">최근 상담</h4>
+                      <div className="space-y-2">
+                        {previousSessions.slice(0, 2).map((session) => {
+                          const categoryInfo = categories.find(c => c.id === session.category) || {
+                            label: session.category === 'direct' ? '직접 입력' : session.category,
+                            color: '#34d399',
+                          };
+                          const displayName = session.alias || session.summary?.slice(0, 15) || categoryInfo.label;
+                          return (
+                            <button
+                              key={session.sessionId}
+                              onClick={() => handleResumeSession(session.sessionId)}
+                              className="w-full p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-left text-sm flex items-center gap-2 transition-colors"
+                            >
+                              <span className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0"
+                                style={{ backgroundColor: `${categoryInfo.color}20`, color: categoryInfo.color }}>
+                                {categoryInfo.label[0]}
+                              </span>
+                              <span className="truncate text-foreground">{displayName}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* 진단 대화 히스토리 */}
                 <div className="space-y-5">
                   {selectionHistory.map((item, idx) => (
@@ -1787,31 +1819,26 @@ export default function Home() {
                       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">선택하기</span>
                       <div className="flex-1 h-px bg-border" />
                     </div>
-                    <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-2">
                       {options.map((option, idx) => (
                         <button
                           key={idx}
                           onClick={() => handleSelectOption(option)}
-                          className="w-full p-5 rounded-2xl bg-card border-2 border-border text-left hover:border-primary/50 transition-all duration-300 group"
+                          className="w-full p-3 sm:p-4 rounded-xl bg-card border-2 border-border text-left hover:border-primary/50 transition-all duration-300 group"
                         >
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-base text-foreground">{option}</span>
-                            <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                          </div>
+                          <span className="text-sm text-foreground line-clamp-2">{option}</span>
                         </button>
                       ))}
-                      <button
-                        onClick={handleRequestNewOptions}
-                        className="w-full p-4 rounded-2xl border-2 border-dashed border-border text-muted-foreground text-sm hover:border-primary/50 hover:text-foreground transition-all flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        {isLoadingNewOptions ? "추천 답변을 찾는 중..." : "다른 답변 보기"}
-                      </button>
                     </div>
+                    <button
+                      onClick={handleRequestNewOptions}
+                      className="w-full p-3 rounded-xl border-2 border-dashed border-border text-muted-foreground text-sm hover:border-primary/50 hover:text-foreground transition-all flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {isLoadingNewOptions ? "추천 답변을 찾는 중..." : "다른 답변 보기"}
+                    </button>
                   </div>
                 )}
               </div>
