@@ -231,7 +231,7 @@ export async function setResponseModeStream(
           if (data.error) {
             throw new Error(data.error);
           }
-        } catch (e) {
+        } catch {
           // JSON parse error, skip
         }
       }
@@ -290,7 +290,7 @@ export async function sendMessageStream(
           if (data.error) {
             throw new Error(data.error);
           }
-        } catch (e) {
+        } catch {
           // JSON parse error, skip
         }
       }
@@ -616,7 +616,7 @@ export function confirmPayment(
   tier: SubscriptionTier,
   token: string
 ) {
-  return fetchApi<{ success: boolean; payment: any }>("/payment/confirm", {
+  return fetchApi<{ success: boolean; payment: unknown }>("/payment/confirm", {
     method: "POST",
     body: JSON.stringify({ paymentKey, orderId, amount, tier }),
     token,

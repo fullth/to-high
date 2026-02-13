@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -39,24 +39,14 @@ export default function AdminPage() {
   const [visitors, setVisitors] = useState<AdminVisitor[]>([]);
   const [visitorsTotal, setVisitorsTotal] = useState(0);
 
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!token) {
-      router.push("/");
-      return;
-    }
-
-    loadDashboard();
-  }, [token, authLoading, router]);
-
-  async function loadDashboard() {
+  const loadDashboard = useCallback(async () => {
+    if (!token) return;
     try {
       setLoading(true);
       const [dashboardData, usersData, visitorsData] = await Promise.all([
-        getAdminDashboard(token!),
-        getAdminUsers(token!),
-        getAdminVisitors(token!, { limit: 50 }),
+        getAdminDashboard(token),
+        getAdminUsers(token),
+        getAdminVisitors(token, { limit: 50 }),
       ]);
       setStats(dashboardData);
       setUsers(usersData.users);
@@ -65,7 +55,6 @@ export default function AdminPage() {
     } catch (err: unknown) {
       console.error("Admin load error:", err);
       if (err instanceof Error && (err.message.includes("403") || err.message.includes("Forbidden"))) {
-        // 권한 없으면 404처럼 처리
         setError("not-found");
       } else {
         setError("데이터를 불러오는데 실패했습니다.");
@@ -73,14 +62,15 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
 
-  async function loadSessions() {
+  const loadSessions = useCallback(async () => {
+    if (!token) return;
     try {
       setLoading(true);
-      const data = await getAdminSessions(token!, {
+      const data = await getAdminSessions(token, {
         anonymous: sessionFilter === "anonymous" ? true : sessionFilter === "logged-in" ? false : undefined,
-        limit: 0, // 전체 세션 보기
+        limit: 0,
       });
       setSessions(data.sessions);
       setSessionsTotal(data.total);
@@ -90,13 +80,22 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token, sessionFilter]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!token) {
+      router.push("/");
+      return;
+    }
+    loadDashboard();
+  }, [token, authLoading, router, loadDashboard]);
 
   useEffect(() => {
     if (activeTab === "sessions" && token) {
       loadSessions();
     }
-  }, [activeTab, sessionFilter, token]);
+  }, [activeTab, token, loadSessions]);
 
   async function handleViewSession(sessionId: string) {
     try {
@@ -183,7 +182,7 @@ export default function AdminPage() {
         <div className="min-h-screen bg-background flex flex-col items-center justify-center text-foreground">
           <h1 className="text-6xl font-bold mb-4">404</h1>
           <p className="text-xl text-muted-foreground mb-6">페이지를 찾을 수 없습니다</p>
-          <a href="/" className="text-primary hover:underline">홈으로 돌아가기</a>
+          <button onClick={() => router.push("/")} className="text-primary hover:underline">홈으로 돌아가기</button>
         </div>
       );
     }
@@ -257,6 +256,7 @@ export default function AdminPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             {user.picture && (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img src={user.picture} alt="" className="w-8 h-8 rounded-full" />
                             )}
                             <span className="font-medium">{user.name || "-"}</span>

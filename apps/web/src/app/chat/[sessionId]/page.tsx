@@ -17,7 +17,7 @@ function ChatContent() {
   const sessionId = params.sessionId as string;
 
   const [phase, setPhase] = useState<ChatPhase>("selecting");
-  const [question, setQuestion] = useState<string>("");
+  const [, setQuestion] = useState<string>("");
   const [options, setOptions] = useState<string[]>([]);
   const [responseModes, setResponseModes] = useState<ResponseModeOption[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);

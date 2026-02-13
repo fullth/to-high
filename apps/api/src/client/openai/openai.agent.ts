@@ -119,6 +119,43 @@ export class OpenAIAgent {
     // 카테고리별 전문 프롬프트 추가
     const categoryExpertise = getCategoryExpertise(category);
 
+    // 턴 수 계산 (사용자 입력 수 기준)
+    const userTurnCount = context.filter(c => c.startsWith('나:')).length;
+
+    // 마지막 사용자 입력에서 조언 요청 감지
+    const userInputs = context.filter(c => c.startsWith('나:'));
+    const lastUserInput = userInputs[userInputs.length - 1] || '';
+    const adviceRequestKeywords = ['조언', '정리해', '어떻게 하면', '어떻게 해야', '알려줘', '도와줘', '네 생각', '좋을까'];
+    const isAdviceRequested = adviceRequestKeywords.some(keyword => lastUserInput.includes(keyword));
+
+    // 디버깅 로그
+    console.log('[generateOptions] lastUserInput:', lastUserInput);
+    console.log('[generateOptions] isAdviceRequested:', isAdviceRequested);
+
+    // 조언 모드: 3턴 이상이거나 명시적 조언 요청 시
+    const shouldGiveAdvice = userTurnCount >= PROMPT_CONFIG.MIN_TURNS_FOR_ADVICE || isAdviceRequested;
+
+    // 조언 모드 강제 프롬프트
+    const adviceModePrompt = shouldGiveAdvice
+      ? `\n\n[⚠️ 조언 모드 - 최우선 필수]
+사용자가 조언을 요청했습니다. 반드시 다음을 지키세요:
+
+1. 절대 질문하지 마세요 (물음표 ? 사용 금지)
+2. "~해보세요", "~하시면 좋겠어요" 같은 조언으로 끝내세요
+3. 구체적인 행동 제안을 번호 리스트로 제공하세요
+
+[좋은 예시]
+"지금 상황에서 이렇게 해보시면 어떨까요.
+
+1. 매일 아침 5분간 오늘의 우선순위 3가지를 적어보세요
+2. 점심 후 10분간 가벼운 산책을 해보세요
+3. 하루를 마무리하며 잘한 일 하나를 떠올려 보세요"
+
+[나쁜 예시 - 절대 금지]
+"어떤 것부터 시작해보실 건가요?"
+"그렇게 느끼시는 이유가 있을까요?"`
+      : '';
+
     const systemPrompt = `${GENERATE_OPTIONS_SYSTEM_PROMPT}
 
 ${modePrompt}
@@ -130,6 +167,7 @@ ${categoryContext}
 ${categoryExpertise}
 
 ${QUESTION_DEPTH_GUIDE}
+${adviceModePrompt}
 
 현재 수집된 컨텍스트 수: ${contextCount}개
 ${questionHint ? `상황: ${questionHint}` : ''}`;
@@ -141,7 +179,7 @@ ${questionHint ? `상황: ${questionHint}` : ''}`;
 ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
 현재 단계: ${currentStep}
-사용자의 마지막 선택/입력에 공감하면서 다음 질문과 선택지를 생성해주세요.`;
+${isAdviceRequested ? '⚠️ 사용자가 조언을 요청했습니다. 질문하지 말고 구체적인 조언만 제공하세요.' : '사용자의 마지막 선택/입력에 공감하면서 다음 질문과 선택지를 생성해주세요.'}`;
 
     const response = await this.openai.chat.completions.create({
       model: PROMPT_CONFIG.MODEL,
@@ -155,32 +193,67 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
 
-    // 5회 이상 연속 질문 방지: context에서 최근 AI 응답들이 모두 질문인지 확인
+    // 질문 필터링 로직
     let question = result.question || '';
-    const recentAiResponses = context
-      .filter(c => c.startsWith('상담사:') || c.startsWith('상담사: '))
-      .slice(-4); // 최근 4개 AI 응답
 
-    const allQuestionsRecently = recentAiResponses.length >= 4 &&
-      recentAiResponses.every(r => r.includes('?'));
-
-    // 이번 응답도 질문으로 끝나고, 최근 4개가 모두 질문이면 → 질문 제거
-    if (allQuestionsRecently && question.trim().endsWith('?')) {
-      // 물음표 문장 제거하고 공감 부분만 남기기
+    // 조언 모드 (3턴 이상)에서 질문으로 끝나면 질문 부분 제거
+    if (shouldGiveAdvice && question.trim().endsWith('?')) {
       const sentences = question.split(/(?<=[.!?])\s*/);
       const nonQuestionSentences = sentences.filter((s: string) => !s.trim().endsWith('?'));
 
       if (nonQuestionSentences.length > 0) {
         question = nonQuestionSentences.join(' ').trim();
       } else {
-        // 전부 질문이면 기본 공감 멘트로 대체
-        question = '네, 잘 들었어요. 천천히 이야기해주세요.';
+        // 전부 질문이면 조언 요청 메시지로 대체
+        question = '지금까지 말씀해주신 내용을 잘 들었어요. 제 생각을 말씀드릴게요.';
       }
+    } else {
+      // 기존 로직: 5회 이상 연속 질문 방지
+      const recentAiResponses = context
+        .filter(c => c.startsWith('상담사:') || c.startsWith('상담사: '))
+        .slice(-4); // 최근 4개 AI 응답
+
+      const allQuestionsRecently = recentAiResponses.length >= 4 &&
+        recentAiResponses.every(r => r.includes('?'));
+
+      // 이번 응답도 질문으로 끝나고, 최근 4개가 모두 질문이면 → 질문 제거
+      if (allQuestionsRecently && question.trim().endsWith('?')) {
+        const sentences = question.split(/(?<=[.!?])\s*/);
+        const nonQuestionSentences = sentences.filter((s: string) => !s.trim().endsWith('?'));
+
+        if (nonQuestionSentences.length > 0) {
+          question = nonQuestionSentences.join(' ').trim();
+        } else {
+          question = '네, 잘 들었어요. 천천히 이야기해주세요.';
+        }
+      }
+    }
+
+    // 옵션에 "조언해줘" 관련 버튼이 없으면 강제 추가
+    let options: string[] = result.options || [];
+    const adviceKeywords = ['조언', '정리', '해줘', '알려줘', '도와줘', '방법', '어떻게'];
+    const hasAdviceOption = options.some((opt: string) =>
+      adviceKeywords.some(keyword => opt.includes(keyword))
+    );
+
+    // 컨텍스트가 2턴 이상이고, 조언 관련 옵션이 없으면 마지막 옵션을 대체
+    if (contextCount >= 2 && !hasAdviceOption && options.length > 0) {
+      // 조언 요청 옵션 목록 (상황에 맞게 랜덤 선택)
+      const adviceOptions = [
+        '조언해줘',
+        '정리해줘',
+        '어떻게 하면 좋을까',
+        '네 생각을 말해줘',
+      ];
+      const randomAdvice = adviceOptions[Math.floor(Math.random() * adviceOptions.length)];
+      // 마지막 옵션을 조언 요청으로 대체
+      options = [...options.slice(0, -1), randomAdvice];
     }
 
     return {
       ...result,
       question,
+      options,
       canRequestFeedback,
     };
   }
@@ -519,6 +592,58 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
       console.error('summarizeImportedText error:', error);
       // 오류 시 처음 500자만 반환
       return text.slice(0, 500);
+    }
+  }
+
+  /**
+   * 세션 이름 자동 생성 (대화 내용 기반)
+   * 15자 이내의 간결한 세션 이름 생성
+   */
+  async generateSessionName(context: string[]): Promise<string> {
+    if (!this.hasApiKey || context.length === 0) {
+      return '';
+    }
+
+    try {
+      // 최근 대화만 사용 (토큰 절약)
+      const recentContext = context.slice(-5);
+
+      const response = await this.openai.chat.completions.create({
+        model: PROMPT_CONFIG.MODEL,
+        messages: [
+          {
+            role: 'system',
+            content: `당신은 상담 세션의 이름을 짓는 역할입니다.
+대화 내용을 보고 핵심 주제를 파악하여 15자 이내의 간결하고 따뜻한 세션 이름을 만들어주세요.
+
+규칙:
+- 15자 이내로 작성
+- 핵심 감정이나 상황을 담을 것
+- "~이야기", "~고민", "~마음" 같은 자연스러운 표현 사용
+- 이모지는 사용하지 않음
+- 따옴표 없이 이름만 출력
+
+예시:
+- 직장 스트레스 이야기
+- 친구와 다툰 마음
+- 미래에 대한 고민
+- 가족 관계 이야기`,
+          },
+          {
+            role: 'user',
+            content: `대화 내용:\n${recentContext.join('\n')}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 30,
+      });
+
+      const name = response.choices[0].message.content?.trim() || '';
+      // 15자 초과 시 자르기
+      return name.slice(0, 15);
+    } catch (error) {
+      console.error('generateSessionName error:', error);
+      return '';
     }
   }
 }

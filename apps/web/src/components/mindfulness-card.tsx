@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 // 마음 돌봄 콘텐츠 데이터
 const mindfulnessContents = [
@@ -46,13 +46,15 @@ const mindfulnessContents = [
     },
 ];
 
-export function MindfulnessCard() {
-    const [contentIndex, setContentIndex] = useState(0);
+// 날짜 기반 인덱스 (매일 다른 콘텐츠 표시)
+function getDailyIndex() {
+    const today = new Date();
+    const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000);
+    return dayOfYear % mindfulnessContents.length;
+}
 
-    useEffect(() => {
-        // 페이지 로드 시 랜덤 콘텐츠 선택
-        setContentIndex(Math.floor(Math.random() * mindfulnessContents.length));
-    }, []);
+export function MindfulnessCard() {
+    const [contentIndex, setContentIndex] = useState(getDailyIndex);
 
     const content = mindfulnessContents[contentIndex];
     const nextContent = () => {
@@ -80,7 +82,7 @@ export function MindfulnessCard() {
             {content.type === "quote" ? (
                 <div className="space-y-3">
                     <p className="text-base leading-relaxed text-foreground/80 italic font-serif">
-                        "{content.content}"
+                        &ldquo;{content.content}&rdquo;
                     </p>
                     <p className="text-xs text-muted-foreground text-right">
                         — {content.author}

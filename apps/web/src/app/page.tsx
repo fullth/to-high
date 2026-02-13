@@ -30,6 +30,41 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption } from "@/types/chat";
 
+/**
+ * 텍스트를 마크다운 형식으로 변환
+ * - [제목] 형식을 ## 제목으로 변환
+ * - 번호 리스트(1. 2. 3.) 앞에 줄바꿈 추가
+ * - 대시 리스트(- 항목) 앞에 줄바꿈 추가
+ */
+function formatAsMarkdown(text: string): string {
+  if (!text) return text;
+
+  let result = text;
+
+  // **제목** 패턴 제거 (예: **대안적 제안**, **상담사의 관점**)
+  // 제목만 있는 줄은 완전히 제거
+  result = result.replace(/^\s*\*\*[^*]+\*\*\s*$/gm, '');
+  // 문장 중간에 있는 **제목** 형식도 일반 텍스트로 변환
+  result = result.replace(/\*\*([^*]+)\*\*/g, '$1');
+
+  // [제목] 형식도 제거
+  result = result.replace(/\[([^\]]+)\]/g, '\n\n$1\n');
+
+  // 번호 리스트 앞에 줄바꿈 추가 (1. 2. 3. 등)
+  result = result.replace(/(\s)(\d+)\.\s/g, '\n$2. ');
+
+  // 대시 리스트 앞에 줄바꿈 추가
+  result = result.replace(/(\s)-\s/g, '\n- ');
+
+  // 연속된 줄바꿈 정리 (3개 이상 -> 2개)
+  result = result.replace(/\n{3,}/g, '\n\n');
+
+  // 앞뒤 공백 제거
+  result = result.trim();
+
+  return result;
+}
+
 // 상위 상담 모드 정의
 type TopLevelMode = "mbti" | "reaction" | "listening" | null;
 
@@ -186,32 +221,7 @@ const categories = [
   },
 ];
 
-type HistoryItem = {
-  type: "user" | "assistant" | "system";
-  content: string;
-  isQuestion?: boolean;
-  timestamp?: Date;
-};
-
-// 시간 경과 표시 함수
-function getTimeAgo(date: Date): string {
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / (1000 * 60));
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-  if (minutes < 1) return '방금 전';
-  if (minutes < 60) return `${minutes}분 전`;
-  if (hours < 24) return `${hours}시간 전`;
-  if (days < 7) return `${days}일 전`;
-  return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-}
-
-// 비로그인 사용자 최대 대화 횟수
-const MAX_ANONYMOUS_SELECTIONS = 10;
-
-// 마음 돌봄 콘텐츠 데이터
+// 마음 돌봄 콘텐츠
 const mindfulnessContents = [
   {
     type: "quote",
@@ -260,7 +270,6 @@ function MindfulnessCard() {
   const [contentIndex, setContentIndex] = useState(0);
 
   useEffect(() => {
-    // 페이지 로드 시 랜덤 콘텐츠 선택
     setContentIndex(Math.floor(Math.random() * mindfulnessContents.length));
   }, []);
 
@@ -290,7 +299,7 @@ function MindfulnessCard() {
       {content.type === "quote" ? (
         <div className="space-y-2">
           <p className="text-sm leading-relaxed text-foreground/80 italic">
-            "{content.content}"
+            &ldquo;{content.content}&rdquo;
           </p>
           <p className="text-xs text-muted-foreground text-right">
             — {content.author}
@@ -306,6 +315,38 @@ function MindfulnessCard() {
       )}
     </div>
   );
+}
+
+type HistoryItem = {
+  type: "user" | "assistant" | "system";
+  content: string;
+  isQuestion?: boolean;
+  timestamp?: Date;
+};
+
+// 시간 경과 표시 함수
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (minutes < 1) return '방금 전';
+  if (minutes < 60) return `${minutes}분 전`;
+  if (hours < 24) return `${hours}시간 전`;
+  if (days < 7) return `${days}일 전`;
+  return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+}
+
+// 비로그인 사용자 최대 대화 횟수
+const MAX_ANONYMOUS_SELECTIONS = 10;
+
+// 세션 제한 에러 타입
+interface SessionLimitError extends Error {
+  code?: string;
+  sessionCount?: number;
+  limit?: number;
 }
 
 // 로그인 전 세션 상태 저장 키
@@ -340,7 +381,7 @@ export default function Home() {
 
   // 상담 기록 목록 (진행 중 + 저장된 상담 통합)
   const [previousSessions, setPreviousSessions] = useState<SessionListItem[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [_isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [isSwitchingSession, setIsSwitchingSession] = useState(false);
 
   // 세션 별칭 수정 상태
@@ -367,7 +408,7 @@ export default function Home() {
   const [importText, setImportText] = useState("");
   const [importSummary, setImportSummary] = useState("");
   const [isImporting, setIsImporting] = useState(false);
-  const [importError, setImportError] = useState<string | null>(null);
+  const [_importError, setImportError] = useState<string | null>(null);
 
   // 공책(세션) 제한 초과 상태
   const [notebookLimitError, setNotebookLimitError] = useState<{
@@ -559,7 +600,7 @@ export default function Home() {
       if (res.hasHistory && res.previousSessionSummary) {
         historyItems.push({
           type: "assistant",
-          content: `다시 와주셨네요. 지난번에 "${res.previousSessionSummary}" 이야기를 나눴었죠. 기억하고 있어요.`,
+          content: `다시 찾아주셨군요. 지난번에 이런 상담을 하셨어요.\n\n"${res.previousSessionSummary}"\n\n기억하고 있으니 편하게 말씀해 주세요.`,
           timestamp: new Date(),
         });
       }
@@ -572,13 +613,14 @@ export default function Home() {
       });
 
       setSelectionHistory(historyItems);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       // 세션 제한 초과 에러 처리
-      if (err.code === 'SESSION_LIMIT_EXCEEDED') {
+      const sessionErr = err as SessionLimitError;
+      if (sessionErr.code === 'SESSION_LIMIT_EXCEEDED') {
         setNotebookLimitError({
-          sessionCount: err.sessionCount,
-          limit: err.limit,
+          sessionCount: sessionErr.sessionCount || 0,
+          limit: sessionErr.limit || 0,
         });
       }
     } finally {
@@ -607,7 +649,7 @@ export default function Home() {
       if (res.hasHistory && res.previousSessionSummary) {
         historyItems.push({
           type: "assistant",
-          content: `다시 와주셨네요. 지난번에 "${res.previousSessionSummary}" 이야기를 나눴었죠. 기억하고 있어요.`,
+          content: `다시 찾아주셨군요. 지난번에 이런 상담을 하셨어요.\n\n"${res.previousSessionSummary}"\n\n기억하고 있으니 편하게 말씀해 주세요.`,
           timestamp: new Date(),
         });
       }
@@ -617,13 +659,14 @@ export default function Home() {
 
       setSelectionHistory(historyItems);
       setDirectInput("");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       // 세션 제한 초과 에러 처리
-      if (err.code === 'SESSION_LIMIT_EXCEEDED') {
+      const sessionErr = err as SessionLimitError;
+      if (sessionErr.code === 'SESSION_LIMIT_EXCEEDED') {
         setNotebookLimitError({
-          sessionCount: err.sessionCount,
-          limit: err.limit,
+          sessionCount: sessionErr.sessionCount || 0,
+          limit: sessionErr.limit || 0,
         });
       }
     } finally {
@@ -647,7 +690,7 @@ export default function Home() {
       const result = await summarizeText(importText, token || undefined);
       setImportSummary(result.summary);
       setImportStep("summary");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Summarize failed:", error);
       setImportError("상담 내용을 분석하는 중 오류가 발생했어요. 다시 시도해주세요.");
     } finally {
@@ -681,7 +724,7 @@ export default function Home() {
       setImportSummary("");
       setImportCategory(null);
       setImportStep("category");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Import failed:", error);
       setImportError("상담을 시작하는 중 오류가 발생했어요. 다시 시도해주세요.");
     } finally {
@@ -728,9 +771,8 @@ export default function Home() {
         }
 
         if (res.canProceedToResponse && res.responseModes) {
-          // 상담가 유형이 선택된 경우 모드 선택 스킵하고 바로 채팅
+          // 상담가 유형이 선택된 경우 모드 선택 스킵하고 바로 채팅 (selecting 페이즈 유지)
           if (selectedCounselorType) {
-            setPhase("chatting");
             setStreamingContent("");
             let content = "";
             try {
@@ -738,10 +780,13 @@ export default function Home() {
                 content += chunk;
                 setStreamingContent(content);
               });
-              setMessages([{ role: "assistant", content }]);
+              // 채팅 응답을 selectionHistory에 추가
+              setSelectionHistory(prev => [...prev, { type: "assistant", content, timestamp: new Date() }]);
             } finally {
               setStreamingContent("");
             }
+            // 옵션 초기화 (직접 입력만 가능하도록)
+            setOptions([]);
           } else {
             setPhase("mode");
             setResponseModes(res.responseModes);
@@ -795,7 +840,7 @@ export default function Home() {
   }, [sessionId, token]);
 
   // 피드백 요청 (지금까지 이야기에 대한 생각 듣기)
-  const handleRequestFeedback = useCallback(async () => {
+  const _handleRequestFeedback = useCallback(async () => {
     if (!sessionId) return;
 
     // 상담가 유형이 선택된 경우 바로 채팅으로 이동
@@ -815,10 +860,9 @@ export default function Home() {
             role: item.type === "user" ? "user" : "assistant",
             content: item.content,
           }));
-        // AI 응답 추가
-        previousMessages.push({ role: "assistant", content });
-        setMessages(previousMessages);
-        setPhase("chatting");
+        // AI 응답을 selectionHistory에 추가 (selecting 페이즈 유지)
+        setSelectionHistory(prev => [...prev, { type: "assistant", content, timestamp: new Date() }]);
+        setOptions([]); // 옵션 초기화 - 직접 입력만 가능
       } finally {
         setStreamingContent("");
         setIsLoading(false);
@@ -844,7 +888,7 @@ export default function Home() {
   }, [sessionId, token, selectedCounselorType, selectionHistory]);
 
   // 모드 선택 핸들러 (채팅창 내에서) - 같은 채팅창에서 응답 표시 후 채팅 모드로 전환
-  const handleSelectModeInChat = useCallback(async (mode: ResponseMode) => {
+  const _handleSelectModeInChat = useCallback(async (mode: ResponseMode) => {
     if (!sessionId) return;
 
     const modeLabel = responseModes.find(m => m.mode === mode)?.label || mode;
@@ -871,19 +915,16 @@ export default function Home() {
           role: item.type === "user" ? "user" : "assistant",
           content: item.content,
         }));
-      // 모드 선택도 추가
-      previousMessages.push({ role: "user", content: modeLabel });
-      // AI 응답 추가
-      previousMessages.push({ role: "assistant", content });
-      setMessages(previousMessages);
-      setPhase("chatting");
+      // AI 응답을 selectionHistory에 추가 (selecting 페이즈 유지)
+      setSelectionHistory(prev => [...prev, { type: "assistant", content, timestamp: new Date() }]);
+      setOptions([]); // 옵션 초기화 - 직접 입력만 가능
     } finally {
       setStreamingContent("");
       setIsLoading(false);
     }
-  }, [sessionId, token, responseModes, selectionHistory]);
+  }, [sessionId, token, responseModes]);
 
-  const handleSupplementSubmit = useCallback(async () => {
+  const _handleSupplementSubmit = useCallback(async () => {
     if (!supplementInput.trim()) return;
     await handleSelectOption(supplementInput.trim());
   }, [supplementInput, handleSelectOption]);
@@ -893,7 +934,6 @@ export default function Home() {
     async (mode: string) => {
       if (!sessionId) return;
       setIsLoading(true);
-      setPhase("chatting");
       setStreamingContent("");
 
       let content = "";
@@ -902,7 +942,9 @@ export default function Home() {
           content += chunk;
           setStreamingContent(content);
         });
-        setMessages([{ role: "assistant", content }]);
+        // AI 응답을 selectionHistory에 추가 (selecting 페이즈 유지)
+        setSelectionHistory(prev => [...prev, { type: "assistant", content, timestamp: new Date() }]);
+        setOptions([]); // 옵션 초기화 - 직접 입력만 가능
       } catch (err) {
         console.error(err);
       } finally {
@@ -1035,7 +1077,7 @@ export default function Home() {
 
         historyItems.push({
           type: "system",
-          content: `📋 이전 상담 요약\n\n💭 주제: ${categoryLabel}\n📝 ${summaryText}\n🔄 대화 ${res.turnCount || 0}회`,
+          content: `지난번에 이런 상담을 하셨어요.\n\n**${categoryLabel}** 주제로 ${res.turnCount || 0}회 대화하셨습니다.\n\n"${summaryText}"`,
           timestamp: new Date(),
         });
       }
@@ -1100,6 +1142,24 @@ export default function Home() {
     } finally {
       setEditingSessionId(null);
       setEditingAlias("");
+    }
+  };
+
+  // 세션 삭제
+  const handleDeleteSession = async (targetSessionId: string) => {
+    if (!token) return;
+    if (!confirm("이 상담 기록을 삭제하시겠어요?")) return;
+    try {
+      await deleteSession(targetSessionId, token);
+      setPreviousSessions((prev) =>
+        prev.filter((s) => s.sessionId !== targetSessionId)
+      );
+      // 현재 세션이 삭제된 경우 새 세션으로 이동
+      if (sessionId === targetSessionId) {
+        handleNewSession();
+      }
+    } catch (err) {
+      console.error("Failed to delete session:", err);
     }
   };
 
@@ -1454,26 +1514,86 @@ export default function Home() {
                           label: session.category === 'direct' ? '직접 입력' : session.category,
                           color: '#34d399',
                         };
+                        const isEditing = editingSessionId === session.sessionId;
+                        const displayName = session.alias || session.summary?.slice(0, 20) || categoryInfo.label;
+
                         return (
-                          <button
+                          <div
                             key={session.sessionId}
-                            onClick={() => handleResumeSession(session.sessionId)}
                             className="group w-full p-5 rounded-2xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 text-left flex items-center gap-4"
                           >
-                            <div
-                              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
+                            <button
+                              onClick={() => !isEditing && handleResumeSession(session.sessionId)}
+                              disabled={isEditing}
+                              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold transition-transform hover:scale-105"
                               style={{ backgroundColor: `${categoryInfo.color}20`, color: categoryInfo.color }}
                             >
                               {categoryInfo.label[0]}
-                            </div>
+                            </button>
                             <div className="flex-1 min-w-0">
-                              <p className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors">{session.alias || categoryInfo.label}</p>
-                              <p className="text-sm text-muted-foreground mt-0.5">{getTimeAgo(new Date(session.updatedAt))}</p>
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editingAlias}
+                                  onChange={(e) => setEditingAlias(e.target.value)}
+                                  onBlur={() => handleUpdateAlias(session.sessionId)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleUpdateAlias(session.sessionId);
+                                    if (e.key === 'Escape') {
+                                      setEditingSessionId(null);
+                                      setEditingAlias("");
+                                    }
+                                  }}
+                                  className="w-full text-base font-semibold bg-secondary border-2 border-primary rounded-lg px-3 py-1.5 focus:outline-none"
+                                  autoFocus
+                                  maxLength={50}
+                                  placeholder="별칭 입력"
+                                />
+                              ) : (
+                                <button
+                                  onClick={() => handleResumeSession(session.sessionId)}
+                                  className="block w-full text-left"
+                                >
+                                  <p className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors">{displayName}</p>
+                                  <p className="text-sm text-muted-foreground mt-0.5">{getTimeAgo(new Date(session.updatedAt))}</p>
+                                </button>
+                              )}
                             </div>
-                            <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
+                            {!isEditing && (
+                              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingSessionId(session.sessionId);
+                                    setEditingAlias(session.alias || "");
+                                  }}
+                                  className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                                  title="별칭 수정"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSession(session.sessionId);
+                                  }}
+                                  className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                  title="삭제"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                            {!isEditing && (
+                              <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 group-hover:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                              </svg>
+                            )}
+                          </div>
                         );
                       })}
                     </div>
@@ -1584,17 +1704,17 @@ export default function Home() {
                 <section className="animate-fade-in-up stagger-5 space-y-4">
                   <h3 className="text-lg font-bold text-foreground px-1">직접 이야기하기</h3>
                   <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
-                    <p className="text-muted-foreground">마음에 담아둔 이야기를 바로 들려주세요</p>
-                    <div className="flex gap-3">
+                    <p className="text-muted-foreground">우리 천천히 얘기해봐요</p>
+                    <div className="flex gap-3 w-full">
                       <input
                         type="text"
                         value={directInput}
                         onChange={(e) => setDirectInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && directInput.trim() && handleDirectInputSubmit()}
-                        placeholder="무슨 일이 있었나요?..."
-                        className="flex-1 px-5 h-14 rounded-xl bg-secondary border-2 border-transparent text-foreground text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                        placeholder="당신의 이야기를 들려주세요"
+                        className="flex-1 min-w-0 px-4 sm:px-5 h-12 sm:h-14 rounded-xl bg-secondary border-2 border-transparent text-foreground text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
                       />
-                      <Button onClick={handleDirectInputSubmit} disabled={!directInput.trim() || isLoading} size="lg">
+                      <Button onClick={handleDirectInputSubmit} disabled={!directInput.trim() || isLoading} size="lg" className="shrink-0 h-12 sm:h-14 px-4 sm:px-6">
                         시작
                       </Button>
                     </div>
@@ -1641,7 +1761,7 @@ export default function Home() {
                         <div className={`p-5 rounded-2xl ${item.type === "user" ? "bg-primary text-primary-foreground rounded-tr-md" : "bg-card border-2 border-border text-foreground rounded-tl-md"}`}>
                           <div className="markdown-content text-base leading-relaxed">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {item.content}
+                              {formatAsMarkdown(item.content)}
                             </ReactMarkdown>
                           </div>
                         </div>
@@ -1896,308 +2016,6 @@ export default function Home() {
             )}
           </div>
         </div>
-      </main>
-    );
-  }
-
-  // 채팅 중
-  if (phase === "chatting") {
-    return (
-      <main className="min-h-screen flex flex-col bg-background bg-[radial-gradient(circle_at_bottom_left,rgba(5,150,105,0.05)_0%,transparent_50%)]">
-        <header className="border-b border-border/50 p-4 bg-background/80 backdrop-blur-sm">
-          <div className="flex justify-between items-center">
-            <Logo size="sm" onClick={handleNewSession} />
-            <div className="flex items-center gap-3">
-              {user && (
-                <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-secondary/50">
-                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
-                    {(user.name || user.email)?.[0]?.toUpperCase()}
-                  </div>
-                  <span className="text-xs text-foreground/80 hidden sm:inline">
-                    {user.name || user.email.split('@')[0]}
-                  </span>
-                </div>
-              )}
-              {user && !isSaved && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSaveModal(true)}
-                  className="text-primary"
-                >
-                  <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  저장
-                </Button>
-              )}
-              {isSaved && (
-                <span className="text-xs text-primary flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  저장됨
-                </span>
-              )}
-              {!user && (
-                <button
-                  onClick={() => {
-                    saveSessionState();
-                    login();
-                  }}
-                  className="text-xs text-primary/80 hover:text-primary flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors"
-                >
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  로그인 후 저장
-                </button>
-              )}
-              <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
-                상담 종료
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        {statusBadge}
-
-        <div className="flex-1 flex flex-col lg:flex-row justify-center lg:gap-6 xl:gap-8 overflow-hidden relative p-4 lg:p-0">
-          {/* 왼쪽 사이드바 - 상담 기록 (로그인한 사용자만) */}
-          {user && previousSessions.length > 0 && (
-            <aside className="hidden lg:block w-72 shrink-0 border-r border-border/30 overflow-auto p-4 lg:p-6 lg:pr-0 space-y-4 order-2 lg:order-1">
-              {/* 상담 기록 */}
-              <div className="rounded-2xl border border-border/40 bg-white/40 backdrop-blur-md p-3 space-y-2 shadow-sm">
-                <div className="flex items-center justify-between px-1">
-                  <p className="text-xs font-semibold text-foreground/80 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-primary/50" />
-                    상담 기록
-                  </p>
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{previousSessions.length}</span>
-                </div>
-                <div className="space-y-1.5 max-h-[180px] overflow-auto pr-1 scrollbar-hide">
-                  {previousSessions.map((session) => {
-                    const categoryInfo = categories.find(c => c.id === session.category) || {
-                      label: session.category === 'direct' ? '직접 입력' : session.category,
-                      color: '#8B9BAA',
-                    };
-                    const isActive = session.status === 'active';
-                    const isCurrent = session.sessionId === sessionId;
-                    const displayName = session.alias || (session.category === 'direct' ? '직접 입력' : categoryInfo.label);
-
-                    return (
-                      <button
-                        key={session.sessionId}
-                        onClick={() => !isCurrent && handleResumeSession(session.sessionId)}
-                        disabled={isLoading || isCurrent}
-                        className={`w-full p-2.5 rounded-2xl text-left transition-all duration-200 group relative overflow-hidden ${isCurrent
-                          ? 'bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 shadow-inner'
-                          : 'border border-border/40 bg-white/60 hover:bg-white hover:border-primary/30 hover:shadow-sm'
-                          }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-white text-[10px] font-bold shadow-sm transition-transform duration-300 ${!isCurrent && 'group-hover:scale-105'}`}
-                            style={{
-                              background: `linear-gradient(135deg, ${categoryInfo.color}, ${categoryInfo.color}dd)`,
-                              boxShadow: `0 2px 5px ${categoryInfo.color}40`,
-                              opacity: isCurrent ? 1 : 0.9
-                            }}
-                          >
-                            {categoryInfo.label.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1">
-                              <span className={`text-xs font-semibold truncate transition-colors ${isCurrent ? 'text-primary' : 'text-foreground/90 group-hover:text-primary'}`}>{displayName}</span>
-                              {isCurrent && (
-                                <span className="px-1.5 py-0.5 rounded-full text-[8px] bg-primary text-primary-foreground font-medium shadow-sm">현재</span>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground truncate opacity-80 mt-0.5">
-                              {session.summary || '이어하기...'}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 다른 주제 상담하기 */}
-              <button
-                onClick={handleNewSession}
-                className="w-full p-2 rounded-xl border-2 border-dashed border-primary/30 text-primary/80 text-xs font-medium transition-all duration-200 hover:border-primary/50 hover:bg-primary/5"
-              >
-                <span className="flex items-center justify-center gap-1">
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  다른 주제로 상담
-                </span>
-              </button>
-            </aside>
-          )}
-
-          {/* 오른쪽 메인 영역 - 채팅 */}
-          <div className="flex-1 max-w-2xl flex flex-col overflow-hidden relative bg-white/40 backdrop-blur-2xl rounded-[32px] border border-white/60 shadow-2xl z-0 ring-1 ring-white/70 order-1 lg:order-2">
-            <div className="flex-1 overflow-y-auto px-4 pb-32 pt-4 scrollbar-hide space-y-4">
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start gap-3"}`}
-                >
-                  {msg.role !== "user" && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/50">
-                      <Logo size="sm" showText={false} />
-                    </div>
-                  )}
-                  <div
-                    className={`max-w-[85%] rounded-[24px] px-5 py-3.5 shadow-sm transition-all duration-300 hover:shadow-md ${msg.role === "user"
-                      ? "bg-gradient-to-br from-primary to-emerald-400 text-white rounded-tr-sm shadow-primary/20"
-                      : "bg-white/95 border border-white/40 text-foreground rounded-tl-sm backdrop-blur-sm shadow-gray-100"
-                      }`}
-                  >
-                    <div className="markdown-content text-[15px] leading-relaxed font-medium">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {msg.content}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {isLoading && streamingContent && (
-                <div className="flex justify-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/50">
-                    <Logo size="sm" showText={false} />
-                  </div>
-                  <div className="bg-white/80 border border-border/40 rounded-[24px] rounded-tl-sm px-5 py-4 max-w-[85%] shadow-sm backdrop-blur-sm">
-                    <div className="markdown-content text-[15px] leading-relaxed font-medium text-foreground/90">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {streamingContent}
-                      </ReactMarkdown>
-                      <span className="animate-pulse text-primary ml-1">▋</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {isLoading && !streamingContent && (
-                <div className="flex justify-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shrink-0 mt-1 shadow-sm border border-white/50">
-                    <Logo size="sm" showText={false} />
-                  </div>
-                  <div className="bg-white/80 border border-border/40 rounded-[24px] rounded-tl-sm px-5 py-4 shadow-sm backdrop-blur-sm">
-                    <WritingIndicator />
-                  </div>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* 하단 고정 입력창 (Glassmorphism) - 채팅 중 */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 pt-8 bg-gradient-to-t from-background via-background/95 to-transparent z-20 pointer-events-none">
-              <div className="max-w-3xl mx-auto w-full pointer-events-auto">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-primary/20 rounded-[28px] blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                  <div className="relative bg-white/80 backdrop-blur-md rounded-[28px] border border-white/50 shadow-lg flex items-center p-1.5 gap-2 transition-all duration-300 group-hover:shadow-xl group-hover:border-primary/30">
-                    <input
-                      type="text"
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                      placeholder="메시지를 입력하세요..."
-                      className="flex-1 px-5 h-11 bg-transparent text-base focus:outline-none placeholder:text-muted-foreground/60 text-foreground/90"
-                      disabled={isLoading}
-                    />
-                    <Button
-                      className="h-10 px-5 rounded-[22px] bg-gradient-to-r from-primary to-violet-600 hover:opacity-90 transition-all shadow-md active:scale-95 disabled:opacity-50"
-                      onClick={handleSendMessage}
-                      disabled={isLoading || !inputMessage.trim()}
-                    >
-                      <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
-                      </svg>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <LimitErrorModal />
-        <LoginPromptModal />
-        <NotebookLimitModal />
-        <SessionSwitchingOverlay />
-
-        {/* 저장 모달 */}
-        {showSaveModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="max-w-md w-full border-primary/30 bg-card">
-              <CardHeader className="space-y-4">
-                <CardTitle className="text-lg text-center">상담 저장하기</CardTitle>
-                <CardDescription className="text-center">
-                  저장 방식을 선택해주세요
-                </CardDescription>
-
-                <div className="space-y-3 pt-2">
-                  <button
-                    onClick={() => setSaveType("category")}
-                    className={`w-full p-4 rounded-xl border text-left transition-all ${saveType === "category"
-                      ? "border-primary bg-primary/10"
-                      : "border-border/50 hover:border-primary/40"
-                      }`}
-                  >
-                    <div className="font-medium">카테고리별 저장</div>
-                    <div className="text-sm text-muted-foreground">자동으로 카테고리에 분류됩니다</div>
-                  </button>
-
-                  <button
-                    onClick={() => setSaveType("custom")}
-                    className={`w-full p-4 rounded-xl border text-left transition-all ${saveType === "custom"
-                      ? "border-primary bg-primary/10"
-                      : "border-border/50 hover:border-primary/40"
-                      }`}
-                  >
-                    <div className="font-medium">나만의 상담</div>
-                    <div className="text-sm text-muted-foreground">직접 이름을 지정해서 저장합니다</div>
-                  </button>
-
-                  {saveType === "custom" && (
-                    <input
-                      type="text"
-                      value={customSaveName}
-                      onChange={(e) => setCustomSaveName(e.target.value)}
-                      placeholder="상담 이름을 입력하세요"
-                      className="w-full px-4 py-3 rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      autoFocus
-                    />
-                  )}
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="ghost"
-                    className="flex-1"
-                    onClick={() => {
-                      setShowSaveModal(false);
-                      setSaveType(null);
-                      setCustomSaveName("");
-                    }}
-                  >
-                    취소
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={handleSaveSession}
-                    disabled={isSaving || !saveType || (saveType === "custom" && !customSaveName.trim())}
-                  >
-                    {isSaving ? "저장 중..." : "저장하기"}
-                  </Button>
-                </div>
-              </CardHeader>
-            </Card>
-          </div>
-        )}
       </main>
     );
   }
