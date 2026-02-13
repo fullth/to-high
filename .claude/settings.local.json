@@ -76,7 +76,10 @@
       "WebFetch(domain:www.behance.net)",
       "WebFetch(domain:mobbin.com)",
       "WebFetch(domain:colorswall.com)",
-      "WebFetch(domain:channel.io)"
+      "WebFetch(domain:channel.io)",
+      "Bash(for hash in b6fdff4 a3da7e4 d01fb41 73c41ff 20616e3 d3498af 8d324ee 94785c2 a95162a da5c989 d4fb4ed 287c4b5 0d7f212)",
+      "Bash(do if git show $hash:apps/web/src/app/page.tsx)",
+      "Bash(then echo \"$hash - HAS alias edit UI\" else echo \"$hash - MISSING alias edit UI\" fi done)"
     ]
   },
   "enableAllProjectMcpServers": true,

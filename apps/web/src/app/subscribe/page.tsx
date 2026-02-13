@@ -12,9 +12,19 @@ import {
   SubscriptionTier,
 } from "@/lib/api";
 
+interface TossPaymentsInstance {
+  requestPayment: (method: string, options: {
+    amount: number;
+    orderId: string;
+    orderName: string;
+    successUrl: string;
+    failUrl: string;
+  }) => Promise<void>;
+}
+
 declare global {
   interface Window {
-    TossPayments: any;
+    TossPayments: (clientKey: string) => TossPaymentsInstance;
   }
 }
 
@@ -89,8 +99,9 @@ function SubscribeContent() {
         // 성공 - 새로고침해서 구독 상태 업데이트
         router.replace("/subscribe?success=true");
         window.location.reload();
-      } catch (err: any) {
-        setError(err.message || "결제 처리 중 오류가 발생했습니다.");
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "결제 처리 중 오류가 발생했습니다.";
+        setError(errorMessage);
       } finally {
         setIsProcessing(false);
       }
@@ -99,7 +110,7 @@ function SubscribeContent() {
     processPayment();
   }, [token, paymentKey, orderId, amount, router]);
 
-  const handleSubscribe = async (tier: SubscriptionTier) => {
+  const _handleSubscribe = async (tier: SubscriptionTier) => {
     if (!token || isProcessing) return;
 
     setIsProcessing(true);
@@ -129,12 +140,13 @@ function SubscribeContent() {
         successUrl: `${window.location.origin}/subscribe`,
         failUrl: `${window.location.origin}/subscribe?error=payment_failed`,
       });
-    } catch (err: any) {
-      if (err.code === "USER_CANCEL") {
+    } catch (err: unknown) {
+      const paymentErr = err as { code?: string; message?: string };
+      if (paymentErr.code === "USER_CANCEL") {
         // 사용자가 결제 취소
         localStorage.removeItem("pendingTier");
       } else {
-        setError(err.message || "결제 요청 중 오류가 발생했습니다.");
+        setError(paymentErr.message || "결제 요청 중 오류가 발생했습니다.");
       }
     } finally {
       setIsProcessing(false);

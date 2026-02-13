@@ -333,6 +333,10 @@ export class ChatService {
 
   async setMode(sessionId: string, mode: ResponseMode) {
     await this.sessionService.setResponseMode(sessionId, mode);
+
+    // 세션 이름 자동 생성 (alias가 없을 경우)
+    await this.tryGenerateSessionName(sessionId);
+
     return this.generateResponse(sessionId);
   }
 
@@ -402,7 +406,47 @@ export class ChatService {
    */
   async *setModeStream(sessionId: string, mode: ResponseMode) {
     await this.sessionService.setResponseMode(sessionId, mode);
+
+    // 세션 이름 자동 생성 (alias가 없을 경우)
+    await this.tryGenerateSessionName(sessionId);
+
     yield* this.generateResponseStream(sessionId);
+  }
+
+  /**
+   * 세션 이름 자동 생성 시도 (alias가 없고 context가 있을 때)
+   */
+  private async tryGenerateSessionName(sessionId: string): Promise<void> {
+    try {
+      const session = await this.sessionService.findById(sessionId);
+      if (!session) return;
+
+      // 이미 alias가 있거나, context가 없거나, 익명 사용자면 스킵
+      if (session.alias || session.context.length === 0 || !session.userId) {
+        return;
+      }
+
+      // context에서 실제 사용자 입력만 추출 (시스템 메시지 제외)
+      const userContext = session.context.filter(
+        (c: string) => !c.startsWith('[이전 상담') && !c.startsWith('상담사:')
+      );
+
+      if (userContext.length === 0) {
+        return;
+      }
+
+      const autoName = await this.openaiAgent.generateSessionName(session.context);
+      if (autoName) {
+        await this.sessionRepository.updateAlias(
+          sessionId,
+          session.userId.toString(),
+          autoName
+        );
+      }
+    } catch (error) {
+      // 세션 이름 생성 실패는 무시 (핵심 기능이 아님)
+      console.error('tryGenerateSessionName error:', error);
+    }
   }
 
   /**
@@ -460,6 +504,14 @@ export class ChatService {
     }
 
     await this.sessionService.addContext(sessionId, `상담사: ${fullResponse}`);
+
+    // 첫 응답 후 세션 이름 생성 (아직 없으면)
+    if (!session.alias) {
+      // 비동기로 실행하여 응답 지연 방지
+      this.tryGenerateSessionName(sessionId).catch(() => {
+        // 무시
+      });
+    }
   }
 
   /**

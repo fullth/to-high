@@ -1,7 +1,7 @@
 "use client";
 
 import { getMe, User } from "@/lib/api";
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useState, useRef } from "react";
 
 interface AuthContextType {
   user: User | null;
@@ -18,20 +18,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const initialized = useRef(false);
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     const storedToken = localStorage.getItem("accessToken");
     if (storedToken) {
-      setToken(storedToken);
       getMe(storedToken)
-        .then(setUser)
+        .then((userData) => {
+          setToken(storedToken);
+          setUser(userData);
+        })
         .catch(() => {
           localStorage.removeItem("accessToken");
-          setToken(null);
         })
         .finally(() => setIsLoading(false));
     } else {
-      setIsLoading(false);
+      // 비동기적으로 상태 업데이트 (queueMicrotask 사용)
+      queueMicrotask(() => setIsLoading(false));
     }
   }, []);
 
