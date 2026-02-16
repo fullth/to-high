@@ -33,8 +33,11 @@ export function TopicButton({
 
       {/* 아이콘 */}
       <div
-        className="relative w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110"
-        style={{ backgroundColor: `${color}18`, color }}
+        className="relative w-10 h-10 rounded-xl overflow-hidden shrink-0 transition-all duration-300 group-hover:scale-110"
+        style={{
+          backgroundColor: '#0a0a0a',
+          boxShadow: `0 0 0 1px ${color}40, 0 0 12px ${color}20`,
+        }}
       >
         {icon}
       </div>

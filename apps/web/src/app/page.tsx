@@ -29,7 +29,8 @@ import {
 } from "@/lib/api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption } from "@/types/chat";
+import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption, TopLevelMode } from "@/types/chat";
+import { topLevelModes, mbtiSubTypes, categories } from "@/lib/ui-data";
 
 /**
  * 텍스트를 마크다운 형식으로 변환
@@ -66,161 +67,7 @@ function formatAsMarkdown(text: string): string {
   return result;
 }
 
-// 상위 상담 모드 정의
-type TopLevelMode = "mbti" | "reaction" | "listening" | null;
-
-const topLevelModes = [
-  {
-    id: "mbti" as TopLevelMode,
-    label: "MBTI 성향 상담",
-    description: "성향 맞춤 대화",
-    color: "#818cf8",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 2a7 7 0 0 0 0 14 7 7 0 0 0 0-14" />
-        <path d="M12 8v8" />
-        <path d="M8 12h8" />
-      </svg>
-    ),
-  },
-  {
-    id: "reaction" as TopLevelMode,
-    label: "따뜻한 공감",
-    description: "진심 어린 호응으로",
-    color: "#fb7185",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    ),
-  },
-  {
-    id: "listening" as TopLevelMode,
-    label: "깊은 경청",
-    description: "당신의 모든 이야기를",
-    color: "#34d399",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <path d="M9 18V5l12-2v13" />
-        <circle cx="6" cy="18" r="3" />
-        <circle cx="18" cy="16" r="3" />
-      </svg>
-    ),
-  },
-];
-
-// MBTI 하위 선택 (T/F)
-const mbtiSubTypes = [
-  {
-    id: "F" as CounselorType,
-    label: "F 감정형",
-    description: "따뜻한 위로가 필요해요",
-    color: "#f472b6",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-      </svg>
-    ),
-  },
-  {
-    id: "T" as CounselorType,
-    label: "T 사고형",
-    description: "현실적인 조언이 필요해요",
-    color: "#38bdf8",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-      </svg>
-    ),
-  },
-];
 import { useCallback, useEffect, useRef, useState } from "react";
-
-const categories = [
-  {
-    id: "self",
-    color: "#a78bfa",
-    label: "나",
-    description: "마음, 감정",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
-        <path d="M12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-        <path d="M7 21v-2a5 5 0 0 1 10 0v2" />
-        <circle cx="12" cy="11" r="1.5" fill="currentColor" />
-      </svg>
-    )
-  },
-  {
-    id: "future",
-    color: "#34d399",
-    label: "미래",
-    description: "진로, 선택",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 2v20M2 12h20" />
-        <path d="m16 8-8 8M16 16 8 8" />
-        <circle cx="12" cy="12" r="3" fill="currentColor" fillOpacity="0.2" />
-      </svg>
-    )
-  },
-  {
-    id: "work",
-    color: "#38bdf8",
-    label: "일",
-    description: "업무, 직장",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
-        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-        <path d="M2 12h20" />
-      </svg>
-    )
-  },
-  {
-    id: "relationship",
-    color: "#fbbf24",
-    label: "관계",
-    description: "가족, 친구",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    )
-  },
-  {
-    id: "love",
-    color: "#fb7185",
-    label: "연애",
-    description: "사랑, 이별",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-      </svg>
-    )
-  },
-  {
-    id: "daily",
-    color: "#818cf8",
-    label: "일상",
-    description: "그냥 얘기",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <path d="M3 6h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" />
-        <path d="M3 10h18" />
-        <path d="M7 14h.01" />
-        <path d="M11 14h.01" />
-        <path d="M15 14h.01" />
-      </svg>
-    )
-  },
-];
 
 // 마음 돌봄 콘텐츠
 const mindfulnessContents = [
@@ -1636,7 +1483,13 @@ export default function Home() {
                             className={`mb-3 transition-all duration-300 group-hover:scale-110 ${selectedTopMode === mode.id ? "scale-110" : ""}`}
                             style={{ color: mode.color }}
                           >
-                            <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300" style={{ backgroundColor: `${mode.color}20` }}>
+                            <div
+                              className="relative w-12 h-12 rounded-xl overflow-hidden transition-all duration-300"
+                              style={{
+                                backgroundColor: '#0a0a0a',
+                                boxShadow: `0 0 0 1px ${mode.color}40, 0 0 12px ${mode.color}20`,
+                              }}
+                            >
                               {mode.icon}
                             </div>
                           </div>
@@ -1905,7 +1758,7 @@ export default function Home() {
                       }}
                       className="group p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/50 hover:bg-white/10 transition-all text-left"
                     >
-                      <div className="mb-3 transform group-hover:scale-110 transition-transform">
+                      <div className="relative w-10 h-10 mb-3 overflow-hidden rounded-xl ring-1 ring-white/10 transform group-hover:scale-110 transition-transform" style={{ backgroundColor: '#0a0a0a' }}>
                         {cat.icon}
                       </div>
                       <p className="text-sm font-bold text-white/90">{cat.label}</p>
