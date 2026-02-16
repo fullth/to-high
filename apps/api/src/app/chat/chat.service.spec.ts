@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { SessionService } from '../session/session.service';
 import { SessionRepository } from '../../persistence/session/session.repository';
@@ -49,6 +49,8 @@ describe('ChatService', () => {
       countUserSessions: jest.fn(),
       getUserSessions: jest.fn(),
       findById: jest.fn(),
+      deleteSession: jest.fn(),
+      updateAlias: jest.fn(),
     };
 
     const mockUserRepository = {
@@ -501,6 +503,88 @@ describe('ChatService', () => {
       expect(result.isCrisis).toBe(true);
       expect(result.crisisLevel).toBe('high');
       expect(result.response).toContain('1393');
+    });
+  });
+
+  describe('deleteSession', () => {
+    it('should delete session for authenticated user', async () => {
+      // Arrange
+      sessionRepository.deleteSession.mockResolvedValue(true);
+
+      // Act
+      const result = await service.deleteSession('session-123', 'user-123');
+
+      // Assert
+      expect(result).toEqual({ success: true });
+      expect(sessionRepository.deleteSession).toHaveBeenCalledWith('session-123', 'user-123');
+    });
+
+    it('should throw ForbiddenException for anonymous user', async () => {
+      // Act & Assert
+      await expect(
+        service.deleteSession('session-123', 'anonymous')
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(sessionRepository.deleteSession).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when session not found or no permission', async () => {
+      // Arrange
+      sessionRepository.deleteSession.mockResolvedValue(false);
+
+      // Act & Assert
+      await expect(
+        service.deleteSession('session-999', 'user-123')
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateSessionAlias', () => {
+    it('should update alias for authenticated user', async () => {
+      // Arrange
+      const mockSession = {
+        _id: 'session-123',
+        alias: '나의 고민 상담',
+      };
+      sessionRepository.updateAlias.mockResolvedValue(mockSession as any);
+
+      // Act
+      const result = await service.updateSessionAlias('session-123', 'user-123', '나의 고민 상담');
+
+      // Assert
+      expect(result).toEqual({ sessionId: 'session-123', alias: '나의 고민 상담' });
+      expect(sessionRepository.updateAlias).toHaveBeenCalledWith('session-123', 'user-123', '나의 고민 상담');
+    });
+
+    it('should throw ForbiddenException for anonymous user', async () => {
+      // Act & Assert
+      await expect(
+        service.updateSessionAlias('session-123', 'anonymous', '별칭')
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(sessionRepository.updateAlias).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when alias exceeds 50 characters', async () => {
+      // Arrange
+      const longAlias = 'a'.repeat(51);
+
+      // Act & Assert
+      await expect(
+        service.updateSessionAlias('session-123', 'user-123', longAlias)
+      ).rejects.toThrow(BadRequestException);
+
+      expect(sessionRepository.updateAlias).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when session not found or no permission', async () => {
+      // Arrange
+      sessionRepository.updateAlias.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.updateSessionAlias('session-999', 'user-123', '별칭')
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -2,6 +2,7 @@
 
 import { ContactSidebar } from "@/components/contact-sidebar";
 import { Logo } from "@/components/logo";
+import { TopicButton } from "@/components/topic-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
@@ -1407,16 +1408,15 @@ export default function Home() {
               {authLoading ? (
                 <div className="h-10 w-24 bg-muted rounded-xl animate-pulse" />
               ) : user ? (
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card border border-border">
-                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
-                      {(user.name || user.email)?.[0]?.toUpperCase()}
-                    </div>
-                    <span className="text-sm font-medium text-foreground hidden sm:inline">
-                      {user.name || user.email.split('@')[0]}
-                    </span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border">
+                  <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                    {(user.name || user.email)?.[0]?.toUpperCase()}
                   </div>
-                  <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground">
+                  <span className="text-sm font-medium text-foreground hidden sm:inline">
+                    {user.name || user.email.split('@')[0]}
+                  </span>
+                  <div className="w-px h-5 bg-border hidden sm:block" />
+                  <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground px-2 h-7 text-xs">
                     로그아웃
                   </Button>
                 </div>
@@ -1560,7 +1560,7 @@ export default function Home() {
                               )}
                             </div>
                             {!isEditing && (
-                              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1589,7 +1589,7 @@ export default function Home() {
                               </div>
                             )}
                             {!isEditing && (
-                              <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 group-hover:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 hidden sm:block sm:group-hover:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                               </svg>
                             )}
@@ -1668,33 +1668,17 @@ export default function Home() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Topic</span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {categories.map((category) => (
-                        <button
+                        <TopicButton
                           key={category.id}
-                          className="group p-6 rounded-2xl bg-secondary border-2 border-transparent hover:border-primary/50 transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
+                          icon={category.icon}
+                          label={category.label}
+                          description={category.description}
+                          color={category.color}
                           onClick={() => handleCategorySelect(category.id)}
                           disabled={isLoading}
-                        >
-                          <div
-                            className="mb-4 flex justify-center"
-                            style={{ color: category.color }}
-                          >
-                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110" style={{ backgroundColor: `${category.color}15` }}>
-                              {category.icon}
-                            </div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-base font-bold text-foreground">{category.label}</div>
-                            <div className="text-sm text-muted-foreground mt-1">{category.description}</div>
-                          </div>
-                        </button>
+                        />
                       ))}
                     </div>
                   </div>
