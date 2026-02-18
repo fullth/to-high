@@ -11,14 +11,19 @@ import {
   deleteAdminSession,
   deleteAdminSessions,
   getAdminVisitors,
+  getAdminInquiries,
+  adminReplyInquiry,
+  adminCloseInquiry,
   DashboardStats,
   AdminUser,
   AdminSession,
   AdminSessionDetail,
   AdminVisitor,
+  Inquiry,
+  InquiryMessage,
 } from "../../lib/api";
 
-type TabType = "dashboard" | "sessions";
+type TabType = "dashboard" | "sessions" | "inquiries";
 type SessionFilter = "all" | "anonymous" | "logged-in";
 
 export default function AdminPage() {
@@ -38,6 +43,10 @@ export default function AdminPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [visitors, setVisitors] = useState<AdminVisitor[]>([]);
   const [visitorsTotal, setVisitorsTotal] = useState(0);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [replyInput, setReplyInput] = useState("");
+  const [replying, setReplying] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     if (!token) return;
@@ -91,11 +100,27 @@ export default function AdminPage() {
     loadDashboard();
   }, [token, authLoading, router, loadDashboard]);
 
+  const loadInquiries = useCallback(async () => {
+    if (!token) return;
+    try {
+      setLoading(true);
+      const data = await getAdminInquiries(token);
+      setInquiries(data);
+    } catch (err) {
+      console.error("Inquiries load error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (activeTab === "sessions" && token) {
       loadSessions();
     }
-  }, [activeTab, token, loadSessions]);
+    if (activeTab === "inquiries" && token) {
+      loadInquiries();
+    }
+  }, [activeTab, token, loadSessions, loadInquiries]);
 
   async function handleViewSession(sessionId: string) {
     try {
@@ -167,6 +192,55 @@ export default function AdminPage() {
     }
   }
 
+  async function handleAdminReply(inquiryId: string) {
+    if (!replyInput.trim() || !token || replying) return;
+    try {
+      setReplying(true);
+      const result = await adminReplyInquiry(inquiryId, replyInput.trim(), token);
+      setReplyInput("");
+      // 선택된 문의의 messages 업데이트
+      if (selectedInquiry && selectedInquiry._id === inquiryId) {
+        setSelectedInquiry({ ...selectedInquiry, messages: result.messages });
+      }
+      // 목록에서도 업데이트
+      setInquiries((prev) =>
+        prev.map((inq) =>
+          inq._id === inquiryId ? { ...inq, messages: result.messages } : inq
+        )
+      );
+    } catch (err) {
+      console.error("Reply error:", err);
+      alert("답변 전송에 실패했습니다.");
+    } finally {
+      setReplying(false);
+    }
+  }
+
+  async function handleCloseInquiry(inquiryId: string) {
+    if (!confirm("이 문의를 종료하시겠습니까?")) return;
+    if (!token) return;
+    try {
+      await adminCloseInquiry(inquiryId, token);
+      if (selectedInquiry && selectedInquiry._id === inquiryId) {
+        setSelectedInquiry({ ...selectedInquiry, status: "closed" });
+      }
+      setInquiries((prev) =>
+        prev.map((inq) =>
+          inq._id === inquiryId ? { ...inq, status: "closed" } : inq
+        )
+      );
+    } catch (err) {
+      console.error("Close inquiry error:", err);
+      alert("문의 종료에 실패했습니다.");
+    }
+  }
+
+  const inquiryTypeLabels: Record<string, string> = {
+    contact: "버그 신고",
+    feature: "기능 요청",
+    ad: "광고 문의",
+  };
+
   if (authLoading || (loading && activeTab === "dashboard")) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -200,7 +274,7 @@ export default function AdminPage() {
 
         {/* 탭 네비게이션 */}
         <div className="flex gap-2 mb-6 border-b border-gray-700 pb-4">
-          {(["dashboard", "sessions"] as TabType[]).map((tab) => (
+          {(["dashboard", "sessions", "inquiries"] as TabType[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -210,7 +284,7 @@ export default function AdminPage() {
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
-              {tab === "dashboard" ? "대시보드" : "세션 관리"}
+              {tab === "dashboard" ? "대시보드" : tab === "sessions" ? "세션 관리" : "문의 관리"}
             </button>
           ))}
         </div>
@@ -502,6 +576,155 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+        {/* 문의 관리 탭 */}
+        {activeTab === "inquiries" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">문의 목록 ({inquiries.length}건)</h2>
+              <button
+                onClick={() => loadInquiries()}
+                className="text-sm text-blue-400 hover:text-blue-300"
+              >
+                새로고침
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="p-8 text-center text-gray-400">로딩 중...</div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* 문의 목록 */}
+                <div className="lg:col-span-1 bg-gray-800 rounded-lg overflow-hidden">
+                  <div className="divide-y divide-gray-700 max-h-[70vh] overflow-y-auto">
+                    {inquiries.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">문의가 없습니다.</div>
+                    ) : (
+                      inquiries.map((inquiry) => (
+                        <button
+                          key={inquiry._id}
+                          onClick={() => { setSelectedInquiry(inquiry); setReplyInput(""); }}
+                          className={`w-full text-left p-4 hover:bg-gray-700 transition-colors ${
+                            selectedInquiry?._id === inquiry._id ? "bg-gray-700" : ""
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-blue-400">
+                              {inquiryTypeLabels[inquiry.type] || inquiry.type}
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              inquiry.status === "open"
+                                ? "bg-green-600/30 text-green-400"
+                                : "bg-gray-600/30 text-gray-400"
+                            }`}>
+                              {inquiry.status === "open" ? "진행중" : "종료"}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-300 truncate">
+                            {inquiry.messages[0]?.content || ""}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-xs text-gray-500">
+                              {inquiry.messages.length}개 메시지
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(inquiry.updatedAt).toLocaleDateString("ko-KR")}
+                            </span>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* 문의 상세 + 답변 */}
+                <div className="lg:col-span-2 bg-gray-800 rounded-lg overflow-hidden flex flex-col max-h-[70vh]">
+                  {selectedInquiry ? (
+                    <>
+                      {/* 헤더 */}
+                      <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-medium">
+                            {inquiryTypeLabels[selectedInquiry.type]}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-2">
+                            {selectedInquiry.userId}
+                          </span>
+                        </div>
+                        {selectedInquiry.status === "open" && (
+                          <button
+                            onClick={() => handleCloseInquiry(selectedInquiry._id)}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs"
+                          >
+                            문의 종료
+                          </button>
+                        )}
+                      </div>
+
+                      {/* 메시지 목록 */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {selectedInquiry.messages.map((msg: InquiryMessage, idx: number) => (
+                          <div
+                            key={idx}
+                            className={`flex ${msg.role === "user" ? "justify-start" : "justify-end"}`}
+                          >
+                            <div
+                              className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
+                                msg.role === "user"
+                                  ? "bg-gray-700 text-gray-200"
+                                  : "bg-blue-600 text-white"
+                              }`}
+                            >
+                              <p className="text-xs font-medium mb-1 opacity-70">
+                                {msg.role === "user" ? "사용자" : "관리자"}
+                              </p>
+                              <p className="whitespace-pre-wrap">{msg.content}</p>
+                              <p className="text-[10px] mt-1 opacity-50">
+                                {new Date(msg.createdAt).toLocaleString("ko-KR")}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* 답변 입력 */}
+                      {selectedInquiry.status === "open" && (
+                        <div className="px-4 pb-4 pt-2 border-t border-gray-700">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={replyInput}
+                              onChange={(e) => setReplyInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                                  e.preventDefault();
+                                  handleAdminReply(selectedInquiry._id);
+                                }
+                              }}
+                              placeholder="답변을 입력하세요..."
+                              className="flex-1 px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                              disabled={replying}
+                            />
+                            <button
+                              onClick={() => handleAdminReply(selectedInquiry._id)}
+                              disabled={!replyInput.trim() || replying}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                            >
+                              {replying ? "전송 중..." : "답변"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-gray-500">
+                      왼쪽에서 문의를 선택하세요.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

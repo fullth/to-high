@@ -1397,10 +1397,48 @@ export default function Home() {
               )}
             </>
           )}
+          {/* 좌측 사이드바 - 마음 한스푼 + 최근 상담 (세션 중, 데스크톱) */}
+          {sessionId && (
+            <aside className="hidden lg:block fixed left-0 top-[73px] w-64 h-[calc(100vh-73px)] border-r border-border overflow-y-auto z-30 bg-background">
+              <div className="p-4 space-y-4">
+                <MindfulnessCard />
+                {user && previousSessions.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-foreground">최근 상담</h4>
+                    <div className="space-y-1.5">
+                      {previousSessions.slice(0, 5).map((session) => {
+                        const catInfo = categories.find(c => c.id === session.category) || {
+                          label: session.category === 'direct' ? '직접 입력' : session.category,
+                          color: '#34d399',
+                        };
+                        const displayName = session.alias || session.summary?.slice(0, 15) || catInfo.label;
+                        return (
+                          <button
+                            key={session.sessionId}
+                            onClick={() => handleResumeSession(session.sessionId)}
+                            className="group w-full p-2 rounded-lg hover:bg-secondary/50 text-left text-sm flex items-center gap-2 transition-colors"
+                          >
+                            <span className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold shrink-0"
+                              style={{ backgroundColor: `${catInfo.color}20`, color: catInfo.color }}>
+                              {catInfo.label[0]}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{displayName}</p>
+                              <p className="text-xs text-muted-foreground">{getTimeAgo(new Date(session.updatedAt))}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </aside>
+          )}
           <div>
           <div className="max-w-3xl mx-auto px-6 py-12 sm:py-20">
             {!sessionId ? (
-              <div className="space-y-16 sm:space-y-24">
+              <div className="space-y-10 sm:space-y-14">
 
                 {/* 1. 히어로 섹션 - 토스 스타일 대형 타이포 */}
                 <section className="text-center space-y-6">
@@ -1557,13 +1595,13 @@ export default function Home() {
                 )}
 
                 {/* 4. 카테고리 선택 영역 (메인) */}
-                <section className="space-y-10 animate-fade-in-up stagger-4">
-                  <div className="text-center space-y-3">
+                <section className="space-y-6 animate-fade-in-up stagger-4">
+                  <div className="text-center space-y-2">
                     <h2 className="text-2xl sm:text-3xl font-bold text-foreground">어떤 대화를 시작할까요?</h2>
                     <p className="text-lg text-muted-foreground">당신의 이야기를 들을 준비가 되어 있습니다</p>
                   </div>
 
-                  <div className="rounded-3xl border-2 border-border p-8 sm:p-10 space-y-10 bg-card">
+                  <div className="rounded-3xl border-2 border-border p-5 sm:p-7 space-y-6 bg-card">
                     {/* 모드 선택 - MBTI 클릭 시 T/F로 인라인 교체 */}
                     <div className={`grid gap-4 transition-all duration-300 ${selectedTopMode === "mbti" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
                       {topLevelModes.flatMap((mode) => {
@@ -1701,39 +1739,7 @@ export default function Home() {
                 </section>
               </div>
             ) : (
-              <div className="space-y-6 pb-32">
-                {/* 오늘의 위로 + 최근 상담 (세션 중에도 표시) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                  <MindfulnessCard />
-                  {user && previousSessions.length > 0 && (
-                    <div className="p-4 rounded-2xl bg-card border-2 border-border">
-                      <h4 className="text-sm font-semibold text-muted-foreground mb-3">최근 상담</h4>
-                      <div className="space-y-2">
-                        {previousSessions.slice(0, 2).map((session) => {
-                          const categoryInfo = categories.find(c => c.id === session.category) || {
-                            label: session.category === 'direct' ? '직접 입력' : session.category,
-                            color: '#34d399',
-                          };
-                          const displayName = session.alias || session.summary?.slice(0, 15) || categoryInfo.label;
-                          return (
-                            <button
-                              key={session.sessionId}
-                              onClick={() => handleResumeSession(session.sessionId)}
-                              className="w-full p-2 rounded-lg bg-secondary/50 hover:bg-secondary text-left text-sm flex items-center gap-2 transition-colors"
-                            >
-                              <span className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0"
-                                style={{ backgroundColor: `${categoryInfo.color}20`, color: categoryInfo.color }}>
-                                {categoryInfo.label[0]}
-                              </span>
-                              <span className="truncate text-foreground">{displayName}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
+              <div className="space-y-6 pb-80">
                 {/* 진단 대화 히스토리 */}
                 <div className="space-y-5">
                   {selectionHistory.map((item, idx) => (
@@ -1769,46 +1775,42 @@ export default function Home() {
                   <div ref={chatEndRef} />
                 </div>
 
-                {/* 진단 옵션 버튼 그리드 */}
-                {!isLoading && options.length > 0 && (
-                  <div className="space-y-5 animate-fade-in">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">선택하기</span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {options.map((option, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSelectOption(option)}
-                          className="w-full p-3 sm:p-4 rounded-xl bg-card border-2 border-border text-left hover:border-primary/50 transition-all duration-300 group"
-                        >
-                          <span className="text-sm text-foreground line-clamp-2">{option}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      onClick={handleRequestNewOptions}
-                      className="w-full p-3 rounded-xl border-2 border-dashed border-border text-muted-foreground text-sm hover:border-primary/50 hover:text-foreground transition-all flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      {isLoadingNewOptions ? "추천 답변을 찾는 중..." : "다른 답변 보기"}
-                    </button>
-                  </div>
-                )}
               </div>
             )}
           </div>
         </div>
         </div>
 
-        {/* 진단 단계 하단 고정 입력창 */}
+        {/* 진단 단계 하단 고정: 선택하기 + 입력창 */}
         {sessionId && phase === "selecting" && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 pb-6 sm:pb-8 bg-gradient-to-t from-background via-background to-transparent z-40">
-            <div className="max-w-3xl mx-auto">
+          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background from-80% to-transparent z-40">
+            <div className="max-w-3xl mx-auto px-4 pb-6 sm:pb-8 space-y-3">
+              {/* 선택하기 옵션 */}
+              {!isLoading && options.length > 0 && (
+                <div className="space-y-2 animate-fade-in">
+                  <div className="grid grid-cols-2 gap-2">
+                    {options.map((option, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSelectOption(option)}
+                        className="w-full p-2.5 sm:p-3 rounded-xl bg-card border-2 border-border text-left hover:border-primary/50 transition-all duration-300 group"
+                      >
+                        <span className="text-sm text-foreground line-clamp-2">{option}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={handleRequestNewOptions}
+                    className="w-full p-2 rounded-xl border-2 border-dashed border-border text-muted-foreground text-xs hover:border-primary/50 hover:text-foreground transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    {isLoadingNewOptions ? "추천 답변을 찾는 중..." : "다른 답변 보기"}
+                  </button>
+                </div>
+              )}
+              {/* 직접 입력 */}
               <div className="flex gap-3 p-2 rounded-2xl bg-card border-2 border-border">
                 <input
                   type="text"

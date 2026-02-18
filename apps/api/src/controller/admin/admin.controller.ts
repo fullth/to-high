@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Param,
   Query,
@@ -20,6 +21,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { AdminService } from '../../app/admin/admin.service';
+import { InquiryService } from '../../app/inquiry/inquiry.service';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -31,6 +33,7 @@ export class AdminController {
   constructor(
     private adminService: AdminService,
     private configService: ConfigService,
+    private inquiryService: InquiryService,
   ) {
     // 환경변수에서 관리자 이메일 목록 로드 (콤마로 구분)
     const adminEmailsEnv = this.configService.get<string>('ADMIN_EMAILS');
@@ -182,5 +185,30 @@ export class AdminController {
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
     });
+  }
+
+  @Get('inquiries')
+  @ApiOperation({ summary: '문의 목록', description: '모든 문의를 조회합니다.' })
+  async getInquiries(@Req() req: any) {
+    this.checkAdmin(req.user.email);
+    return this.inquiryService.getAllInquiries();
+  }
+
+  @Post('inquiries/:id/reply')
+  @ApiOperation({ summary: '문의 답변', description: '문의에 관리자 답변을 작성합니다.' })
+  async replyInquiry(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { message: string },
+  ) {
+    this.checkAdmin(req.user.email);
+    return this.inquiryService.adminReply(id, body.message);
+  }
+
+  @Patch('inquiries/:id/close')
+  @ApiOperation({ summary: '문의 종료', description: '문의를 종료합니다.' })
+  async closeInquiry(@Req() req: any, @Param('id') id: string) {
+    this.checkAdmin(req.user.email);
+    return this.inquiryService.closeInquiry(id);
   }
 }

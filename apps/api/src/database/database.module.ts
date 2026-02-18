@@ -4,6 +4,7 @@ import { SessionDocument, SessionSchema } from './session.schema';
 import { UserDocument, UserSchema } from './user.schema';
 import { UserProfileDocument, UserProfileSchema } from './user-profile.schema';
 import { VisitorDocument, VisitorSchema } from './visitor.schema';
+import { InquiryDocument, InquirySchema } from './inquiry.schema';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { VisitorDocument, VisitorSchema } from './visitor.schema';
       { name: SessionDocument.name, schema: SessionSchema },
       { name: UserProfileDocument.name, schema: UserProfileSchema },
       { name: VisitorDocument.name, schema: VisitorSchema },
+      { name: InquiryDocument.name, schema: InquirySchema },
     ]),
   ],
   exports: [MongooseModule],

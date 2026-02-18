@@ -649,3 +649,75 @@ export function refundPayment(paymentKey: string, cancelReason: string, token: s
 export function getPaymentHistory(token: string) {
   return fetchApi<{ payments: PaymentHistory[] }>("/payment/history", { token });
 }
+
+// ============ Inquiry API ============
+
+export type InquiryType = "contact" | "feature" | "ad";
+
+export interface InquiryMessage {
+  role: "user" | "admin";
+  content: string;
+  createdAt: string;
+}
+
+export interface Inquiry {
+  _id: string;
+  userId: string;
+  type: InquiryType;
+  messages: InquiryMessage[];
+  status: "open" | "closed";
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 문의 생성
+export function createInquiry(type: InquiryType, message: string, token: string) {
+  return fetchApi<{ inquiryId: string; messages: InquiryMessage[] }>("/inquiry", {
+    method: "POST",
+    body: JSON.stringify({ type, message }),
+    token,
+  });
+}
+
+// 문의에 메시지 추가
+export function addInquiryMessage(inquiryId: string, message: string, token: string) {
+  return fetchApi<{ messages: InquiryMessage[] }>(`/inquiry/${inquiryId}/message`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+    token,
+  });
+}
+
+// 내 문의 목록 조회
+export function getInquiries(token: string) {
+  return fetchApi<Inquiry[]>("/inquiry", { token });
+}
+
+// 문의 상세 조회
+export function getInquiry(inquiryId: string, token: string) {
+  return fetchApi<Inquiry>(`/inquiry/${inquiryId}`, { token });
+}
+
+// ============ Admin Inquiry API ============
+
+// 관리자 - 전체 문의 목록
+export function getAdminInquiries(token: string) {
+  return fetchApi<Inquiry[]>("/admin/inquiries", { token });
+}
+
+// 관리자 - 문의 답변
+export function adminReplyInquiry(inquiryId: string, message: string, token: string) {
+  return fetchApi<{ messages: InquiryMessage[] }>(`/admin/inquiries/${inquiryId}/reply`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+    token,
+  });
+}
+
+// 관리자 - 문의 종료
+export function adminCloseInquiry(inquiryId: string, token: string) {
+  return fetchApi<{ status: string }>(`/admin/inquiries/${inquiryId}/close`, {
+    method: "PATCH",
+    token,
+  });
+}
