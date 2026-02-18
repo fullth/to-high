@@ -9,6 +9,7 @@ import {
 import { VisitorDocument, VisitorSchema } from '../../database/visitor.schema';
 import { AdminService } from './admin.service';
 import { NotificationService } from '../../common/notification.service';
+import { InquiryModule } from '../inquiry/inquiry.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { NotificationService } from '../../common/notification.service';
       { name: SessionDocument.name, schema: SessionSchema },
       { name: VisitorDocument.name, schema: VisitorSchema },
     ]),
+    InquiryModule,
   ],
   providers: [AdminService, NotificationService],
   exports: [AdminService],
