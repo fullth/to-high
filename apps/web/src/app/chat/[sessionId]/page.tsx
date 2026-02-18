@@ -208,10 +208,21 @@ function ChatContent() {
 
   if (phase === "selecting") {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-background via-background to-secondary/20">
-        <div className="max-w-lg w-full space-y-6">
-          {/* 대화 히스토리 */}
-          <div className="space-y-4 max-h-[40vh] overflow-auto">
+      <main className="h-screen max-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20 overflow-hidden">
+        {/* 고정 헤더 */}
+        <header className="flex-shrink-0 border-b border-border/50 p-4 flex justify-between items-center bg-background/80 backdrop-blur-sm">
+          <h1 className="font-medium text-foreground/90">이야기 나누는 중</h1>
+          <button
+            onClick={() => router.push("/")}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            홈으로
+          </button>
+        </header>
+
+        {/* 스크롤되는 대화 영역 */}
+        <div className="flex-1 min-h-0 overflow-auto p-4">
+          <div className="max-w-lg mx-auto space-y-4">
             {selectionHistory.map((item, idx) => (
               <div
                 key={idx}
@@ -237,53 +248,49 @@ function ChatContent() {
                 </div>
               </div>
             )}
-            {/* 스크롤 위치 마커 */}
             <div ref={chatEndRef} />
           </div>
+        </div>
 
-          {/* 옵션 버튼들 */}
-          <div className="grid gap-3">
-            {options.map((option, idx) => (
-              <Button
-                key={idx}
-                variant="outline"
-                className="w-full h-auto py-4 text-left justify-start whitespace-normal transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
-                onClick={() => handleSelectOption(option)}
+        {/* 하단 고정 영역: 옵션 + 입력창 */}
+        <div className="flex-shrink-0 border-t border-border/50 bg-background/80 backdrop-blur-sm">
+          <div className="max-w-lg mx-auto p-4 space-y-3">
+            {/* 옵션 버튼들 */}
+            {options.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                {options.map((option, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    className="w-full h-auto py-2.5 px-3 text-left justify-start whitespace-normal text-sm transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
+                    onClick={() => handleSelectOption(option)}
+                    disabled={isLoading}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            {/* 직접 입력 */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={supplementInput}
+                onChange={(e) => setSupplementInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
+                placeholder="직접 말씀해 주셔도 좋아요..."
+                className="flex-1 px-4 h-11 text-sm rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                 disabled={isLoading}
+              />
+              <Button
+                className="h-11 px-5"
+                onClick={handleSupplementSubmit}
+                disabled={isLoading || !supplementInput.trim()}
               >
-                {option}
+                전송
               </Button>
-            ))}
-          </div>
-
-          {/* 직접 입력 */}
-          <div className="flex gap-3 items-stretch">
-            <input
-              type="text"
-              value={supplementInput}
-              onChange={(e) => setSupplementInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
-              placeholder="마음이 괜찮다면, 직접 얘기해주셔도 좋아요"
-              className="flex-1 px-4 h-12 text-base rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
-              disabled={isLoading}
-            />
-            <Button
-              className="h-12 px-6"
-              onClick={handleSupplementSubmit}
-              disabled={isLoading || !supplementInput.trim()}
-            >
-              전송
-            </Button>
-          </div>
-
-          {/* 홈으로 돌아가기 */}
-          <div className="pt-4">
-            <button
-              onClick={() => router.push("/")}
-              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              홈으로 돌아가기
-            </button>
+            </div>
           </div>
         </div>
       </main>
