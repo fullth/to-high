@@ -29,7 +29,7 @@ export const topLevelModes = [
         description: "그냥 들어줄게요",
         color: "#7C9885",
         icon: (
-            <img src="/to-high-icon-listening-green.jpg" alt="경청 모드" className="block w-full h-full object-cover" draggable={false} />
+            <img src="/to-high-icon-04-listening.jpg" alt="경청 모드" className="block w-full h-full object-cover" draggable={false} />
         ),
     },
 ];
@@ -67,7 +67,7 @@ export const categories = [
         label: "나",
         description: "마음, 감정",
         icon: (
-            <img src="/to-high-icon-me-nobg.jpg" alt="나" className="block w-full h-full object-cover" draggable={false} />
+            <img src="/to-high-icon-01-me.jpg" alt="나" className="block w-full h-full object-cover" draggable={false} />
         )
     },
     {
@@ -76,7 +76,7 @@ export const categories = [
         label: "미래",
         description: "진로, 선택",
         icon: (
-            <img src="/to-high-icon-future-nobg.jpg" alt="미래" className="block w-full h-full object-cover" draggable={false} />
+            <img src="/to-high-icon-05-future.jpg" alt="미래" className="block w-full h-full object-cover" draggable={false} />
         )
     },
     {
@@ -85,7 +85,7 @@ export const categories = [
         label: "일",
         description: "업무, 직장",
         icon: (
-            <img src="/to-high-icon-work-nobg.jpg" alt="일" className="block w-full h-full object-cover" draggable={false} />
+            <img src="/to-high-icon-06-work.jpg" alt="일" className="block w-full h-full object-cover" draggable={false} />
         )
     },
     {
@@ -94,7 +94,7 @@ export const categories = [
         label: "관계",
         description: "가족, 친구",
         icon: (
-            <img src="/to-high-icon-relationship-nobg.jpg" alt="관계" className="block w-full h-full object-cover" draggable={false} />
+            <img src="/to-high-icon-07-relationship.jpg" alt="관계" className="block w-full h-full object-cover" draggable={false} />
         )
     },
     {
@@ -103,7 +103,7 @@ export const categories = [
         label: "연애",
         description: "사랑, 이별",
         icon: (
-            <img src="/to-high-icon-love-nobg.jpg" alt="연애" className="block w-full h-full object-cover" draggable={false} />
+            <img src="/to-high-icon-08-love.jpg" alt="연애" className="block w-full h-full object-cover" draggable={false} />
         )
     },
     {
@@ -112,7 +112,7 @@ export const categories = [
         label: "일상",
         description: "그냥 얘기",
         icon: (
-            <img src="/to-high-icon-daily-nobg.jpg" alt="일상" className="block w-full h-full object-cover" draggable={false} />
+            <img src="/to-high-icon-09-daily.jpg" alt="일상" className="block w-full h-full object-cover" draggable={false} />
         )
     },
 ];

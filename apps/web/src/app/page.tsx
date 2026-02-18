@@ -234,6 +234,7 @@ export default function Home() {
 
   // 세션 별칭 수정 상태
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingAlias, setEditingAlias] = useState("");
 
   // 저장 관련 상태
@@ -1289,6 +1290,114 @@ export default function Home() {
 
         {/* 메인 콘텐츠 */}
         <div className="flex-1 overflow-y-auto">
+          {/* 좌측 사이드바 - 최근 상담 (데스크톱, 고정, 토글) */}
+          {user && previousSessions.length > 0 && !sessionId && (
+            <>
+              {/* 사이드바 본체 */}
+              <aside className={`hidden xl:block fixed left-0 top-[73px] w-64 h-[calc(100vh-73px)] border-r border-border overflow-y-auto z-30 bg-background transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-foreground">최근 상담</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{previousSessions.length}개</span>
+                      <button
+                        onClick={() => setSidebarOpen(false)}
+                        className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="사이드바 접기"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {previousSessions.map((session) => {
+                      const catInfo = categories.find(c => c.id === session.category) || {
+                        label: session.category === 'direct' ? '직접 입력' : session.category,
+                        color: '#34d399',
+                      };
+                      const isEditingSidebar = editingSessionId === session.sessionId;
+                      const sidebarDisplayName = session.alias || session.summary?.slice(0, 20) || catInfo.label;
+
+                      return (
+                        <div
+                          key={session.sessionId}
+                          className="group rounded-xl hover:bg-secondary/50 transition-all"
+                        >
+                          <div className="flex items-center gap-2.5 p-2.5">
+                            <button
+                              onClick={() => !isEditingSidebar && handleResumeSession(session.sessionId)}
+                              disabled={isEditingSidebar}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold"
+                              style={{ backgroundColor: `${catInfo.color}20`, color: catInfo.color }}
+                            >
+                              {catInfo.label[0]}
+                            </button>
+                            <div className="flex-1 min-w-0">
+                              {isEditingSidebar ? (
+                                <input
+                                  type="text"
+                                  value={editingAlias}
+                                  onChange={(e) => setEditingAlias(e.target.value)}
+                                  onBlur={() => handleUpdateAlias(session.sessionId)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleUpdateAlias(session.sessionId);
+                                    if (e.key === 'Escape') { setEditingSessionId(null); setEditingAlias(""); }
+                                  }}
+                                  className="w-full text-sm bg-secondary border border-primary rounded-lg px-2 py-1 focus:outline-none"
+                                  autoFocus
+                                  maxLength={50}
+                                  placeholder="별칭 입력"
+                                />
+                              ) : (
+                                <button onClick={() => handleResumeSession(session.sessionId)} className="block w-full text-left">
+                                  <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{sidebarDisplayName}</p>
+                                  <p className="text-xs text-muted-foreground">{getTimeAgo(new Date(session.updatedAt))}</p>
+                                </button>
+                              )}
+                            </div>
+                            {!isEditingSidebar && (
+                              <div className="flex items-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditingSessionId(session.sessionId); setEditingAlias(session.alias || ""); }}
+                                  className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                                  title="별칭 수정"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.sessionId); }}
+                                  className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                  title="삭제"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </aside>
+              {/* 사이드바 열기 탭 (접힌 상태) */}
+              {!sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="hidden xl:flex fixed left-0 top-1/2 -translate-y-1/2 z-30 items-center gap-1 pl-2 pr-3 py-3 rounded-r-xl bg-card border border-l-0 border-border shadow-lg hover:bg-secondary transition-all group"
+                  title="최근 상담 열기"
+                >
+                  <svg className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-xs font-medium text-muted-foreground group-hover:text-primary transition-colors [writing-mode:vertical-lr]">최근 상담</span>
+                </button>
+              )}
+            </>
+          )}
+          <div>
           <div className="max-w-3xl mx-auto px-6 py-12 sm:py-20">
             {!sessionId ? (
               <div className="space-y-16 sm:space-y-24">
@@ -1348,9 +1457,9 @@ export default function Home() {
                   </section>
                 )}
 
-                {/* 3. 최근 상담 기록 (회원) */}
+                {/* 3. 최근 상담 기록 (회원) - 사이드바 없는 화면에서만 표시 */}
                 {user && previousSessions.length > 0 && !sessionId && (
-                  <section className="animate-fade-in-up stagger-3 space-y-4">
+                  <section className="animate-fade-in-up stagger-3 space-y-4 xl:hidden">
                     <div className="flex items-center justify-between px-1">
                       <h3 className="text-lg font-bold text-foreground">최근 상담</h3>
                       <span className="text-sm text-muted-foreground">{previousSessions.length}개</span>
@@ -1455,71 +1564,83 @@ export default function Home() {
                   </div>
 
                   <div className="rounded-3xl border-2 border-border p-8 sm:p-10 space-y-10 bg-card">
-                    {/* 모드 선택 */}
-                    <div className="grid grid-cols-3 gap-4">
-                      {topLevelModes.map((mode) => (
-                        <button
-                          key={mode.id}
-                          className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all duration-300 ${selectedTopMode === mode.id
-                            ? "bg-secondary border-primary shadow-lg shadow-primary/20"
-                            : "bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-black/20"
-                            } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
-                          onClick={() => {
-                            if (selectedTopMode === mode.id) {
-                              setSelectedTopMode(null);
-                              setSelectedCounselorType(null);
-                            } else {
-                              setSelectedTopMode(mode.id);
-                              if (mode.id === "reaction" || mode.id === "listening") {
-                                setSelectedCounselorType(mode.id as CounselorType);
-                              } else {
-                                setSelectedCounselorType(null);
-                              }
-                            }
-                          }}
-                          disabled={isLoading}
-                        >
-                          <div
-                            className={`mb-3 transition-all duration-300 group-hover:scale-110 ${selectedTopMode === mode.id ? "scale-110" : ""}`}
-                            style={{ color: mode.color }}
-                          >
-                            <div
-                              className="relative w-12 h-12 rounded-xl overflow-hidden transition-all duration-300"
-                              style={{
-                                backgroundColor: '#0a0a0a',
-                                boxShadow: `0 0 0 1px ${mode.color}40, 0 0 12px ${mode.color}20`,
+                    {/* 모드 선택 - MBTI 클릭 시 T/F로 인라인 교체 */}
+                    <div className={`grid gap-4 transition-all duration-300 ${selectedTopMode === "mbti" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+                      {topLevelModes.flatMap((mode) => {
+                        // MBTI 선택 시 → T/F 버튼 2개로 교체
+                        if (mode.id === "mbti" && selectedTopMode === "mbti") {
+                          return mbtiSubTypes.map((subType) => (
+                            <button
+                              key={subType.id}
+                              className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all duration-300 ${
+                                selectedCounselorType === subType.id
+                                  ? "bg-secondary border-primary shadow-lg shadow-primary/20"
+                                  : "bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-black/20"
+                              } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                              onClick={() => {
+                                if (selectedCounselorType === subType.id) {
+                                  setSelectedTopMode(null);
+                                  setSelectedCounselorType(null);
+                                } else {
+                                  setSelectedCounselorType(subType.id);
+                                }
                               }}
+                              disabled={isLoading}
                             >
-                              {mode.icon}
-                            </div>
-                          </div>
-                          <div className="text-sm font-semibold text-foreground">{mode.label}</div>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* MBTI 하위 선택 */}
-                    {selectedTopMode === "mbti" && (
-                      <div className="bg-secondary rounded-2xl border-2 border-border p-4 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                        {mbtiSubTypes.map((subType) => (
+                              <div
+                                className={`mb-3 transition-all duration-300 group-hover:scale-110 ${selectedCounselorType === subType.id ? "scale-110" : ""}`}
+                                style={{ color: subType.color }}
+                              >
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${subType.color}20` }}>
+                                  {subType.icon}
+                                </div>
+                              </div>
+                              <div className="text-sm font-semibold text-foreground">{subType.label}</div>
+                            </button>
+                          ));
+                        }
+                        // 일반 모드 버튼 (MBTI 미선택 시 MBTI 포함, 리액션, 경청)
+                        return [(
                           <button
-                            key={subType.id}
-                            className={`group p-5 rounded-xl border-2 transition-all duration-300 ${selectedCounselorType === subType.id ? "bg-card border-primary shadow-lg shadow-primary/20" : "bg-card border-border hover:border-primary/50"}`}
-                            onClick={() => setSelectedCounselorType(selectedCounselorType === subType.id ? null : subType.id)}
+                            key={mode.id}
+                            className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all duration-300 ${selectedTopMode === mode.id
+                              ? "bg-secondary border-primary shadow-lg shadow-primary/20"
+                              : "bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-black/20"
+                              } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                            onClick={() => {
+                              if (selectedTopMode === mode.id) {
+                                setSelectedTopMode(null);
+                                setSelectedCounselorType(null);
+                              } else {
+                                setSelectedTopMode(mode.id);
+                                if (mode.id === "reaction" || mode.id === "listening") {
+                                  setSelectedCounselorType(mode.id as CounselorType);
+                                } else {
+                                  setSelectedCounselorType(null);
+                                }
+                              }
+                            }}
+                            disabled={isLoading}
                           >
                             <div
-                              className="mb-2 flex justify-center transition-transform group-hover:scale-110"
-                              style={{ color: subType.color }}
+                              className={`mb-3 transition-all duration-300 group-hover:scale-110 ${selectedTopMode === mode.id ? "scale-110" : ""}`}
+                              style={{ color: mode.color }}
                             >
-                              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${subType.color}20` }}>
-                                {subType.icon}
+                              <div
+                                className="relative w-12 h-12 rounded-xl overflow-hidden transition-all duration-300"
+                                style={{
+                                  backgroundColor: '#0a0a0a',
+                                  boxShadow: `0 0 0 1px ${mode.color}40, 0 0 12px ${mode.color}20`,
+                                }}
+                              >
+                                {mode.icon}
                               </div>
                             </div>
-                            <div className="text-sm font-semibold text-foreground text-center">{subType.label}</div>
+                            <div className="text-sm font-semibold text-foreground">{mode.label}</div>
                           </button>
-                        ))}
-                      </div>
-                    )}
+                        )];
+                      })}
+                    </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {categories.map((category) => (
@@ -1681,6 +1802,7 @@ export default function Home() {
               </div>
             )}
           </div>
+        </div>
         </div>
 
         {/* 진단 단계 하단 고정 입력창 */}
