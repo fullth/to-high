@@ -748,7 +748,6 @@ export default function Home() {
           if (selectedCounselorType) {
             // empathy와 feedback을 채팅 응답 앞에 붙이기
             const prefixContent = [empathyContent, feedbackContent].filter(Boolean).join("\n\n");
-            console.log('[DEBUG] Starting chat response with prefix:', { prefixContent, empathyContent, feedbackContent });
             let content = "";
             try {
               await setResponseModeStream(sessionId, "comfort", token || undefined, (chunk) => {
@@ -758,7 +757,6 @@ export default function Home() {
               });
               // 채팅 응답을 selectionHistory에 추가 (prefix 포함)
               const fullContent = prefixContent ? prefixContent + "\n\n" + content : content;
-              console.log('[DEBUG] Adding chat response to history, fullContent length:', fullContent.length);
               flushSync(() => {
                 setStreamingContent("");
                 setSelectionHistory(prev => [...prev, { type: "assistant", content: fullContent, timestamp: new Date() }]);
@@ -845,12 +843,12 @@ export default function Home() {
       }]);
       setShowModeSelection(true);
       setResponseModes([
-        { mode: "comfort", label: "그냥 위로해줘", description: "해결책 없이 공감과 위로만 받고 싶어요", emoji: "🤗" },
-        { mode: "listen", label: "그냥 들어줘", description: "말없이 들어주기만 해도 돼요", emoji: "👂" },
-        { mode: "organize", label: "상황 정리해줘", description: "복잡한 감정과 상황을 정리하고 싶어요", emoji: "📝" },
-        { mode: "validate", label: "내가 이상한 건가?", description: "내 감정이 정상인지 확인받고 싶어요", emoji: "🤔" },
-        { mode: "direction", label: "뭘 해야 할지 모르겠어", description: "작은 행동 하나만 제안해줘요", emoji: "🧭" },
-        { mode: "similar", label: "나만 이런 건가?", description: "비슷한 경험을 한 사람들 이야기가 궁금해요", emoji: "👥" },
+        { mode: "comfort", label: "그냥 위로해줘", description: "해결책 없이 공감과 위로만 받고 싶어요" },
+        { mode: "listen", label: "그냥 들어줘", description: "말없이 들어주기만 해도 돼요" },
+        { mode: "organize", label: "상황 정리해줘", description: "복잡한 감정과 상황을 정리하고 싶어요" },
+        { mode: "validate", label: "내가 이상한 건가?", description: "내 감정이 정상인지 확인받고 싶어요" },
+        { mode: "direction", label: "뭘 해야 할지 모르겠어", description: "작은 행동 하나만 제안해줘요" },
+        { mode: "similar", label: "나만 이런 건가?", description: "비슷한 경험을 한 사람들 이야기가 궁금해요" },
       ]);
     }
   }, [sessionId, token, selectedCounselorType, selectionHistory]);
@@ -2352,9 +2350,8 @@ export default function Home() {
                   onClick={() => handleSelectMode(rm.mode)}
                 >
                   <CardHeader className="p-4">
-                    <CardTitle className="text-base font-medium flex items-center gap-2">
-                      <span>{rm.emoji}</span>
-                      <span>{rm.label}</span>
+                    <CardTitle className="text-base font-medium">
+                      {rm.label}
                     </CardTitle>
                     <CardDescription className="text-sm">{rm.description}</CardDescription>
                   </CardHeader>

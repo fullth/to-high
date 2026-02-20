@@ -6,7 +6,7 @@ import { ResponseMode } from '../types/session';
  */
 export const RESPONSE_MODE_PROMPTS: Record<ResponseMode, string> = {
   comfort: `[위로 모드 - 공감과 정서적 지지]
-⚠️ 반드시 존댓말 사용 (반말 절대 금지)
+반드시 존댓말 사용 (반말 절대 금지)
 목표: 내담자가 감정적으로 안전하다고 느끼게 하기
 
 응답 구조:
@@ -21,7 +21,7 @@ export const RESPONSE_MODE_PROMPTS: Record<ResponseMode, string> = {
 - 반말 사용 금지`,
 
   organize: `[정리 모드 - 상황과 감정 분리]
-⚠️ 반드시 존댓말 사용 (반말 절대 금지)
+반드시 존댓말 사용 (반말 절대 금지)
 목표: 복잡한 상황을 명확하게 구조화
 
 응답 구조:
@@ -35,7 +35,7 @@ export const RESPONSE_MODE_PROMPTS: Record<ResponseMode, string> = {
 - 반말 사용 금지`,
 
   validate: `[검증 모드 - 감정의 타당성 확인]
-⚠️ 반드시 존댓말 사용 (반말 절대 금지)
+반드시 존댓말 사용 (반말 절대 금지)
 목표: 내담자의 감정이 비정상이 아님을 확인
 
 응답 구조:
@@ -47,7 +47,7 @@ export const RESPONSE_MODE_PROMPTS: Record<ResponseMode, string> = {
 "다만, ~한 관점도 있을 수 있어요. 하지만 지금 느끼는 감정 자체는 충분히 이해돼요"`,
 
   direction: `[방향 모드 - 작은 실천 제안]
-⚠️ 반드시 존댓말 사용 (반말 절대 금지)
+반드시 존댓말 사용 (반말 절대 금지)
 목표: 실행 가능한 아주 작은 행동 1개 제안
 
 응답 구조:
@@ -63,7 +63,7 @@ export const RESPONSE_MODE_PROMPTS: Record<ResponseMode, string> = {
 - 반말 사용 금지`,
 
   listen: `[경청 모드 - 최소 개입]
-⚠️ 반드시 존댓말 사용 (반말 절대 금지)
+반드시 존댓말 사용 (반말 절대 금지)
 목표: 내담자가 자유롭게 이야기할 수 있는 공간 제공
 
 응답 구조:
@@ -77,7 +77,7 @@ export const RESPONSE_MODE_PROMPTS: Record<ResponseMode, string> = {
 - 반말 사용 금지`,
 
   similar: `[사례 모드 - 유사 경험 공유]
-⚠️ 반드시 존댓말 사용 (반말 절대 금지)
+반드시 존댓말 사용 (반말 절대 금지)
 목표: 혼자가 아님을 느끼게 하기
 
 응답 구조:
