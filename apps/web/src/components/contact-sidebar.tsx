@@ -46,6 +46,7 @@ export function ContactSidebar() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [showList, setShowList] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [email, setEmail] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,6 +65,21 @@ export function ContactSidebar() {
   };
 
   const handleSelectType = (type: InquiryType) => {
+    // 비로그인 사용자는 이메일 필수
+    if (!user && !email.trim()) {
+      alert("답변 받으실 이메일을 입력해주세요.");
+      return;
+    }
+
+    // 이메일 형식 검증
+    if (!user && email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        alert("올바른 이메일 형식을 입력해주세요.");
+        return;
+      }
+    }
+
     setOpenChat(type);
     setMessages([]);
     setInquiryId(null);
@@ -104,7 +120,8 @@ export function ContactSidebar() {
 
     try {
       if (!inquiryId) {
-        const result = await createInquiry(openChat!, content, token);
+        const emailToSend = user ? user.email : email.trim();
+        const result = await createInquiry(openChat!, content, token, emailToSend);
         setInquiryId(result.inquiryId);
       } else {
         await addInquiryMessage(inquiryId, content, token);
@@ -123,6 +140,7 @@ export function ContactSidebar() {
     setInput("");
     setShowList(false);
     setSelectedInquiry(null);
+    setEmail("");
   };
 
   const handleClose = () => {
@@ -133,6 +151,7 @@ export function ContactSidebar() {
     setInput("");
     setShowList(false);
     setSelectedInquiry(null);
+    setEmail("");
   };
 
   // 유형 선택 화면인지 (모달은 열려있지만 채팅/목록은 아닌 상태)
@@ -148,12 +167,20 @@ export function ContactSidebar() {
             className="group flex items-center gap-2 p-2.5 rounded-xl hover:bg-primary/10 transition-all duration-200"
             title="문의하기"
           >
-            <span className="text-muted-foreground group-hover:text-primary transition-colors">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </span>
-            <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors whitespace-nowrap opacity-0 group-hover:opacity-100 max-w-0 group-hover:max-w-[100px] overflow-hidden transition-all duration-200">
+            <div className="relative">
+              <span className="text-muted-foreground group-hover:text-primary transition-colors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </span>
+              <div className="absolute -top-1 -right-1">
+                <div className="relative">
+                  <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                  <div className="absolute inset-0 w-2 h-2 rounded-full bg-primary animate-ping opacity-75" />
+                </div>
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors whitespace-nowrap">
               문의하기
             </span>
           </button>
@@ -199,7 +226,33 @@ export function ContactSidebar() {
             {/* 유형 선택 화면 */}
             {showTypeSelector && (
               <div className="p-4 space-y-3">
-                <p className="text-sm text-muted-foreground text-center mb-2">
+                <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 space-y-1">
+                  <p className="text-xs text-primary font-medium">📬 문의 안내</p>
+                  <p className="text-xs text-foreground/80">
+                    {user
+                      ? `답변은 ${user.email}로 전송됩니다.`
+                      : "답변 받으실 이메일을 입력해주세요."}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    문의 내역은 영구 보관되며, 언제든 확인 가능합니다.
+                  </p>
+                </div>
+
+                {!user && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground">답변 받을 이메일 *</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="example@email.com"
+                      className="w-full px-3 py-2 rounded-xl bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      required
+                    />
+                  </div>
+                )}
+
+                <p className="text-sm text-muted-foreground text-center">
                   어떤 유형의 문의인가요?
                 </p>
                 {inquiryTypes.map((type) => (

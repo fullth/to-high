@@ -181,15 +181,20 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 현재 단계: ${currentStep}
 ${isAdviceRequested ? '⚠️ 사용자가 조언을 요청했습니다. 질문하지 말고 구체적인 조언만 제공하세요.' : '사용자의 마지막 선택/입력에 공감하면서 다음 질문과 선택지를 생성해주세요.'}`;
 
-    const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: PROMPT_CONFIG.TEMPERATURE_OPTIONS,
-    });
+    const response = await this.openai.chat.completions.create(
+      {
+        model: PROMPT_CONFIG.MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: PROMPT_CONFIG.TEMPERATURE_OPTIONS,
+      },
+      {
+        timeout: 60000, // 60초 타임아웃
+      }
+    );
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
 

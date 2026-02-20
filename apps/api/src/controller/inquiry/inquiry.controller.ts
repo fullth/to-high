@@ -11,9 +11,9 @@ export class InquiryController {
   @UseGuards(JwtAuthGuard)
   async create(
     @Req() req: any,
-    @Body() body: { type: InquiryType; message: string },
+    @Body() body: { type: InquiryType; message: string; email?: string },
   ) {
-    return this.inquiryService.create(req.user.userId, body.type, body.message);
+    return this.inquiryService.create(req.user.userId, body.type, body.message, body.email);
   }
 
   @Post(':id/message')

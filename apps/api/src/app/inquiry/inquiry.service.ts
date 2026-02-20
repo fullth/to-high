@@ -10,10 +10,11 @@ export class InquiryService {
     private readonly inquiryModel: Model<InquiryDocument>,
   ) {}
 
-  async create(userId: string, type: InquiryType, message: string) {
+  async create(userId: string, type: InquiryType, message: string, email?: string) {
     const inquiry = await this.inquiryModel.create({
       userId,
       type,
+      email,
       messages: [{ role: 'user', content: message, createdAt: new Date() }],
     });
     return { inquiryId: inquiry._id, messages: inquiry.messages };

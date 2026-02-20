@@ -309,3 +309,28 @@
 .markdown-content a {
   @apply text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary transition-colors;
 }
+
+/* 스크롤바 스타일 - 다크 테마에 맞게 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2d4a3a #0f1f15;
+}
+
+/* WebKit 기반 브라우저 (Chrome, Safari, Edge) */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0f1f15;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #2d4a3a;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #34d399;
+}
