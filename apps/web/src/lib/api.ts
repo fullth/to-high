@@ -671,10 +671,10 @@ export interface Inquiry {
 }
 
 // 문의 생성
-export function createInquiry(type: InquiryType, message: string, token: string) {
+export function createInquiry(type: InquiryType, message: string, token: string, email?: string) {
   return fetchApi<{ inquiryId: string; messages: InquiryMessage[] }>("/inquiry", {
     method: "POST",
-    body: JSON.stringify({ type, message }),
+    body: JSON.stringify({ type, message, email }),
     token,
   });
 }

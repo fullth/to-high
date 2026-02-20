@@ -25,6 +25,9 @@ export class InquiryDocument extends Document {
   @Prop({ required: true, enum: ['contact', 'feature', 'ad'] })
   type: InquiryType;
 
+  @Prop()
+  email?: string;
+
   @Prop({ type: [InquiryMessageSchema], default: [] })
   messages: InquiryMessage[];
 

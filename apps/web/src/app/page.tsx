@@ -273,23 +273,11 @@ export default function Home() {
 
   // 스크롤 ref
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
+  const [highlightCategory, setHighlightCategory] = useState(false);
 
-  const statusBadge = (
-    <div className="fixed right-0 top-32 z-50 pointer-events-none hidden lg:flex">
-      <div className="bg-card border-2 border-border border-r-0 rounded-l-2xl py-3 px-6 shadow-2xl shadow-black/30 flex items-center gap-4 group hover:border-primary/50 transition-all duration-300 pointer-events-auto">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <div className="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_12px_rgba(52,211,153,0.6)]" />
-            <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-primary animate-ping opacity-75" />
-          </div>
-        </div>
-        <div className="w-px h-5 bg-border" />
-        <p className="text-sm font-semibold text-foreground whitespace-nowrap">
-          24시간 언제든 찾아주세요
-        </p>
-      </div>
-    </div>
-  );
+  // 선택지 캐러셀
+  const [optionsPage, setOptionsPage] = useState(0);
 
   // 세션 상태 저장 함수 (로그인 전)
   const saveSessionState = useCallback(() => {
@@ -401,6 +389,11 @@ export default function Home() {
         console.error("Failed to get public stats:", err);
       });
   }, []);
+
+  // 선택지가 변경되면 캐러셀 페이지 리셋
+  useEffect(() => {
+    setOptionsPage(0);
+  }, [options]);
 
   // 한도 에러 처리
   const handleLimitError = (error: unknown, lastInput: string) => {
@@ -905,10 +898,16 @@ export default function Home() {
 
   // 이전 세션 재개
   const handleResumeSession = async (targetSessionId: string) => {
-    if (!token) return;
+    console.log("[handleResumeSession] 시작", { targetSessionId, hasToken: !!token });
+    if (!token) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
     setIsSwitchingSession(true);
+    console.log("[handleResumeSession] API 호출 중...");
     try {
       const res = await resumeSession(targetSessionId, token);
+      console.log("[handleResumeSession] 성공", res);
       setSessionId(res.sessionId);
       setQuestion(res.question);
       setOptions(res.options);
@@ -965,8 +964,26 @@ export default function Home() {
       }
 
       setSelectionHistory(historyItems);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to resume session:", err);
+
+      // 기술적 에러 메시지를 사용자 친화적으로 변환
+      let errorMessage = "상담을 불러오는 중 오류가 발생했습니다.";
+
+      if (err?.message) {
+        if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError") || err.message.includes("fetch")) {
+          errorMessage = "네트워크 연결을 확인해주세요.";
+        } else if (err.message.includes("timeout") || err.message.includes("시간이 초과")) {
+          errorMessage = "응답 시간이 초과되었습니다. 다시 시도해주세요.";
+        } else if (!err.message.startsWith("HTTP") && err.message.length < 100) {
+          // 백엔드에서 온 사용자 친화적 메시지 (너무 길지 않은 경우만)
+          errorMessage = err.message;
+        }
+      }
+
+      alert(errorMessage);
+      // 에러 발생 시 처음으로 돌아가기
+      setSessionId(null);
     } finally {
       setIsSwitchingSession(false);
     }
@@ -1244,27 +1261,27 @@ export default function Home() {
   // 상담 대기/선택 단계 (기본 화면)
   if (!sessionId || phase === "selecting") {
     return (
-      <main className="min-h-screen flex flex-col bg-background">
+      <main className="h-screen flex flex-col bg-background overflow-hidden">
         {/* 오른쪽 사이드바 - 문의 링크 */}
         <ContactSidebar />
 
         {/* 헤더 - 더 넓고 깔끔하게 */}
-        <header className="px-6 py-5 border-b border-border sticky top-0 z-50 bg-background/95 backdrop-blur-sm">
-          <div className="flex justify-between items-center max-w-5xl mx-auto w-full">
+        <header className="px-6 py-5 z-50 bg-background/95 backdrop-blur-sm shrink-0">
+          <div className="flex justify-between items-center w-full">
             <Logo size="md" onClick={handleNewSession} />
             <div className="flex items-center gap-4">
               {authLoading ? (
                 <div className="h-10 w-24 bg-muted rounded-xl animate-pulse" />
               ) : user ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border">
-                  <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-card border border-border">
+                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
                     {(user.name || user.email)?.[0]?.toUpperCase()}
                   </div>
                   <span className="text-sm font-medium text-foreground hidden sm:inline">
                     {user.name || user.email.split('@')[0]}
                   </span>
                   <div className="w-px h-5 bg-border hidden sm:block" />
-                  <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground px-2 h-7 text-xs">
+                  <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground px-3 h-8 text-xs">
                     로그아웃
                   </Button>
                 </div>
@@ -1286,10 +1303,8 @@ export default function Home() {
           </div>
         </header>
 
-        {statusBadge}
-
         {/* 메인 콘텐츠 */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* 좌측 사이드바 - 최근 상담 (데스크톱, 고정, 토글) */}
           {user && previousSessions.length > 0 && !sessionId && (
             <>
@@ -1436,7 +1451,7 @@ export default function Home() {
             </aside>
           )}
           <div>
-          <div className="max-w-3xl mx-auto px-6 py-12 sm:py-20">
+          <div className="max-w-3xl mx-auto px-6 py-8 sm:py-12">
             {!sessionId ? (
               <div className="space-y-10 sm:space-y-14">
 
@@ -1601,7 +1616,14 @@ export default function Home() {
                     <p className="text-lg text-muted-foreground">당신의 이야기를 들을 준비가 되어 있습니다</p>
                   </div>
 
-                  <div className="rounded-3xl border-2 border-border p-5 sm:p-7 space-y-6 bg-card">
+                  <div
+                    ref={categoryRef}
+                    className={`rounded-3xl border-2 p-5 sm:p-7 space-y-6 bg-card transition-all duration-500 ${
+                      highlightCategory
+                        ? "border-primary shadow-lg shadow-primary/30 animate-pulse"
+                        : "border-border"
+                    }`}
+                  >
                     {/* 모드 선택 - MBTI 클릭 시 T/F로 인라인 교체 */}
                     <div className={`grid gap-4 transition-all duration-300 ${selectedTopMode === "mbti" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
                       {topLevelModes.flatMap((mode) => {
@@ -1621,6 +1643,12 @@ export default function Home() {
                                   setSelectedCounselorType(null);
                                 } else {
                                   setSelectedCounselorType(subType.id);
+                                  // 카테고리로 부드럽게 스크롤 + 강조
+                                  setTimeout(() => {
+                                    categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                    setHighlightCategory(true);
+                                    setTimeout(() => setHighlightCategory(false), 2000);
+                                  }, 100);
                                 }
                               }}
                               disabled={isLoading}
@@ -1656,6 +1684,12 @@ export default function Home() {
                                 } else {
                                   setSelectedCounselorType(null);
                                 }
+                                // 카테고리로 부드럽게 스크롤 + 강조
+                                setTimeout(() => {
+                                  categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                  setHighlightCategory(true);
+                                  setTimeout(() => setHighlightCategory(false), 2000);
+                                }, 100);
                               }
                             }}
                             disabled={isLoading}
@@ -1739,7 +1773,7 @@ export default function Home() {
                 </section>
               </div>
             ) : (
-              <div className="space-y-6 pb-80">
+              <div className="space-y-6 pb-80 sm:pb-64">
                 {/* 진단 대화 히스토리 */}
                 <div className="space-y-5">
                   {selectionHistory.map((item, idx) => (
@@ -1754,7 +1788,7 @@ export default function Home() {
                             <Logo size="sm" showText={false} />
                           </div>
                         )}
-                        <div className={`p-5 rounded-2xl ${item.type === "user" ? "bg-primary text-primary-foreground rounded-tr-md" : "bg-card border-2 border-border text-foreground rounded-tl-md"}`}>
+                        <div className={`py-2 px-5 rounded-2xl ${item.type === "user" ? "bg-primary text-primary-foreground rounded-tr-md" : "bg-card border-2 border-border text-foreground rounded-tl-md"}`}>
                           <div className="markdown-content text-base leading-relaxed">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                               {formatAsMarkdown(item.content)}
@@ -1784,32 +1818,89 @@ export default function Home() {
         {/* 진단 단계 하단 고정: 선택하기 + 입력창 */}
         {sessionId && phase === "selecting" && (
           <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background from-80% to-transparent z-40">
-            <div className="max-w-3xl mx-auto px-4 pb-6 sm:pb-8 space-y-3">
-              {/* 선택하기 옵션 */}
-              {!isLoading && options.length > 0 && (
-                <div className="space-y-2 animate-fade-in">
-                  <div className="grid grid-cols-2 gap-2">
-                    {options.map((option, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleSelectOption(option)}
-                        className="w-full p-2.5 sm:p-3 rounded-xl bg-card border-2 border-border text-left hover:border-primary/50 transition-all duration-300 group"
-                      >
-                        <span className="text-sm text-foreground line-clamp-2">{option}</span>
-                      </button>
-                    ))}
+            <div className="max-w-3xl mx-auto px-4 py-4 sm:py-5 space-y-3">
+              {/* 선택하기 옵션 - 캐러셀 */}
+              {!isLoading && options.length > 0 && (() => {
+                const itemsPerPage = 4;
+                const totalPages = Math.ceil(options.length / itemsPerPage);
+                const currentOptions = options.slice(optionsPage * itemsPerPage, (optionsPage + 1) * itemsPerPage);
+
+                return (
+                  <div className="space-y-2 animate-fade-in">
+                    {/* 캐러셀 컨테이너 */}
+                    <div className="relative">
+                      {/* 좌측 화살표 */}
+                      {totalPages > 1 && optionsPage > 0 && (
+                        <button
+                          onClick={() => setOptionsPage(p => p - 1)}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-8 h-8 rounded-full bg-card border-2 border-border flex items-center justify-center hover:border-primary/50 transition-all shadow-lg"
+                        >
+                          <svg className="w-4 h-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                      )}
+
+                      {/* 선택지 그리드 (2x2) */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {currentOptions.map((option, idx) => (
+                          <button
+                            key={optionsPage * itemsPerPage + idx}
+                            onClick={() => {
+                              handleSelectOption(option);
+                              setOptionsPage(0); // 선택 후 첫 페이지로 리셋
+                            }}
+                            className="w-full p-2.5 sm:p-3 rounded-xl bg-card border-2 border-border text-left hover:border-primary/50 transition-all duration-300 group"
+                          >
+                            <span className="text-sm text-foreground line-clamp-2">{option}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* 우측 화살표 */}
+                      {totalPages > 1 && optionsPage < totalPages - 1 && (
+                        <button
+                          onClick={() => setOptionsPage(p => p + 1)}
+                          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-8 h-8 rounded-full bg-card border-2 border-border flex items-center justify-center hover:border-primary/50 transition-all shadow-lg"
+                        >
+                          <svg className="w-4 h-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 인디케이터 점 */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center gap-1.5 pt-1">
+                        {Array.from({ length: totalPages }).map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setOptionsPage(idx)}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${
+                              idx === optionsPage ? "bg-primary w-4" : "bg-border"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 다른 답변 보기 버튼 */}
+                    <button
+                      onClick={() => {
+                        handleRequestNewOptions();
+                        setOptionsPage(0); // 새 옵션 로드 시 첫 페이지로
+                      }}
+                      className="w-full p-2 rounded-xl border-2 border-dashed border-border text-muted-foreground text-xs hover:border-primary/50 hover:text-foreground transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {isLoadingNewOptions ? "추천 답변을 찾는 중..." : "다른 답변 보기"}
+                    </button>
                   </div>
-                  <button
-                    onClick={handleRequestNewOptions}
-                    className="w-full p-2 rounded-xl border-2 border-dashed border-border text-muted-foreground text-xs hover:border-primary/50 hover:text-foreground transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    {isLoadingNewOptions ? "추천 답변을 찾는 중..." : "다른 답변 보기"}
-                  </button>
-                </div>
-              )}
+                );
+              })()}
               {/* 직접 입력 */}
               <div className="flex gap-3 p-2 rounded-2xl bg-card border-2 border-border">
                 <input
@@ -1955,8 +2046,6 @@ export default function Home() {
           </div>
         </header>
 
-        {statusBadge}
-
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="max-w-md w-full space-y-6">
             {crisisMessage && (
@@ -2027,8 +2116,6 @@ export default function Home() {
             )}
           </div>
         </header>
-
-        {statusBadge}
 
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <div className="max-w-md w-full space-y-6">

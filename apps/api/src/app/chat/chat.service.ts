@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
@@ -604,26 +604,50 @@ export class ChatService {
       ? [`[이전 대화 요약] ${rollingSummary}`, ...session.context.slice(-5)]
       : session.context;
 
-    const options = await this.openaiAgent.generateOptions(
-      contextForAI,
-      'collecting',
-      session.category as Category,
-      session.counselorType as CounselorType,
-    );
+    try {
+      const options = await this.openaiAgent.generateOptions(
+        contextForAI,
+        'collecting',
+        session.category as Category,
+        session.counselorType as CounselorType,
+      );
 
-    return {
-      sessionId: session._id.toString(),
-      question: options.question,
-      options: options.options,
-      canProceedToResponse: options.canProceedToResponse,
-      canRequestFeedback: options.canRequestFeedback,
-      previousContext: session.context.slice(-10), // 최근 10개
-      rollingSummary,
-      summary: session.summary || '', // 세션 전체 요약
-      category: session.category,
-      counselorType: session.counselorType,
-      turnCount: (session as any).turnCount || 0,
-    };
+      return {
+        sessionId: session._id.toString(),
+        question: options.question,
+        options: options.options,
+        canProceedToResponse: options.canProceedToResponse,
+        canRequestFeedback: options.canRequestFeedback,
+        previousContext: session.context.slice(-10), // 최근 10개
+        rollingSummary,
+        summary: session.summary || '', // 세션 전체 요약
+        category: session.category,
+        counselorType: session.counselorType,
+        turnCount: (session as any).turnCount || 0,
+      };
+    } catch (error) {
+      // OpenAI API 에러 처리
+      if (error.status === 429) {
+        throw new HttpException(
+          '일시적으로 서비스 이용량이 많습니다. 잠시 후 다시 시도해주세요.',
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+
+      // 타임아웃 에러
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        throw new HttpException(
+          '응답 시간이 초과되었습니다. 다시 시도해주세요.',
+          HttpStatus.REQUEST_TIMEOUT,
+        );
+      }
+
+      // 기타 OpenAI 에러
+      throw new HttpException(
+        '상담을 이어가는 중 오류가 발생했습니다. 다시 시도해주세요.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   /**
