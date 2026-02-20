@@ -1,8 +1,10 @@
 "use client";
 
+import { flushSync } from "react-dom";
 import { ContactSidebar } from "@/components/contact-sidebar";
 import { Logo } from "@/components/logo";
 import { TopicButton } from "@/components/topic-button";
+import { CategoryButtonVariant } from "@/components/category-button-variants";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
@@ -12,6 +14,7 @@ import {
   summarizeText,
   startSessionWithImportSummary,
   selectOption,
+  selectOptionStream,
   setResponseModeStream,
   sendMessageStream,
   endSession,
@@ -30,7 +33,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChatMessage, ChatPhase, ResponseMode, ResponseModeOption, TopLevelMode } from "@/types/chat";
-import { topLevelModes, mbtiSubTypes, categories } from "@/lib/ui-data";
+import { topLevelModes, mbtiSubTypes, reactionSubTypes, listeningSubTypes, categories } from "@/lib/ui-data";
 
 /**
  * 텍스트를 마크다운 형식으로 변환
@@ -199,6 +202,8 @@ interface SessionLimitError extends Error {
 
 // 로그인 전 세션 상태 저장 키
 const SESSION_STATE_KEY = "to-high-pending-session";
+// 현재 세션 자동 저장 키 (새로고침 대응)
+const CURRENT_SESSION_KEY = "to-high-current-session";
 
 export default function Home() {
   const { user, token, isLoading: authLoading, login, loginWithKakao, logout } = useAuth();
@@ -275,6 +280,9 @@ export default function Home() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
   const [highlightCategory, setHighlightCategory] = useState(false);
+
+  // 애니메이션 베이스 인덱스 (새로운 대화 시작 시점의 히스토리 길이)
+  const animationBaseIndexRef = useRef<number>(0);
 
   // 선택지 캐러셀
   const [optionsPage, setOptionsPage] = useState(0);
@@ -364,6 +372,74 @@ export default function Home() {
         });
     }
   }, [authLoading, user, token]);
+
+  // 페이지 로드 시 세션 복원 (새로고침 대응)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const savedSession = localStorage.getItem(CURRENT_SESSION_KEY);
+    if (savedSession) {
+      try {
+        const parsed = JSON.parse(savedSession);
+        if (parsed.sessionId && parsed.timestamp && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+          // 24시간 이내 세션만 복원
+          setSessionId(parsed.sessionId);
+          setPhase(parsed.phase || "selecting");
+          setQuestion(parsed.question || "");
+          setOptions(parsed.options || []);
+          setResponseModes(parsed.responseModes || []);
+          setSelectionHistory(parsed.selectionHistory || []);
+          setMessages(parsed.messages || []);
+          setSelectedCounselorType(parsed.selectedCounselorType || null);
+          setCanRequestFeedback(parsed.canRequestFeedback || false);
+          setContextCount(parsed.contextCount || 0);
+          setShowModeSelection(parsed.showModeSelection || false);
+          setHasHistory(parsed.hasHistory || false);
+          setPreviousSessionSummary(parsed.previousSessionSummary || null);
+        }
+      } catch (e) {
+        console.error("Failed to restore session:", e);
+      }
+    }
+  }, []);
+
+  // 세션 상태 자동 저장 (새로고침 대응)
+  useEffect(() => {
+    if (typeof window === "undefined" || !sessionId) return;
+
+    const stateToSave = {
+      sessionId,
+      phase,
+      question,
+      options,
+      responseModes,
+      selectionHistory,
+      messages,
+      selectedCounselorType,
+      canRequestFeedback,
+      contextCount,
+      showModeSelection,
+      hasHistory,
+      previousSessionSummary,
+      timestamp: Date.now(),
+    };
+
+    localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(stateToSave));
+  }, [
+    sessionId,
+    phase,
+    question,
+    options,
+    responseModes,
+    selectionHistory,
+    messages,
+    selectedCounselorType,
+    canRequestFeedback,
+    contextCount,
+    showModeSelection,
+    hasHistory,
+    previousSessionSummary,
+  ]);
 
   // 방문자 추적 (비로그인 사용자도 추적)
   useEffect(() => {
@@ -585,72 +661,122 @@ export default function Home() {
         return;
       }
 
+      // 현재 히스토리 길이를 애니메이션 베이스 인덱스로 설정 (이후 추가되는 항목들은 애니메이션 없음)
+      animationBaseIndexRef.current = selectionHistory.length;
+
+      // 사용자 선택을 즉시 렌더링 (flushSync 사용)
+      flushSync(() => {
+        setSelectionHistory(prev => [...prev, { type: "user", content: selected, timestamp: new Date() }]);
+      });
+
       setIsLoading(true);
       setSupplementInput("");
+      setStreamingContent("");
 
-      setSelectionHistory(prev => [...prev, { type: "user", content: selected, timestamp: new Date() }]);
+      const newHistoryItems: HistoryItem[] = [];
+      let empathyContent = "";
+      let feedbackContent = "";
+      let canProceed = false;
+      let responseModes: any = null;
 
       try {
-        const res: SelectOptionResponse = await selectOption(sessionId, selected, token || undefined);
+        await selectOptionStream(sessionId, selected, token || undefined, (chunk) => {
+          if (chunk.type === 'metadata') {
+            if (chunk.isCrisis && chunk.crisisMessage) {
+              setCrisisMessage(chunk.crisisMessage);
+            }
+            if (chunk.canProceedToResponse) {
+              canProceed = true;
+              responseModes = chunk.responseModes;
+            }
+          } else if (chunk.type === 'empathy') {
+            empathyContent = chunk.content;
+            // 실시간으로 스트리밍 표시
+            setStreamingContent(empathyContent);
+          } else if (chunk.type === 'feedback') {
+            feedbackContent = chunk.content;
+            // empathy 뒤에 이어서 실시간으로 표시
+            setStreamingContent(empathyContent + "\n\n" + feedbackContent);
+          } else if (chunk.type === 'contextSummary') {
+            // contextSummary는 즉시 히스토리에 추가
+            flushSync(() => {
+              setStreamingContent("");
+              setSelectionHistory(prev => [...prev, { type: "assistant", content: chunk.content, timestamp: new Date() }]);
+            });
+          } else if (chunk.type === 'next') {
+            // question이 있으면 스트리밍에 추가 표시
+            if (chunk.question && chunk.options && !chunk.canProceedToResponse) {
+              const combinedParts = [];
+              if (empathyContent) combinedParts.push(empathyContent);
+              if (feedbackContent) combinedParts.push(feedbackContent);
+              if (chunk.question) combinedParts.push(chunk.question);
+              const combinedContent = combinedParts.join("\n\n");
+              setStreamingContent(combinedContent);
 
-        if (res.isCrisis && res.crisisMessage) {
-          setCrisisMessage(res.crisisMessage);
-        }
+              // 잠시 후 히스토리에 추가
+              setTimeout(() => {
+                flushSync(() => {
+                  setStreamingContent("");
+                  setSelectionHistory(prev => [...prev, {
+                    type: "assistant",
+                    content: combinedContent,
+                    isQuestion: true,
+                    timestamp: new Date(),
+                  }]);
+                });
+              }, 100);
+            } else if (chunk.canProceedToResponse) {
+              // canProceedToResponse가 true일 때는 streamingContent를 비움 (채팅 응답에 합쳐질 것)
+              setStreamingContent("");
+            }
 
-        const newHistoryItems: HistoryItem[] = [];
+            if (chunk.canProceedToResponse) {
+              canProceed = true;
+              responseModes = chunk.responseModes;
+              setCanRequestFeedback(chunk.canRequestFeedback || false);
+            } else if (chunk.question && chunk.options) {
+              setQuestion(chunk.question);
+              setOptions(chunk.options);
+              setCanRequestFeedback(chunk.canRequestFeedback || false);
+              setContextCount(chunk.contextCount || 0);
+            }
+          }
+        });
 
-        if (res.empathyComment) {
-          newHistoryItems.push({ type: "assistant", content: res.empathyComment, timestamp: new Date() });
-        }
-
-        // 상담가 피드백 추가 (경청모드 제외, AI 의견)
-        if (res.counselorFeedback) {
-          newHistoryItems.push({ type: "assistant", content: res.counselorFeedback, timestamp: new Date() });
-        }
-
-        if (res.contextSummary) {
-          newHistoryItems.push({ type: "assistant", content: res.contextSummary, timestamp: new Date() });
-        }
-
-        if (res.canProceedToResponse && res.responseModes) {
+        if (canProceed && responseModes) {
           // 상담가 유형이 선택된 경우 모드 선택 스킵하고 바로 채팅 (selecting 페이즈 유지)
           if (selectedCounselorType) {
-            setStreamingContent("");
+            // empathy와 feedback을 채팅 응답 앞에 붙이기
+            const prefixContent = [empathyContent, feedbackContent].filter(Boolean).join("\n\n");
+            console.log('[DEBUG] Starting chat response with prefix:', { prefixContent, empathyContent, feedbackContent });
             let content = "";
             try {
               await setResponseModeStream(sessionId, "comfort", token || undefined, (chunk) => {
                 content += chunk;
-                setStreamingContent(content);
+                // 스트리밍 시 prefix를 앞에 표시
+                setStreamingContent(prefixContent ? prefixContent + "\n\n" + content : content);
               });
-              // 채팅 응답을 selectionHistory에 추가
-              setSelectionHistory(prev => [...prev, { type: "assistant", content, timestamp: new Date() }]);
-            } finally {
+              // 채팅 응답을 selectionHistory에 추가 (prefix 포함)
+              const fullContent = prefixContent ? prefixContent + "\n\n" + content : content;
+              console.log('[DEBUG] Adding chat response to history, fullContent length:', fullContent.length);
+              flushSync(() => {
+                setStreamingContent("");
+                setSelectionHistory(prev => [...prev, { type: "assistant", content: fullContent, timestamp: new Date() }]);
+              });
+            } catch (streamErr) {
+              console.error("Stream error:", streamErr);
               setStreamingContent("");
             }
             // 옵션 초기화 (직접 입력만 가능하도록)
             setOptions([]);
           } else {
             setPhase("mode");
-            setResponseModes(res.responseModes);
+            setResponseModes(responseModes);
           }
-        } else if (res.question && res.options) {
-          newHistoryItems.push({
-            type: "assistant",
-            content: res.question,
-            isQuestion: true,
-            timestamp: new Date(),
-          });
-          setQuestion(res.question);
-          setOptions(res.options);
-          setCanRequestFeedback(res.canRequestFeedback || false);
-          setContextCount(res.contextCount || 0);
-        }
-
-        if (newHistoryItems.length > 0) {
-          setSelectionHistory(prev => [...prev, ...newHistoryItems]);
         }
       } catch (err) {
         console.error(err);
+        setStreamingContent("");
         handleLimitError(err, selected);
       } finally {
         setIsLoading(false);
@@ -1450,7 +1576,7 @@ export default function Home() {
               </div>
             </aside>
           )}
-          <div>
+          <div className={sessionId ? "lg:pl-64" : ""}>
           <div className="max-w-3xl mx-auto px-6 py-8 sm:py-12">
             {!sessionId ? (
               <div className="space-y-10 sm:space-y-14">
@@ -1624,19 +1750,37 @@ export default function Home() {
                         : "border-border"
                     }`}
                   >
-                    {/* 모드 선택 - MBTI 클릭 시 T/F로 인라인 교체 */}
-                    <div className={`grid gap-4 transition-all duration-300 ${selectedTopMode === "mbti" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
+                    {/* 모드 선택 섹션 */}
+                    <div className={`space-y-3 pb-4 border-b border-border/50 transition-opacity duration-300 ${
+                      selectedTopMode !== null ? "opacity-50" : "opacity-100"
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-foreground">어떻게 들어드릴까요?</h4>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">선택하지 않아도 괜찮아요</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">편한 방식으로 들어드릴게요</p>
+
+                      <div className={`grid gap-4 transition-all duration-300 ${
+                        (selectedTopMode === "mbti" || selectedTopMode === "reaction" || selectedTopMode === "listening")
+                          ? "grid-cols-2"
+                          : "grid-cols-3"
+                      }`}>
                       {topLevelModes.flatMap((mode) => {
-                        // MBTI 선택 시 → T/F 버튼 2개로 교체
-                        if (mode.id === "mbti" && selectedTopMode === "mbti") {
+                        // 서브타입 선택 상태면 해당 서브타입만 표시
+                        if (selectedTopMode === "mbti") {
+                          if (mode.id !== "mbti") return [];
                           return mbtiSubTypes.map((subType) => (
                             <button
                               key={subType.id}
-                              className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all duration-300 ${
-                                selectedCounselorType === subType.id
-                                  ? "bg-secondary border-primary shadow-lg shadow-primary/20"
-                                  : "bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-black/20"
-                              } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                              className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${
+                                isLoading ? "opacity-50 pointer-events-none" : ""
+                              }`}
+                              style={{
+                                border: `2px solid ${selectedCounselorType === subType.id ? subType.color : subType.color}`,
+                                boxShadow: selectedCounselorType === subType.id
+                                  ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
+                                  : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
+                              }}
                               onClick={() => {
                                 if (selectedCounselorType === subType.id) {
                                   setSelectedTopMode(null);
@@ -1654,78 +1798,198 @@ export default function Home() {
                               disabled={isLoading}
                             >
                               <div
-                                className={`mb-3 transition-all duration-300 group-hover:scale-110 ${selectedCounselorType === subType.id ? "scale-110" : ""}`}
-                                style={{ color: subType.color }}
-                              >
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${subType.color}20` }}>
+                                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${
+                                  selectedCounselorType === subType.id ? "animate-pulse" : ""
+                                }`}
+                                style={{
+                                  boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
+                                }}
+                              />
+                              <div className="relative z-10 flex flex-col items-center">
+                                <div className="mb-2" style={{ color: subType.color }}>
                                   {subType.icon}
                                 </div>
+                                <div className="text-xs font-semibold text-foreground">{subType.label}</div>
                               </div>
-                              <div className="text-sm font-semibold text-foreground">{subType.label}</div>
                             </button>
                           ));
                         }
-                        // 일반 모드 버튼 (MBTI 미선택 시 MBTI 포함, 리액션, 경청)
+
+                        if (selectedTopMode === "reaction") {
+                          if (mode.id !== "reaction") return [];
+                          return reactionSubTypes.map((subType) => (
+                            <button
+                              key={subType.id}
+                              className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${
+                                isLoading ? "opacity-50 pointer-events-none" : ""
+                              }`}
+                              style={{
+                                border: `2px solid ${subType.color}`,
+                                boxShadow: selectedCounselorType === subType.id
+                                  ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
+                                  : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
+                              }}
+                              onClick={() => {
+                                if (selectedCounselorType === subType.id) {
+                                  setSelectedTopMode(null);
+                                  setSelectedCounselorType(null);
+                                } else {
+                                  setSelectedCounselorType(subType.id);
+                                  setTimeout(() => {
+                                    categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                    setHighlightCategory(true);
+                                    setTimeout(() => setHighlightCategory(false), 2000);
+                                  }, 100);
+                                }
+                              }}
+                              disabled={isLoading}
+                            >
+                              <div
+                                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${
+                                  selectedCounselorType === subType.id ? "animate-pulse" : ""
+                                }`}
+                                style={{
+                                  boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
+                                }}
+                              />
+                              <div className="relative z-10 flex flex-col items-center">
+                                <div className="mb-2" style={{ color: subType.color }}>
+                                  {subType.icon}
+                                </div>
+                                <div className="text-xs font-semibold text-foreground">{subType.label}</div>
+                              </div>
+                            </button>
+                          ));
+                        }
+
+                        if (selectedTopMode === "listening") {
+                          if (mode.id !== "listening") return [];
+                          return listeningSubTypes.map((subType) => (
+                            <button
+                              key={subType.id}
+                              className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${
+                                isLoading ? "opacity-50 pointer-events-none" : ""
+                              }`}
+                              style={{
+                                border: `2px solid ${subType.color}`,
+                                boxShadow: selectedCounselorType === subType.id
+                                  ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
+                                  : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
+                              }}
+                              onClick={() => {
+                                if (selectedCounselorType === subType.id) {
+                                  setSelectedTopMode(null);
+                                  setSelectedCounselorType(null);
+                                } else {
+                                  setSelectedCounselorType(subType.id);
+                                  setTimeout(() => {
+                                    categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                    setHighlightCategory(true);
+                                    setTimeout(() => setHighlightCategory(false), 2000);
+                                  }, 100);
+                                }
+                              }}
+                              disabled={isLoading}
+                            >
+                              <div
+                                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${
+                                  selectedCounselorType === subType.id ? "animate-pulse" : ""
+                                }`}
+                                style={{
+                                  boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
+                                }}
+                              />
+                              <div className="relative z-10 flex flex-col items-center">
+                                <div className="mb-2" style={{ color: subType.color }}>
+                                  {subType.icon}
+                                </div>
+                                <div className="text-xs font-semibold text-foreground">{subType.label}</div>
+                              </div>
+                            </button>
+                          ));
+                        }
+
+                        // 일반 모드 버튼 (서브타입 미선택 시만 표시)
+                        if (selectedTopMode !== null) return [];
+
                         return [(
                           <button
                             key={mode.id}
-                            className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl border-2 transition-all duration-300 ${selectedTopMode === mode.id
-                              ? "bg-secondary border-primary shadow-lg shadow-primary/20"
-                              : "bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-black/20"
-                              } ${isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                            className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${
+                              isLoading ? "opacity-50 pointer-events-none" : ""
+                            }`}
+                            style={{
+                              border: `2px solid ${mode.color}`,
+                              boxShadow: selectedTopMode === mode.id
+                                ? `0 0 20px ${mode.color}60, inset 0 0 20px ${mode.color}20`
+                                : `0 0 10px ${mode.color}40, inset 0 0 10px ${mode.color}10`,
+                            }}
                             onClick={() => {
                               if (selectedTopMode === mode.id) {
                                 setSelectedTopMode(null);
                                 setSelectedCounselorType(null);
                               } else {
                                 setSelectedTopMode(mode.id);
-                                if (mode.id === "reaction" || mode.id === "listening") {
-                                  setSelectedCounselorType(mode.id as CounselorType);
-                                } else {
-                                  setSelectedCounselorType(null);
-                                }
-                                // 카테고리로 부드럽게 스크롤 + 강조
-                                setTimeout(() => {
-                                  categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                                  setHighlightCategory(true);
-                                  setTimeout(() => setHighlightCategory(false), 2000);
-                                }, 100);
+                                setSelectedCounselorType(null); // 서브타입 선택을 위해 초기화
+                                // mbti/reaction/listening은 서브타입 선택으로 전환되므로 스크롤 안 함
                               }
                             }}
                             disabled={isLoading}
                           >
                             <div
-                              className={`mb-3 transition-all duration-300 group-hover:scale-110 ${selectedTopMode === mode.id ? "scale-110" : ""}`}
-                              style={{ color: mode.color }}
-                            >
+                              className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${
+                                selectedTopMode === mode.id ? "animate-pulse" : ""
+                              }`}
+                              style={{
+                                boxShadow: `0 0 20px ${mode.color}60, inset 0 0 20px ${mode.color}20`,
+                              }}
+                            />
+                            <div className="relative z-10 flex flex-col items-center">
                               <div
-                                className="relative w-12 h-12 rounded-xl overflow-hidden transition-all duration-300"
+                                className="w-10 h-10 rounded-lg overflow-hidden mb-2"
                                 style={{
                                   backgroundColor: '#0a0a0a',
-                                  boxShadow: `0 0 0 1px ${mode.color}40, 0 0 12px ${mode.color}20`,
                                 }}
                               >
                                 {mode.icon}
                               </div>
+                              <div className="text-xs font-semibold text-foreground">{mode.label}</div>
                             </div>
-                            <div className="text-sm font-semibold text-foreground">{mode.label}</div>
                           </button>
                         )];
                       })}
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {/* 주제 선택 섹션 */}
+                    <div className={`space-y-3 transition-all duration-300 ${
+                      selectedTopMode !== null
+                        ? "ring-2 ring-primary/30 rounded-2xl p-4 -mx-2 bg-primary/5"
+                        : ""
+                    }`}>
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">무슨 이야기를 나눠볼까요?</h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {selectedTopMode !== null
+                            ? "이제 주제를 선택해주세요 ✨"
+                            : "말하고 싶은 이야기가 있다면 선택해주세요"
+                          }
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {categories.map((category) => (
-                        <TopicButton
+                        <CategoryButtonVariant
                           key={category.id}
-                          icon={category.icon}
                           label={category.label}
                           description={category.description}
                           color={category.color}
                           onClick={() => handleCategorySelect(category.id)}
                           disabled={isLoading}
+                          variant="neon-cyber"
                         />
                       ))}
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -1763,8 +2027,8 @@ export default function Home() {
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <p className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">다른 곳에서의 대화 불러오기</p>
-                      <p className="text-sm text-muted-foreground mt-1">이전 상담의 맥락을 연결할 수 있습니다</p>
+                      <p className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">이전 대화를 이어가볼까요?</p>
+                      <p className="text-sm text-muted-foreground mt-1">나눴던 이야기를 이어갈 수 있어요</p>
                     </div>
                     <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1776,11 +2040,11 @@ export default function Home() {
               <div className="space-y-6 pb-80 sm:pb-64">
                 {/* 진단 대화 히스토리 */}
                 <div className="space-y-5">
-                  {selectionHistory.map((item, idx) => (
+                  {[...selectionHistory, ...(streamingContent ? [{ type: "assistant" as const, content: streamingContent, timestamp: new Date(), isStreaming: true }] : [])].map((item, idx) => (
                     <div
-                      key={idx}
+                      key={item.isStreaming ? 'streaming' : idx}
                       className={`flex ${item.type === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
-                      style={{ animationDelay: `${idx * 80}ms` }}
+                      style={{ animationDelay: (item.isStreaming || idx >= animationBaseIndexRef.current) ? '0ms' : `${idx * 80}ms` }}
                     >
                       <div className={`flex gap-4 max-w-[90%] ${item.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
                         {item.type !== "user" && (
@@ -1798,7 +2062,7 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
-                  {isLoading && !isLoadingNewOptions && (
+                  {isLoading && !isLoadingNewOptions && !streamingContent && (
                     <div className="flex justify-start animate-pulse">
                       <div className="flex gap-4">
                         <div className="w-10 h-10 rounded-xl bg-muted shrink-0" />
@@ -1817,7 +2081,7 @@ export default function Home() {
 
         {/* 진단 단계 하단 고정: 선택하기 + 입력창 */}
         {sessionId && phase === "selecting" && (
-          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background from-80% to-transparent z-40">
+          <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-gradient-to-t from-background from-80% to-transparent z-40">
             <div className="max-w-3xl mx-auto px-4 py-4 sm:py-5 space-y-3">
               {/* 선택하기 옵션 - 캐러셀 */}
               {!isLoading && options.length > 0 && (() => {
@@ -1828,21 +2092,23 @@ export default function Home() {
                 return (
                   <div className="space-y-2 animate-fade-in">
                     {/* 캐러셀 컨테이너 */}
-                    <div className="relative">
+                    <div className="flex items-center justify-center gap-2">
                       {/* 좌측 화살표 */}
-                      {totalPages > 1 && optionsPage > 0 && (
+                      {totalPages > 1 && optionsPage > 0 ? (
                         <button
                           onClick={() => setOptionsPage(p => p - 1)}
-                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-8 h-8 rounded-full bg-card border-2 border-border flex items-center justify-center hover:border-primary/50 transition-all shadow-lg"
+                          className="flex-shrink-0 w-8 h-8 rounded-full bg-card border-2 border-border flex items-center justify-center hover:border-primary/50 transition-all shadow-lg"
                         >
                           <svg className="w-4 h-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                           </svg>
                         </button>
+                      ) : (
+                        totalPages > 1 && <div className="w-8 h-8 flex-shrink-0" />
                       )}
 
                       {/* 선택지 그리드 (2x2) */}
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-3 flex-shrink-0 w-full max-w-2xl">
                         {currentOptions.map((option, idx) => (
                           <button
                             key={optionsPage * itemsPerPage + idx}
@@ -1850,23 +2116,35 @@ export default function Home() {
                               handleSelectOption(option);
                               setOptionsPage(0); // 선택 후 첫 페이지로 리셋
                             }}
-                            className="w-full p-2.5 sm:p-3 rounded-xl bg-card border-2 border-border text-left hover:border-primary/50 transition-all duration-300 group"
+                            className="group relative p-3 rounded-lg bg-background transition-all duration-300 hover:scale-105 text-center"
+                            style={{
+                              border: '2px solid #34d399',
+                              boxShadow: '0 0 10px #34d39940, inset 0 0 10px #34d39910',
+                            }}
                           >
-                            <span className="text-sm text-foreground line-clamp-2">{option}</span>
+                            <div
+                              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg animate-pulse pointer-events-none"
+                              style={{
+                                boxShadow: '0 0 20px #34d39960, inset 0 0 20px #34d39920',
+                              }}
+                            />
+                            <span className="relative z-10 text-sm text-foreground line-clamp-2">{option}</span>
                           </button>
                         ))}
                       </div>
 
                       {/* 우측 화살표 */}
-                      {totalPages > 1 && optionsPage < totalPages - 1 && (
+                      {totalPages > 1 && optionsPage < totalPages - 1 ? (
                         <button
                           onClick={() => setOptionsPage(p => p + 1)}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-8 h-8 rounded-full bg-card border-2 border-border flex items-center justify-center hover:border-primary/50 transition-all shadow-lg"
+                          className="flex-shrink-0 w-8 h-8 rounded-full bg-card border-2 border-border flex items-center justify-center hover:border-primary/50 transition-all shadow-lg"
                         >
                           <svg className="w-4 h-4 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
+                      ) : (
+                        totalPages > 1 && <div className="w-8 h-8 flex-shrink-0" />
                       )}
                     </div>
 
@@ -1963,21 +2241,19 @@ export default function Home() {
               </div>
 
               {importStep === "category" ? (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {categories.map((cat) => (
-                    <button
+                    <CategoryButtonVariant
                       key={cat.id}
+                      label={cat.label}
+                      description={cat.description}
+                      color={cat.color}
                       onClick={() => {
                         setImportCategory(cat.id);
                         setImportStep("text");
                       }}
-                      className="group p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/50 hover:bg-white/10 transition-all text-left"
-                    >
-                      <div className="relative w-10 h-10 mb-3 overflow-hidden rounded-xl ring-1 ring-white/10 transform group-hover:scale-110 transition-transform" style={{ backgroundColor: '#0a0a0a' }}>
-                        {cat.icon}
-                      </div>
-                      <p className="text-sm font-bold text-white/90">{cat.label}</p>
-                    </button>
+                      variant="neon-cyber"
+                    />
                   ))}
                 </div>
               ) : importStep === "text" ? (
