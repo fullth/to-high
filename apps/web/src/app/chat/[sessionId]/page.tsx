@@ -329,9 +329,8 @@ function ChatContent() {
                 onClick={() => handleSelectMode(rm.mode)}
               >
                 <CardHeader className="p-4">
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <span>{rm.emoji}</span>
-                    <span>{rm.label}</span>
+                  <CardTitle className="text-base font-medium">
+                    {rm.label}
                   </CardTitle>
                   <CardDescription className="text-sm">{rm.description}</CardDescription>
                 </CardHeader>

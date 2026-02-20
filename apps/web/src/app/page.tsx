@@ -1402,7 +1402,7 @@ export default function Home() {
                     {(user.name || user.email)?.[0]?.toUpperCase()}
                   </div>
                   <span className="text-sm font-medium text-foreground hidden sm:inline">
-                    {user.name || user.email.split('@')[0]}
+                    {user.name || user.email?.split('@')[0] || 'User'}
                   </span>
                   <div className="w-px h-5 bg-border hidden sm:block" />
                   <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground px-3 h-8 text-xs">
@@ -2040,9 +2040,9 @@ export default function Home() {
                 <div className="space-y-5">
                   {[...selectionHistory, ...(streamingContent ? [{ type: "assistant" as const, content: streamingContent, timestamp: new Date(), isStreaming: true }] : [])].map((item, idx) => (
                     <div
-                      key={item.isStreaming ? 'streaming' : idx}
+                      key={'isStreaming' in item && item.isStreaming ? 'streaming' : idx}
                       className={`flex ${item.type === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
-                      style={{ animationDelay: (item.isStreaming || idx >= animationBaseIndexRef.current) ? '0ms' : `${idx * 80}ms` }}
+                      style={{ animationDelay: (('isStreaming' in item && item.isStreaming) || idx >= animationBaseIndexRef.current) ? '0ms' : `${idx * 80}ms` }}
                     >
                       <div className={`flex gap-4 max-w-[90%] ${item.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
                         {item.type !== "user" && (
@@ -2306,7 +2306,7 @@ export default function Home() {
                     {(user.name || user.email)?.[0]?.toUpperCase()}
                   </div>
                   <span className="text-sm text-foreground/80 hidden sm:inline">
-                    {user.name || user.email.split('@')[0]}
+                    {user.name || user.email?.split('@')[0] || 'User'}
                   </span>
                 </div>
               )}
@@ -2383,7 +2383,7 @@ export default function Home() {
                   {(user.name || user.email)?.[0]?.toUpperCase()}
                 </div>
                 <span className="text-sm text-foreground/80 hidden sm:inline">
-                  {user.name || user.email.split('@')[0]}
+                  {user.name || user.email?.split('@')[0] || 'User'}
                 </span>
               </div>
             )}
