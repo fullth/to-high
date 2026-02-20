@@ -10,18 +10,23 @@ export class InquiryService {
     private readonly inquiryModel: Model<InquiryDocument>,
   ) {}
 
-  async create(userId: string, type: InquiryType, message: string, email?: string) {
-    const inquiry = await this.inquiryModel.create({
-      userId,
+  async create(userId: string | null, type: InquiryType, message: string, email?: string) {
+    const data: any = {
       type,
       email,
       messages: [{ role: 'user', content: message, createdAt: new Date() }],
-    });
-    return { inquiryId: inquiry._id, messages: inquiry.messages };
+    };
+    if (userId) {
+      data.userId = userId;
+    }
+    const inquiry = await this.inquiryModel.create(data);
+    return { inquiryId: inquiry._id.toString(), messages: inquiry.messages };
   }
 
-  async addMessage(inquiryId: string, userId: string, content: string) {
-    const inquiry = await this.inquiryModel.findOne({ _id: inquiryId, userId });
+  async addMessage(inquiryId: string, userId: string | null, content: string) {
+    // 비회원인 경우 inquiryId만으로 조회
+    const query = userId ? { _id: inquiryId, userId } : { _id: inquiryId };
+    const inquiry = await this.inquiryModel.findOne(query);
     if (!inquiry) throw new NotFoundException('문의를 찾을 수 없습니다.');
     if (inquiry.status === 'closed') throw new Error('종료된 문의입니다.');
 

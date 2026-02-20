@@ -211,6 +211,38 @@ export class ChatController {
     };
   }
 
+  @Post('select/stream')
+  @ApiOperation({
+    summary: '선택지 선택 (스트리밍)',
+    description: 'SSE 스트리밍 방식으로 선택지 응답을 받습니다.',
+  })
+  @UsePipes(new ZodValidationPipe(SelectOptionSchema))
+  async selectOptionStream(
+    @Body() dto: { sessionId: string; selectedOption: string },
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    try {
+      for await (const chunk of this.chatService.selectOptionStream(
+        dto.sessionId,
+        dto.selectedOption,
+      )) {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    } catch (error) {
+      res.write(
+        `data: ${JSON.stringify({ error: (error as Error).message })}\n\n`,
+      );
+    } finally {
+      res.end();
+    }
+  }
+
   @Post('mode')
   @ApiOperation({
     summary: '응답 모드 설정',

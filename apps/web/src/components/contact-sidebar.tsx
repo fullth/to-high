@@ -10,6 +10,8 @@ import {
   getInquiries,
   Inquiry,
 } from "@/lib/api";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const inquiryTypes: { id: InquiryType; label: string; description: string }[] = [
   {
@@ -47,6 +49,7 @@ export function ContactSidebar() {
   const [showList, setShowList] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [email, setEmail] = useState("");
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,10 +57,6 @@ export function ContactSidebar() {
   }, [messages]);
 
   const handleOpenModal = () => {
-    if (!user || !token) {
-      login();
-      return;
-    }
     setShowModal(true);
     setOpenChat(null);
     setShowList(false);
@@ -67,7 +66,7 @@ export function ContactSidebar() {
   const handleSelectType = (type: InquiryType) => {
     // 비로그인 사용자는 이메일 필수
     if (!user && !email.trim()) {
-      alert("답변 받으실 이메일을 입력해주세요.");
+      setAlertMessage("답변 받으실 이메일을 입력해주세요.");
       return;
     }
 
@@ -75,7 +74,7 @@ export function ContactSidebar() {
     if (!user && email.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
-        alert("올바른 이메일 형식을 입력해주세요.");
+        setAlertMessage("올바른 이메일 형식을 입력해주세요.");
         return;
       }
     }
@@ -110,7 +109,14 @@ export function ContactSidebar() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !token || sending) return;
+    if (!input.trim() || sending) return;
+
+    // 비회원인 경우 이메일 필수
+    if (!user && !email.trim()) {
+      setAlertMessage("답변 받으실 이메일을 입력해주세요.");
+      return;
+    }
+
     const content = input.trim();
     setInput("");
     setSending(true);
@@ -128,6 +134,7 @@ export function ContactSidebar() {
       }
     } catch {
       setMessages((prev) => prev.slice(0, -1));
+      setAlertMessage("문의 전송에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setSending(false);
     }
@@ -157,8 +164,36 @@ export function ContactSidebar() {
   // 유형 선택 화면인지 (모달은 열려있지만 채팅/목록은 아닌 상태)
   const showTypeSelector = showModal && !openChat && !showList;
 
+  // Alert 모달 컴포넌트
+  const AlertModal = () => {
+    if (!alertMessage) return null;
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
+        <Card className="max-w-md w-full border-primary/30 bg-card">
+          <CardHeader className="space-y-4">
+            <CardTitle className="text-lg text-center">
+              알림
+            </CardTitle>
+            <CardDescription className="text-center text-foreground/70">
+              {alertMessage}
+            </CardDescription>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                className="w-full"
+                onClick={() => setAlertMessage(null)}
+              >
+                확인
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  };
+
   return (
     <>
+      <AlertModal />
       {/* 사이드 버튼 - 하나만 */}
       <aside className="hidden lg:flex fixed right-6 top-1/2 -translate-y-1/2 z-40">
         <div className="flex flex-col gap-2 p-2 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 shadow-lg">
@@ -265,13 +300,15 @@ export function ContactSidebar() {
                     <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
                   </button>
                 ))}
-                {/* 이전 문의 보기 */}
-                <button
-                  onClick={handleShowList}
-                  className="w-full text-center p-3 text-xs text-muted-foreground hover:text-primary transition-colors"
-                >
-                  이전 문의 내역 보기
-                </button>
+                {/* 이전 문의 보기 - 로그인 사용자만 */}
+                {user && token && (
+                  <button
+                    onClick={handleShowList}
+                    className="w-full text-center p-3 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    이전 문의 내역 보기
+                  </button>
+                )}
               </div>
             )}
 

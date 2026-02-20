@@ -275,7 +275,7 @@ export class ChatService {
 
     // 경청모드가 아닌 경우 상담가 피드백 생성 (AI 의견)
     let counselorFeedback = '';
-    if (counselorType && counselorType !== 'listening') {
+    if (counselorType && !counselorType.startsWith('listening-')) {
       counselorFeedback = await this.openaiAgent.generateCounselorFeedback(
         selectedOption,
         session.context,
@@ -329,6 +329,138 @@ export class ChatService {
       contextCount: updatedSession!.context.length + 1,
       ...options,
     };
+  }
+
+  async *selectOptionStream(sessionId: string, selectedOption: string) {
+    // 입력 검증
+    this.validateInput(selectedOption);
+
+    const session = await this.sessionService.findById(sessionId);
+    if (!session) throw new NotFoundException('Session not found');
+
+    // 대화 수 검증
+    this.validateContextCount(session.context.length);
+
+    const crisisResult = detectCrisis(selectedOption);
+    if (crisisResult.isCrisis) {
+      await this.sessionService.addContext(
+        sessionId,
+        `[위기 감지: ${crisisResult.level}] ${selectedOption}`,
+      );
+
+      yield {
+        type: 'metadata',
+        sessionId,
+        isCrisis: true,
+        crisisLevel: crisisResult.level,
+        crisisMessage: crisisResult.recommendedAction,
+        canProceedToResponse: true,
+        canRequestFeedback: true,
+        responseModes: RESPONSE_MODE_OPTIONS,
+        contextCount: session.context.length + 1,
+      };
+      return;
+    }
+
+    // "말하기 어려워요" 유형 선택 시 컨텍스트 요약 제공
+    if (this.isDifficultToTalkOption(selectedOption)) {
+      const contextSummary =
+        await this.openaiAgent.summarizeContextForDifficultToTalk(
+          session.context,
+        );
+
+      await this.sessionService.addContext(
+        sessionId,
+        `[말하기 어려움 선택] ${selectedOption}`,
+      );
+
+      yield { type: 'contextSummary', content: contextSummary };
+
+      const updatedSession = await this.sessionService.findById(sessionId);
+
+      const options = await this.openaiAgent.generateOptions(
+        updatedSession!.context,
+        'collecting',
+        updatedSession!.category as Category,
+        (updatedSession as any).counselorType as CounselorType,
+      );
+
+      yield {
+        type: 'next',
+        sessionId,
+        contextCount: updatedSession!.context.length,
+        ...options,
+      };
+      return;
+    }
+
+    const counselorType = (session as any).counselorType as CounselorType;
+
+    // 공감 코멘트 생성
+    const empathyComment = await this.openaiAgent.generateEmpathyComment(
+      selectedOption,
+      session.context,
+    );
+
+    yield { type: 'empathy', content: empathyComment };
+
+    // 경청모드가 아닌 경우 상담가 피드백 생성 (AI 의견)
+    if (counselorType && !counselorType.startsWith('listening-')) {
+      const counselorFeedback = await this.openaiAgent.generateCounselorFeedback(
+        selectedOption,
+        session.context,
+        counselorType,
+      );
+
+      if (counselorFeedback) {
+        yield { type: 'feedback', content: counselorFeedback };
+      }
+    }
+
+    // 사용자 선택 저장 (나: 접두사 추가)
+    await this.sessionService.addContext(sessionId, `나: ${selectedOption}`);
+
+    const updatedSession = await this.sessionService.findById(sessionId);
+
+    // 롤링 요약이 있으면 context 앞에 추가
+    const rollingSummary = (updatedSession as any).rollingSummary || '';
+    const contextForAI = rollingSummary
+      ? [`[이전 대화 요약] ${rollingSummary}`, ...updatedSession!.context]
+      : updatedSession!.context;
+
+    const options = await this.openaiAgent.generateOptions(
+      contextForAI,
+      'collecting',
+      updatedSession!.category as Category,
+      (updatedSession as any).counselorType as CounselorType,
+    );
+
+    // AI 응답(질문) 저장
+    await this.sessionService.addContext(sessionId, `상담사: ${options.question}`);
+
+    // 롤링 요약: context가 20개 이상이면 오래된 것 요약
+    const finalSession = await this.sessionService.findById(sessionId);
+    if (finalSession && finalSession.context.length >= 20) {
+      await this.performRollingSummary(sessionId, finalSession);
+    }
+
+    if (options.canProceedToResponse) {
+      yield {
+        type: 'next',
+        sessionId,
+        canProceedToResponse: true,
+        canRequestFeedback: options.canRequestFeedback,
+        responseModes: RESPONSE_MODE_OPTIONS,
+        contextCount: updatedSession!.context.length + 1,
+      };
+    } else {
+      yield {
+        type: 'next',
+        sessionId,
+        contextCount: updatedSession!.context.length + 1,
+        ...options,
+      };
+    }
   }
 
   async setMode(sessionId: string, mode: ResponseMode) {

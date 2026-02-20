@@ -32,8 +32,8 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
   return response.json();
 }
 
-// 상담 모드: T(논리적), F(공감적), reaction(짧은 리액션), listening(경청)
-export type CounselorType = "T" | "F" | "reaction" | "listening";
+// 상담 모드: T(논리적), F(공감적), reaction-bright(밝은 리액션), reaction-calm(차분한 리액션), listening-quiet(조용한 경청), listening-active(적극적 경청)
+export type CounselorType = "T" | "F" | "reaction-bright" | "reaction-calm" | "listening-quiet" | "listening-active";
 
 // 세션 시작
 export interface StartSessionResponse {
@@ -96,6 +96,58 @@ export function startSessionWithImportSummary(
     body: JSON.stringify({ importSummary, category, counselorType }),
     token,
   });
+}
+
+// 선택지 선택 스트리밍
+export async function selectOptionStream(
+  sessionId: string,
+  selectedOption: string,
+  token: string | undefined,
+  onChunk: (chunk: any) => void,
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/chat/select/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify({ sessionId, selectedOption }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "요청에 실패했습니다" }));
+    throw new Error(error.message || `HTTP ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("스트리밍을 지원하지 않습니다");
+
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.split("\n");
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const data = line.slice(6);
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) {
+            throw new Error(parsed.error);
+          }
+          if (!parsed.done) {
+            onChunk(parsed);
+          }
+        } catch (e) {
+          // JSON 파싱 실패는 무시 (불완전한 청크)
+        }
+      }
+    }
+  }
 }
 
 // 선택지 선택
@@ -671,7 +723,7 @@ export interface Inquiry {
 }
 
 // 문의 생성
-export function createInquiry(type: InquiryType, message: string, token: string, email?: string) {
+export function createInquiry(type: InquiryType, message: string, token?: string, email?: string) {
   return fetchApi<{ inquiryId: string; messages: InquiryMessage[] }>("/inquiry", {
     method: "POST",
     body: JSON.stringify({ type, message, email }),
@@ -680,7 +732,7 @@ export function createInquiry(type: InquiryType, message: string, token: string,
 }
 
 // 문의에 메시지 추가
-export function addInquiryMessage(inquiryId: string, message: string, token: string) {
+export function addInquiryMessage(inquiryId: string, message: string, token?: string) {
   return fetchApi<{ messages: InquiryMessage[] }>(`/inquiry/${inquiryId}/message`, {
     method: "POST",
     body: JSON.stringify({ message }),
