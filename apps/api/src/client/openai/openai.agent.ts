@@ -78,7 +78,7 @@ export class OpenAIAgent {
     const lastInput = context[context.length - 1];
     if (lastInput && this.isMeaninglessInput(lastInput)) {
       // 모드별 기본 응답
-      if (counselorType === 'listening') {
+      if (counselorType?.startsWith('listening-')) {
         return {
           question: '네...',
           options: ['더 말할게요', '여기까지만요'],
@@ -86,7 +86,7 @@ export class OpenAIAgent {
           canRequestFeedback,
         };
       }
-      if (counselorType === 'reaction') {
+      if (counselorType?.startsWith('reaction-')) {
         return {
           question: '네네',
           options: ['그래서 말인데요', '다른 얘기할게요', '글쎄요...'],
@@ -305,8 +305,10 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
       const counselorFallbacks: Record<CounselorType, string> = {
         T: '상황을 정리해보면, 지금 겪고 계신 일이 복잡하게 느껴지실 수 있어요. 하나씩 객관적으로 살펴보면서 해결책을 찾아가면 어떨까요?',
         F: '말씀해주셔서 감사해요. 그런 상황에서 그렇게 느끼시는 건 정말 자연스러운 거예요. 혼자 감당하느라 많이 힘드셨을 거예요. 제가 함께할게요.',
-        reaction: '아 그러셨군요... 정말요? 아이고...',
-        listening: '네... 그러셨군요.',
+        'reaction-bright': '아 그러셨군요... 정말요? 아이고...',
+        'reaction-calm': '아 그러셨군요... 정말요? 아이고...',
+        'listening-quiet': '네... 그러셨군요.',
+        'listening-active': '네... 그러셨군요.',
       };
       return counselorFallbacks[counselorType];
     }
@@ -379,7 +381,7 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     counselorType: CounselorType,
   ): Promise<string> {
     // 경청모드는 피드백 제공하지 않음
-    if (counselorType === 'listening') {
+    if (counselorType?.startsWith('listening-')) {
       return '';
     }
 
@@ -389,14 +391,15 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     }
 
     // 기본 피드백 (API 키 없을 때)
-    const fallbackFeedbacks: Record<Exclude<CounselorType, 'listening'>, string> = {
+    const fallbackFeedbacks: Partial<Record<CounselorType, string>> = {
       T: '상황을 정리해보면, 지금 겪고 계신 상황이 조금 복잡해 보여요. 핵심을 하나씩 풀어가면 좋을 것 같아요.',
       F: '많이 힘드셨겠어요. 그런 마음이 드는 건 충분히 자연스러운 거예요. 혼자 감당하지 않으셔도 돼요.',
-      reaction: '아... 그런 일이 있으셨군요.',
+      'reaction-bright': '아... 그런 일이 있으셨군요.',
+      'reaction-calm': '아... 그런 일이 있으셨군요.',
     };
 
     if (!this.hasApiKey) {
-      return fallbackFeedbacks[counselorType];
+      return fallbackFeedbacks[counselorType] || '';
     }
 
     const counselorPrompt = COUNSELOR_TYPE_PROMPTS[counselorType];

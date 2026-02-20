@@ -8,22 +8,26 @@ export class InquiryController {
   constructor(private readonly inquiryService: InquiryService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
   async create(
     @Req() req: any,
     @Body() body: { type: InquiryType; message: string; email?: string },
   ) {
-    return this.inquiryService.create(req.user.userId, body.type, body.message, body.email);
+    // 비회원인 경우 이메일 필수
+    const userId = req.user?.userId || null;
+    if (!userId && !body.email) {
+      throw new Error('Email is required for guest users');
+    }
+    return this.inquiryService.create(userId, body.type, body.message, body.email);
   }
 
   @Post(':id/message')
-  @UseGuards(JwtAuthGuard)
   async addMessage(
     @Req() req: any,
     @Param('id') id: string,
     @Body() body: { message: string },
   ) {
-    return this.inquiryService.addMessage(id, req.user.userId, body.message);
+    const userId = req.user?.userId || null;
+    return this.inquiryService.addMessage(id, userId, body.message);
   }
 
   @Get()

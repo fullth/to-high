@@ -19,8 +19,8 @@ export const InquiryMessageSchema = SchemaFactory.createForClass(InquiryMessage)
 
 @Schema({ timestamps: true })
 export class InquiryDocument extends Document {
-  @Prop({ required: true, index: true })
-  userId: string;
+  @Prop({ required: false, index: true })
+  userId?: string;
 
   @Prop({ required: true, enum: ['contact', 'feature', 'ad'] })
   type: InquiryType;
