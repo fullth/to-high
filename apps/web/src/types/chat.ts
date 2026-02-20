@@ -8,7 +8,8 @@ export type ResponseMode =
   | "listen"
   | "similar";
 
-export type CounselorType = "T" | "F" | "deep";
+// CounselorType은 api.ts에서 import하세요
+export type { CounselorType } from "@/lib/api";
 
 export type Category = "self" | "future" | "work" | "relationship";
 
@@ -16,7 +17,6 @@ export interface ResponseModeOption {
   mode: ResponseMode;
   label: string;
   description: string;
-  emoji: string;
 }
 
 export interface ChatState {
@@ -42,4 +42,5 @@ export interface HistoryItem {
   content: string;
   isQuestion?: boolean;
   timestamp?: Date;
+  isStreaming?: boolean;
 }
