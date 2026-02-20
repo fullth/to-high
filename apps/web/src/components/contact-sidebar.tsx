@@ -126,11 +126,13 @@ export function ContactSidebar() {
 
     try {
       if (!inquiryId) {
-        const emailToSend = user ? user.email : email.trim();
-        const result = await createInquiry(openChat!, content, token, emailToSend);
+        const emailToSend: string | undefined = user && user.email !== null
+          ? user.email
+          : email.trim() || undefined;
+        const result = await createInquiry(openChat!, content, token || undefined, emailToSend);
         setInquiryId(result.inquiryId);
       } else {
-        await addInquiryMessage(inquiryId, content, token);
+        await addInquiryMessage(inquiryId, content, token || undefined);
       }
     } catch {
       setMessages((prev) => prev.slice(0, -1));

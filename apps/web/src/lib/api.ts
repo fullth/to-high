@@ -221,7 +221,7 @@ export function endSession(sessionId: string, token?: string) {
 // 사용자 정보 조회
 export interface User {
   userId: string;
-  email: string;
+  email: string | null;
   name?: string;
 }
 
