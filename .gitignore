@@ -38,3 +38,7 @@ coverage/
 # Temp
 tmp/
 temp/
+
+# Playwright
+apps/web/playwright-report/
+apps/web/test-results/
