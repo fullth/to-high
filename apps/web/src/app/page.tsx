@@ -1516,6 +1516,52 @@ export default function Home() {
                   </p>
                 </section>
 
+                {/* 차별화 배너 - 일반 AI와의 차이점 */}
+                <section className="animate-fade-in-up stagger-2">
+                  <div className="rounded-2xl border border-border bg-card/50 p-5 sm:p-6 space-y-4">
+                    {/* 메인 메시지 */}
+                    <div className="space-y-2">
+                      <h3 className="text-base font-bold text-foreground">오래 대화할수록, 나만의 상담사가 됩니다</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        일반 AI 채팅은 대화가 길어질수록 느려지고, 앞의 내용을 놓치기 시작합니다.<br className="hidden sm:inline" />
+                        위로는 당신의 이야기를 안전하게 저장하고, 대화가 쌓일수록 당신을 더 깊이 이해합니다.
+                      </p>
+                    </div>
+
+                    {/* 차별점 리스트 */}
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>대화가 아무리 길어져도 처음부터 끝까지 기억합니다</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>과거 상담 기록을 바탕으로 맞춤형 응답을 제공합니다</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>대화 내용은 암호화되어 제3자에게 절대 공유되지 않습니다</span>
+                      </li>
+                    </ul>
+
+                    <a
+                      href="/privacy"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      개인정보처리방침 보기
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  </div>
+                </section>
+
                 {/* 2. 로그인 유도 (비회원) */}
                 {!authLoading && !user && !sessionId && (
                   <section className="animate-fade-in-up stagger-3">
