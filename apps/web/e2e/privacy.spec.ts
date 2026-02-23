@@ -37,7 +37,7 @@ test.describe("개인정보처리방침 페이지", () => {
   test("이용자 권리가 명시되어 있다", async ({ page }) => {
     await expect(page.getByText("개인정보 열람 요청")).toBeVisible();
     await expect(page.getByText("개인정보 삭제 요청")).toBeVisible();
-    await expect(page.getByText("회원 탈퇴", { exact: true })).toBeVisible();
+    await expect(page.getByText("개인정보 처리 정지 요청")).toBeVisible();
   });
 
   test("돌아가기 버튼이 작동한다", async ({ page }) => {

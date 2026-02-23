@@ -25,7 +25,7 @@ export default function PrivacyPage() {
           {/* 제목 */}
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-foreground">개인정보처리방침</h1>
-            <p className="text-sm text-muted-foreground">시행일: 2024년 1월 1일</p>
+            <p className="text-sm text-muted-foreground">시행일: 2025년 2월 23일</p>
           </div>
 
           {/* 서문 */}
@@ -87,13 +87,13 @@ export default function PrivacyPage() {
             <div className="space-y-3 text-muted-foreground">
               <p>
                 이용자의 개인정보는 서비스 이용 기간 동안 보관되며,
-                회원 탈퇴 시 지체 없이 파기합니다.
+                삭제 요청 시 지체 없이 파기합니다.
               </p>
               <div className="bg-card border border-border rounded-xl p-4">
                 <h3 className="font-semibold text-foreground mb-2">보관 기간</h3>
                 <ul className="space-y-1 text-sm">
-                  <li>회원 정보: 회원 탈퇴 시까지</li>
-                  <li>상담 기록: 회원 탈퇴 시까지 (사용자가 직접 삭제 가능)</li>
+                  <li>회원 정보: 삭제 요청 시까지</li>
+                  <li>상담 기록: 삭제 요청 시까지 (사용자가 직접 삭제 가능)</li>
                   <li>결제 기록: 관련 법령에 따라 5년간 보관</li>
                 </ul>
               </div>
@@ -144,11 +144,10 @@ export default function PrivacyPage() {
                 <li>개인정보 정정 요청</li>
                 <li>개인정보 삭제 요청</li>
                 <li>개인정보 처리 정지 요청</li>
-                <li>회원 탈퇴</li>
               </ul>
               <p className="mt-3">
-                상담 기록은 서비스 내에서 직접 삭제할 수 있으며,
-                회원 탈퇴 시 모든 개인정보가 삭제됩니다.
+                상담 기록은 서비스 내에서 직접 삭제할 수 있습니다.
+                회원 정보 삭제를 원하시면 이메일로 요청해주세요.
               </p>
             </div>
           </section>
