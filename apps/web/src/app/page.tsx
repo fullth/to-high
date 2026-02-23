@@ -674,7 +674,6 @@ export default function Home() {
       setStreamingContent("");
 
       const newHistoryItems: HistoryItem[] = [];
-      let empathyContent = "";
       let feedbackContent = "";
       let canProceed = false;
       let responseModes: any = null;
@@ -689,52 +688,38 @@ export default function Home() {
               canProceed = true;
               responseModes = chunk.responseModes;
             }
-          } else if (chunk.type === 'empathy') {
-            empathyContent = chunk.content;
-            // 실시간으로 스트리밍 표시
-            setStreamingContent(empathyContent);
-          } else if (chunk.type === 'feedback') {
-            feedbackContent = chunk.content;
-            // empathy 뒤에 이어서 실시간으로 표시
-            setStreamingContent(empathyContent + "\n\n" + feedbackContent);
+          } else if (chunk.type === 'feedback_chunk') {
+            feedbackContent += chunk.content;
+            setStreamingContent(feedbackContent);
+          } else if (chunk.type === 'feedback_done') {
+            // feedback 완료, 다음 단계 대기
           } else if (chunk.type === 'contextSummary') {
-            // contextSummary는 즉시 히스토리에 추가
             flushSync(() => {
               setStreamingContent("");
               setSelectionHistory(prev => [...prev, { type: "assistant", content: chunk.content, timestamp: new Date() }]);
             });
           } else if (chunk.type === 'next') {
-            // question이 있으면 스트리밍에 추가 표시
-            if (chunk.question && chunk.options && !chunk.canProceedToResponse) {
-              const combinedParts = [];
-              if (empathyContent) combinedParts.push(empathyContent);
-              if (feedbackContent) combinedParts.push(feedbackContent);
-              if (chunk.question) combinedParts.push(chunk.question);
-              const combinedContent = combinedParts.join("\n\n");
-              setStreamingContent(combinedContent);
-
-              // 잠시 후 히스토리에 추가
-              setTimeout(() => {
-                flushSync(() => {
-                  setStreamingContent("");
-                  setSelectionHistory(prev => [...prev, {
-                    type: "assistant",
-                    content: combinedContent,
-                    isQuestion: true,
-                    timestamp: new Date(),
-                  }]);
-                });
-              }, 100);
-            } else if (chunk.canProceedToResponse) {
-              // canProceedToResponse가 true일 때는 streamingContent를 비움 (채팅 응답에 합쳐질 것)
-              setStreamingContent("");
-            }
-
             if (chunk.canProceedToResponse) {
               canProceed = true;
               responseModes = chunk.responseModes;
               setCanRequestFeedback(chunk.canRequestFeedback || false);
+              // 스트리밍은 비우지 않음 - setResponseModeStream에서 이어서 표시
             } else if (chunk.question && chunk.options) {
+              // 스트리밍에 question 추가해서 표시
+              const withQuestion = feedbackContent ? feedbackContent + "\n\n" + chunk.question : chunk.question;
+
+              // 스트리밍 비우고 전체 내용을 히스토리에 추가
+              setStreamingContent("");
+              setSelectionHistory(prev => [...prev, {
+                type: "assistant",
+                content: withQuestion,
+                isQuestion: true,
+                timestamp: new Date(),
+              }]);
+
+              // 초기화
+              feedbackContent = "";
+
               setQuestion(chunk.question);
               setOptions(chunk.options);
               setCanRequestFeedback(chunk.canRequestFeedback || false);
@@ -744,33 +729,23 @@ export default function Home() {
         });
 
         if (canProceed && responseModes) {
-          // 상담가 유형이 선택된 경우 모드 선택 스킵하고 바로 채팅 (selecting 페이즈 유지)
-          if (selectedCounselorType) {
-            // empathy와 feedback을 채팅 응답 앞에 붙이기
-            const prefixContent = [empathyContent, feedbackContent].filter(Boolean).join("\n\n");
-            let content = "";
-            try {
-              await setResponseModeStream(sessionId, "comfort", token || undefined, (chunk) => {
-                content += chunk;
-                // 스트리밍 시 prefix를 앞에 표시
-                setStreamingContent(prefixContent ? prefixContent + "\n\n" + content : content);
-              });
-              // 채팅 응답을 selectionHistory에 추가 (prefix 포함)
-              const fullContent = prefixContent ? prefixContent + "\n\n" + content : content;
-              flushSync(() => {
-                setStreamingContent("");
-                setSelectionHistory(prev => [...prev, { type: "assistant", content: fullContent, timestamp: new Date() }]);
-              });
-            } catch (streamErr) {
-              console.error("Stream error:", streamErr);
+          // 모드 선택 화면 없이 바로 기본 모드(comfort)로 진행
+          let content = "";
+          try {
+            await setResponseModeStream(sessionId, "comfort", token || undefined, (chunk) => {
+              content += chunk;
+              setStreamingContent(feedbackContent ? feedbackContent + "\n\n" + content : content);
+            });
+            const fullContent = feedbackContent ? feedbackContent + "\n\n" + content : content;
+            flushSync(() => {
               setStreamingContent("");
-            }
-            // 옵션 초기화 (직접 입력만 가능하도록)
-            setOptions([]);
-          } else {
-            setPhase("mode");
-            setResponseModes(responseModes);
+              setSelectionHistory(prev => [...prev, { type: "assistant", content: fullContent, timestamp: new Date() }]);
+            });
+          } catch (streamErr) {
+            console.error("Stream error:", streamErr);
+            setStreamingContent("");
           }
+          setOptions([]);
         }
       } catch (err) {
         console.error(err);
@@ -852,74 +827,6 @@ export default function Home() {
       ]);
     }
   }, [sessionId, token, selectedCounselorType, selectionHistory]);
-
-  // 모드 선택 핸들러 (채팅창 내에서) - 같은 채팅창에서 응답 표시 후 채팅 모드로 전환
-  const _handleSelectModeInChat = useCallback(async (mode: ResponseMode) => {
-    if (!sessionId) return;
-
-    const modeLabel = responseModes.find(m => m.mode === mode)?.label || mode;
-    setSelectionHistory(prev => [...prev, {
-      type: "user",
-      content: modeLabel,
-      isQuestion: false,
-      timestamp: new Date(),
-    }]);
-    setShowModeSelection(false);
-    setIsLoading(true);
-    setStreamingContent("");
-
-    let content = "";
-    try {
-      await setResponseModeStream(sessionId, mode, token || undefined, (chunk) => {
-        content += chunk;
-        setStreamingContent(content);
-      });
-      // 기존 대화 내역을 채팅 메시지로 변환하고 AI 응답 추가 (system 메시지 제외)
-      const previousMessages: ChatMessage[] = selectionHistory
-        .filter(item => item.type !== "system")
-        .map(item => ({
-          role: item.type === "user" ? "user" : "assistant",
-          content: item.content,
-        }));
-      // AI 응답을 selectionHistory에 추가 (selecting 페이즈 유지)
-      setSelectionHistory(prev => [...prev, { type: "assistant", content, timestamp: new Date() }]);
-      setOptions([]); // 옵션 초기화 - 직접 입력만 가능
-    } finally {
-      setStreamingContent("");
-      setIsLoading(false);
-    }
-  }, [sessionId, token, responseModes]);
-
-  const _handleSupplementSubmit = useCallback(async () => {
-    if (!supplementInput.trim()) return;
-    await handleSelectOption(supplementInput.trim());
-  }, [supplementInput, handleSelectOption]);
-
-  // 모드 선택
-  const handleSelectMode = useCallback(
-    async (mode: string) => {
-      if (!sessionId) return;
-      setIsLoading(true);
-      setStreamingContent("");
-
-      let content = "";
-      try {
-        await setResponseModeStream(sessionId, mode, token || undefined, (chunk) => {
-          content += chunk;
-          setStreamingContent(content);
-        });
-        // AI 응답을 selectionHistory에 추가 (selecting 페이즈 유지)
-        setSelectionHistory(prev => [...prev, { type: "assistant", content, timestamp: new Date() }]);
-        setOptions([]); // 옵션 초기화 - 직접 입력만 가능
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-        setStreamingContent("");
-      }
-    },
-    [sessionId, token]
-  );
 
   // 메시지 전송
   const handleSendMessage = useCallback(async () => {
@@ -2038,11 +1945,11 @@ export default function Home() {
               <div className="space-y-6 pb-80 sm:pb-64">
                 {/* 진단 대화 히스토리 */}
                 <div className="space-y-5">
-                  {[...selectionHistory, ...(streamingContent ? [{ type: "assistant" as const, content: streamingContent, timestamp: new Date(), isStreaming: true }] : [])].map((item, idx) => (
+                  {selectionHistory.map((item, idx) => (
                     <div
-                      key={'isStreaming' in item && item.isStreaming ? 'streaming' : idx}
+                      key={idx}
                       className={`flex ${item.type === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
-                      style={{ animationDelay: (('isStreaming' in item && item.isStreaming) || idx >= animationBaseIndexRef.current) ? '0ms' : `${idx * 80}ms` }}
+                      style={{ animationDelay: idx >= animationBaseIndexRef.current ? '0ms' : `${idx * 80}ms` }}
                     >
                       <div className={`flex gap-4 max-w-[90%] ${item.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
                         {item.type !== "user" && (
@@ -2060,6 +1967,23 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
+                  {streamingContent && (
+                    <div className="flex justify-start">
+                      <div className="flex gap-4 max-w-[90%]">
+                        <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                          <Logo size="sm" showText={false} />
+                        </div>
+                        <div className="py-2 px-5 rounded-2xl bg-card border-2 border-border text-foreground rounded-tl-md">
+                          <div className="markdown-content text-base leading-relaxed">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {formatAsMarkdown(streamingContent)}
+                            </ReactMarkdown>
+                            <span className="inline-block w-1.5 h-4 bg-primary rounded-sm ml-0.5 animate-[blink_1s_infinite]" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {isLoading && !isLoadingNewOptions && !streamingContent && (
                     <div className="flex justify-start animate-pulse">
                       <div className="flex gap-4">
@@ -2291,84 +2215,6 @@ export default function Home() {
     );
   }
 
-
-  // 모드 선택
-  if (phase === "mode") {
-    return (
-      <main className="min-h-screen flex flex-col bg-background bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.1)_0%,transparent_50%)]">
-        <header className="p-4 border-b border-border/30">
-          <div className="flex justify-between items-center">
-            <Logo size="md" onClick={handleNewSession} />
-            <div className="flex items-center gap-3">
-              {user && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50">
-                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
-                    {(user.name || user.email)?.[0]?.toUpperCase()}
-                  </div>
-                  <span className="text-sm text-foreground/80 hidden sm:inline">
-                    {user.name || user.email?.split('@')[0] || 'User'}
-                  </span>
-                </div>
-              )}
-              <button
-                onClick={handleNewSession}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
-              >
-                처음으로
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <div className="max-w-md w-full space-y-6">
-            {crisisMessage && (
-              <Card className="border-destructive/30 bg-destructive/5">
-                <CardHeader className="p-4">
-                  <CardTitle className="text-lg text-destructive flex items-center gap-2">
-                    <span>도움이 필요하신가요?</span>
-                  </CardTitle>
-                  <CardDescription className="text-destructive/80 whitespace-pre-wrap">
-                    {crisisMessage}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            )}
-
-            <div className="text-center space-y-2">
-              <h2 className="text-xl font-medium text-foreground/90">어떻게 이야기할까요?</h2>
-              <p className="text-muted-foreground text-sm">
-                이야기를 잘 들었습니다. 어떤 방식으로 진행할까요?
-              </p>
-            </div>
-
-            <div className="grid gap-3">
-              {responseModes.map((rm) => (
-                <Card
-                  key={rm.mode}
-                  className="cursor-pointer transition-all duration-200 hover:border-primary/40 hover:shadow-sm hover:bg-card/80"
-                  onClick={() => handleSelectMode(rm.mode)}
-                >
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-base font-medium">
-                      {rm.label}
-                    </CardTitle>
-                    <CardDescription className="text-sm">{rm.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-
-            {isLoading && (
-              <div className="flex justify-center">
-                <WritingIndicator />
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-    );
-  }
 
   // 종료
   if (phase === "ended") {

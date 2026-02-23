@@ -222,9 +222,10 @@ export class ChatController {
     @Res() res: Response,
   ) {
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
 
     try {
       for await (const chunk of this.chatService.selectOptionStream(
@@ -232,6 +233,9 @@ export class ChatController {
         dto.selectedOption,
       )) {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
       }
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     } catch (error) {
@@ -374,9 +378,10 @@ export class ChatController {
     @Res() res: Response,
   ) {
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
 
     try {
       for await (const chunk of this.chatService.setModeStream(
@@ -384,6 +389,9 @@ export class ChatController {
         dto.mode,
       )) {
         res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
       }
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     } catch (error) {
@@ -416,9 +424,10 @@ export class ChatController {
     @Res() res: Response,
   ) {
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
 
     try {
       for await (const chunk of this.chatService.generateResponseStream(
@@ -426,6 +435,9 @@ export class ChatController {
         dto.message,
       )) {
         res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
       }
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     } catch (error) {

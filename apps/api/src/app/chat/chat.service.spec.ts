@@ -618,4 +618,114 @@ describe('ChatService', () => {
       expect(sessionService.complete).toHaveBeenCalledWith('session-end');
     });
   });
+
+  describe('selectOptionStream', () => {
+    /**
+     * 스트리밍 테스트: empathy_chunk와 feedback_chunk가 올바르게 전송되는지 확인
+     */
+    it('should stream empathy and feedback chunks', async () => {
+      // Arrange
+      const mockSession = {
+        _id: 'session-stream',
+        context: ['이전 대화 1', '이전 대화 2'],
+        counselorType: 'F',
+        category: 'relationship',
+      };
+
+      sessionService.findById.mockResolvedValue(mockSession as any);
+      sessionService.addContext.mockResolvedValue(undefined);
+
+      // Mock 스트리밍 제너레이터
+      const mockEmpathyStream = (async function* () {
+        yield '마음이 ';
+        yield '많이 ';
+        yield '아프시겠어요.';
+      })();
+
+      const mockFeedbackStream = (async function* () {
+        yield '이별의 ';
+        yield '아픔은 ';
+        yield '자연스러운 감정이에요.';
+      })();
+
+      (openaiAgent as any).generateEmpathyCommentStream = jest.fn().mockReturnValue(mockEmpathyStream);
+      (openaiAgent as any).generateCounselorFeedbackStream = jest.fn().mockReturnValue(mockFeedbackStream);
+      openaiAgent.generateOptions.mockResolvedValue({
+        question: '어떤 점이 가장 힘드셨나요?',
+        options: ['외로움', '배신감', '후회'],
+        canProceedToResponse: false,
+        canRequestFeedback: true,
+      });
+
+      // Act: 스트림에서 청크 수집
+      const chunks: any[] = [];
+      for await (const chunk of service.selectOptionStream('session-stream', '이별이 힘들어요')) {
+        chunks.push(chunk);
+      }
+
+      // Assert: 청크 타입 및 순서 확인
+      const chunkTypes = chunks.map(c => c.type);
+
+      // empathy_chunk가 먼저 오고, empathy_done, 그 다음 feedback_chunk, feedback_done, 마지막 next
+      expect(chunkTypes).toContain('empathy_chunk');
+      expect(chunkTypes).toContain('empathy_done');
+      expect(chunkTypes).toContain('feedback_chunk');
+      expect(chunkTypes).toContain('feedback_done');
+      expect(chunkTypes[chunkTypes.length - 1]).toBe('next');
+
+      // empathy 청크 내용 확인
+      const empathyChunks = chunks.filter(c => c.type === 'empathy_chunk');
+      expect(empathyChunks.length).toBe(3);
+      expect(empathyChunks.map(c => c.content).join('')).toBe('마음이 많이 아프시겠어요.');
+
+      // feedback 청크 내용 확인
+      const feedbackChunks = chunks.filter(c => c.type === 'feedback_chunk');
+      expect(feedbackChunks.length).toBe(3);
+      expect(feedbackChunks.map(c => c.content).join('')).toBe('이별의 아픔은 자연스러운 감정이에요.');
+
+      // next 청크에 question과 options 포함
+      const nextChunk = chunks.find(c => c.type === 'next');
+      expect(nextChunk.question).toBe('어떤 점이 가장 힘드셨나요?');
+      expect(nextChunk.options).toEqual(['외로움', '배신감', '후회']);
+    });
+
+    /**
+     * canProceedToResponse가 true일 때 테스트
+     */
+    it('should handle canProceedToResponse correctly', async () => {
+      // Arrange
+      const mockSession = {
+        _id: 'session-proceed',
+        context: ['대화1', '대화2', '대화3', '대화4', '대화5'],
+        counselorType: 'T',
+        category: 'work',
+      };
+
+      sessionService.findById.mockResolvedValue(mockSession as any);
+      sessionService.addContext.mockResolvedValue(undefined);
+
+      const mockEmpathyStream = (async function* () {
+        yield '힘드셨겠어요.';
+      })();
+
+      (openaiAgent as any).generateEmpathyCommentStream = jest.fn().mockReturnValue(mockEmpathyStream);
+      (openaiAgent as any).generateCounselorFeedbackStream = jest.fn().mockReturnValue((async function* () {})());
+      openaiAgent.generateOptions.mockResolvedValue({
+        question: '',
+        options: [],
+        canProceedToResponse: true,
+        canRequestFeedback: true,
+      });
+
+      // Act
+      const chunks: any[] = [];
+      for await (const chunk of service.selectOptionStream('session-proceed', '많이 지쳤어요')) {
+        chunks.push(chunk);
+      }
+
+      // Assert
+      const nextChunk = chunks.find(c => c.type === 'next');
+      expect(nextChunk.canProceedToResponse).toBe(true);
+    });
+  });
 });
