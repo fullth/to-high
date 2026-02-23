@@ -434,6 +434,116 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
   }
 
   /**
+   * 공감 코멘트 스트리밍 생성
+   */
+  async *generateEmpathyCommentStream(
+    selectedOption: string,
+    context: string[],
+  ): AsyncGenerator<string> {
+    const fallbackComments = [
+      '그렇군요.',
+      '네, 이해해요.',
+      '말씀해주셔서 고마워요.',
+      '그런 마음이 드셨군요.',
+      '충분히 그럴 수 있어요.',
+    ];
+
+    if (this.isMeaninglessInput(selectedOption)) {
+      yield '네, 알겠어요.';
+      return;
+    }
+
+    if (!this.hasApiKey) {
+      yield fallbackComments[Math.floor(Math.random() * fallbackComments.length)];
+      return;
+    }
+
+    const stream = await this.openai.chat.completions.create({
+      model: PROMPT_CONFIG.MODEL,
+      messages: [
+        { role: 'system', content: EMPATHY_COMMENT_PROMPT },
+        { role: 'user', content: `사용자 선택: "${selectedOption}"` },
+      ],
+      temperature: PROMPT_CONFIG.TEMPERATURE_EMPATHY,
+      max_tokens: 50,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content;
+      if (content) {
+        yield content;
+      }
+    }
+  }
+
+  /**
+   * 상담가 피드백 스트리밍 생성
+   */
+  async *generateCounselorFeedbackStream(
+    selectedOption: string,
+    context: string[],
+    counselorType: CounselorType,
+  ): AsyncGenerator<string> {
+    if (counselorType?.startsWith('listening-')) {
+      return;
+    }
+
+    if (context.length < 2) {
+      return;
+    }
+
+    const fallbackFeedbacks: Partial<Record<CounselorType, string>> = {
+      T: '상황을 정리해보면, 지금 겪고 계신 상황이 조금 복잡해 보여요.',
+      F: '많이 힘드셨겠어요. 그런 마음이 드는 건 충분히 자연스러운 거예요.',
+      'reaction-bright': '아... 그런 일이 있으셨군요.',
+      'reaction-calm': '아... 그런 일이 있으셨군요.',
+    };
+
+    if (!this.hasApiKey) {
+      const fallback = fallbackFeedbacks[counselorType];
+      if (fallback) yield fallback;
+      return;
+    }
+
+    const counselorPrompt = COUNSELOR_TYPE_PROMPTS[counselorType];
+
+    const stream = await this.openai.chat.completions.create({
+      model: PROMPT_CONFIG.MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: `${counselorPrompt}
+
+사용자가 이야기한 내용에 대해 상담가로서 간단한 의견이나 생각을 제시해주세요.
+- 2~3문장으로 짧게
+- 질문하지 않기
+- 상담가 유형에 맞는 스타일로`,
+        },
+        {
+          role: 'user',
+          content: `현재까지 대화:
+${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+
+마지막 사용자 선택: "${selectedOption}"
+
+상담가로서 짧게 의견을 제시해주세요.`,
+        },
+      ],
+      temperature: PROMPT_CONFIG.TEMPERATURE_RESPONSE,
+      max_tokens: 150,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content;
+      if (content) {
+        yield content;
+      }
+    }
+  }
+
+  /**
    * "말하기 어려워요" 선택 시 현재까지 수집된 컨텍스트를 따뜻하게 요약
    */
   async summarizeContextForDifficultToTalk(context: string[]): Promise<string> {

@@ -396,25 +396,16 @@ export class ChatService {
 
     const counselorType = (session as any).counselorType as CounselorType;
 
-    // 공감 코멘트 생성
-    const empathyComment = await this.openaiAgent.generateEmpathyComment(
-      selectedOption,
-      session.context,
-    );
-
-    yield { type: 'empathy', content: empathyComment };
-
-    // 경청모드가 아닌 경우 상담가 피드백 생성 (AI 의견)
+    // 경청모드가 아닌 경우 상담가 피드백 스트리밍 생성 (AI 의견)
     if (counselorType && !counselorType.startsWith('listening-')) {
-      const counselorFeedback = await this.openaiAgent.generateCounselorFeedback(
+      for await (const chunk of this.openaiAgent.generateCounselorFeedbackStream(
         selectedOption,
         session.context,
         counselorType,
-      );
-
-      if (counselorFeedback) {
-        yield { type: 'feedback', content: counselorFeedback };
+      )) {
+        yield { type: 'feedback_chunk', content: chunk };
       }
+      yield { type: 'feedback_done' };
     }
 
     // 사용자 선택 저장 (나: 접두사 추가)
