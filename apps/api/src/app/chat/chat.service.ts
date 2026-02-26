@@ -323,26 +323,16 @@ export class ChatService {
       await this.performRollingSummary(sessionId, finalSession);
     }
 
-    if (optionsResult?.canProceedToResponse) {
-      yield {
-        type: 'next',
-        sessionId,
-        canProceedToResponse: true,
-        canRequestFeedback: optionsResult.canRequestFeedback,
-        responseModes: RESPONSE_MODE_OPTIONS,
-        contextCount: updatedSession!.context.length + 1,
-      };
-    } else {
-      yield {
-        type: 'next',
-        sessionId,
-        question: fullQuestion,
-        options: optionsResult.options,
-        canProceedToResponse: optionsResult.canProceedToResponse,
-        canRequestFeedback: optionsResult.canRequestFeedback,
-        contextCount: updatedSession!.context.length + 1,
-      };
-    }
+    // 항상 question과 options를 보냄 (canProceedToResponse와 관계없이)
+    yield {
+      type: 'next',
+      sessionId,
+      question: fullQuestion,
+      options: optionsResult.options,
+      canProceedToResponse: optionsResult.canProceedToResponse,
+      canRequestFeedback: optionsResult.canRequestFeedback,
+      contextCount: updatedSession!.context.length + 1,
+    };
   }
 
 

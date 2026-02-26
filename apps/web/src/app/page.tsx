@@ -716,28 +716,16 @@ export default function Home() {
               setSelectionHistory(prev => [...prev, { type: "assistant", content: chunk.content, timestamp: new Date() }]);
             });
           } else if (chunk.type === 'next') {
-            if (chunk.canProceedToResponse) {
-              // 응답 모드 선택 단계로 진입
+            console.log('[DEBUG] next chunk received:', {
+              hasQuestion: !!chunk.question,
+              hasOptions: !!chunk.options,
+              optionsLength: chunk.options?.length,
+              questionContentLength: questionContent.length
+            });
 
-              // 스트리밍된 질문을 히스토리에 추가하고 응답 모드 UI 표시
-              flushSync(() => {
-                if (questionContent) {
-                  setSelectionHistory(prev => [...prev, {
-                    type: "assistant",
-                    content: questionContent,
-                    isQuestion: true,
-                    timestamp: new Date(),
-                  }]);
-                }
-                setStreamingContent("");
-                setShowModeSelection(true);
-                setResponseModes(chunk.responseModes || []);
-              });
-
-              canProceed = true;
-              responseModes = chunk.responseModes;
-              setCanRequestFeedback(chunk.canRequestFeedback || false);
-            } else if (chunk.question && chunk.options) {
+            // canProceedToResponse와 관계없이 항상 일반 선택지 표시
+            if (chunk.question && chunk.options) {
+              console.log('[DEBUG] Setting question and options from chunk');
               // 스트리밍 완료, 질문을 히스토리에 추가
               flushSync(() => {
                 setStreamingContent("");
@@ -753,6 +741,27 @@ export default function Home() {
               setOptions(chunk.options);
               setCanRequestFeedback(chunk.canRequestFeedback || false);
               setContextCount(chunk.contextCount || 0);
+              console.log('[DEBUG] Options set:', chunk.options);
+            } else if (questionContent && chunk.options) {
+              console.log('[DEBUG] Using questionContent with options');
+              // questionContent가 있으면 그것을 사용
+              flushSync(() => {
+                setStreamingContent("");
+                setSelectionHistory(prev => [...prev, {
+                  type: "assistant",
+                  content: questionContent,
+                  isQuestion: true,
+                  timestamp: new Date(),
+                }]);
+              });
+
+              setQuestion(questionContent);
+              setOptions(chunk.options);
+              setCanRequestFeedback(chunk.canRequestFeedback || false);
+              setContextCount(chunk.contextCount || 0);
+              console.log('[DEBUG] Options set from questionContent:', chunk.options);
+            } else {
+              console.log('[DEBUG] No question or options in chunk');
             }
           }
         });
