@@ -277,8 +277,10 @@ export class ChatService {
         type: 'next',
         sessionId,
         question: fullQuestion,
+        options: optionsResult.options,
+        canProceedToResponse: optionsResult.canProceedToResponse,
+        canRequestFeedback: optionsResult.canRequestFeedback,
         contextCount: updatedSession!.context.length,
-        ...optionsResult,
       };
       return;
     }
@@ -335,8 +337,10 @@ export class ChatService {
         type: 'next',
         sessionId,
         question: fullQuestion,
+        options: optionsResult.options,
+        canProceedToResponse: optionsResult.canProceedToResponse,
+        canRequestFeedback: optionsResult.canRequestFeedback,
         contextCount: updatedSession!.context.length + 1,
-        ...optionsResult,
       };
     }
   }
