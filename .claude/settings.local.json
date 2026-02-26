@@ -91,7 +91,10 @@
       "Bash(npm run test:e2e:headed:*)",
       "Bash(wc:*)",
       "Bash(tree:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(chmod:*)",
+      "Bash(./test-streaming.sh)",
+      "Bash(git restore:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
