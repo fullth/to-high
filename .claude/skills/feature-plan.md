@@ -162,7 +162,7 @@ export default function FeaturePage() {
 }
 ```
 
-## ⚠️ 주의사항
+## 주의사항
 
 1. **무제한 사용자 (isGrandfathered)**: 항상 체크
 2. **토큰 소모**: OpenAI 호출 시 비용 고려

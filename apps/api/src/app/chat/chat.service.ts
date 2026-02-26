@@ -207,129 +207,6 @@ export class ChatService {
     return patterns.some((pattern) => option.includes(pattern));
   }
 
-  async selectOption(sessionId: string, selectedOption: string) {
-    // 입력 검증
-    this.validateInput(selectedOption);
-
-    const session = await this.sessionService.findById(sessionId);
-    if (!session) throw new NotFoundException('Session not found');
-
-    // 대화 수 검증
-    this.validateContextCount(session.context.length);
-
-    const crisisResult = detectCrisis(selectedOption);
-    if (crisisResult.isCrisis) {
-      await this.sessionService.addContext(
-        sessionId,
-        `[위기 감지: ${crisisResult.level}] ${selectedOption}`,
-      );
-
-      return {
-        sessionId,
-        isCrisis: true,
-        crisisLevel: crisisResult.level,
-        crisisMessage: crisisResult.recommendedAction,
-        canProceedToResponse: true,
-        canRequestFeedback: true,
-        responseModes: RESPONSE_MODE_OPTIONS,
-        contextCount: session.context.length + 1,
-      };
-    }
-
-    // "말하기 어려워요" 유형 선택 시 컨텍스트 요약 제공
-    if (this.isDifficultToTalkOption(selectedOption)) {
-      const contextSummary =
-        await this.openaiAgent.summarizeContextForDifficultToTalk(
-          session.context,
-        );
-
-      await this.sessionService.addContext(
-        sessionId,
-        `[말하기 어려움 선택] ${selectedOption}`,
-      );
-
-      const updatedSession = await this.sessionService.findById(sessionId);
-
-      const options = await this.openaiAgent.generateOptions(
-        updatedSession!.context,
-        'collecting',
-        updatedSession!.category as Category,
-        (updatedSession as any).counselorType as CounselorType,
-      );
-
-      return {
-        sessionId,
-        contextSummary,
-        contextCount: updatedSession!.context.length,
-        ...options,
-      };
-    }
-
-    const counselorType = (session as any).counselorType as CounselorType;
-
-    // 공감 코멘트 생성
-    const empathyComment = await this.openaiAgent.generateEmpathyComment(
-      selectedOption,
-      session.context,
-    );
-
-    // 경청모드가 아닌 경우 상담가 피드백 생성 (AI 의견)
-    let counselorFeedback = '';
-    if (counselorType && !counselorType.startsWith('listening-')) {
-      counselorFeedback = await this.openaiAgent.generateCounselorFeedback(
-        selectedOption,
-        session.context,
-        counselorType,
-      );
-    }
-
-    // 사용자 선택 저장 (나: 접두사 추가)
-    await this.sessionService.addContext(sessionId, `나: ${selectedOption}`);
-
-    const updatedSession = await this.sessionService.findById(sessionId);
-
-    // 롤링 요약이 있으면 context 앞에 추가
-    const rollingSummary = (updatedSession as any).rollingSummary || '';
-    const contextForAI = rollingSummary
-      ? [`[이전 대화 요약] ${rollingSummary}`, ...updatedSession!.context]
-      : updatedSession!.context;
-
-    const options = await this.openaiAgent.generateOptions(
-      contextForAI,
-      'collecting',
-      updatedSession!.category as Category,
-      (updatedSession as any).counselorType as CounselorType,
-    );
-
-    // AI 응답(질문) 저장
-    await this.sessionService.addContext(sessionId, `상담사: ${options.question}`);
-
-    // 롤링 요약: context가 20개 이상이면 오래된 것 요약
-    const finalSession = await this.sessionService.findById(sessionId);
-    if (finalSession && finalSession.context.length >= 20) {
-      await this.performRollingSummary(sessionId, finalSession);
-    }
-
-    if (options.canProceedToResponse) {
-      return {
-        sessionId,
-        empathyComment,
-        counselorFeedback,
-        canProceedToResponse: true,
-        canRequestFeedback: options.canRequestFeedback,
-        responseModes: RESPONSE_MODE_OPTIONS,
-        contextCount: updatedSession!.context.length + 1,
-      };
-    }
-
-    return {
-      sessionId,
-      empathyComment,
-      counselorFeedback,
-      contextCount: updatedSession!.context.length + 1,
-      ...options,
-    };
-  }
 
   async *selectOptionStream(sessionId: string, selectedOption: string) {
     // 입력 검증
@@ -396,8 +273,11 @@ export class ChatService {
 
     const counselorType = (session as any).counselorType as CounselorType;
 
+    // 시스템 명령어는 피드백 생성 스킵 (불필요한 AI 호출 방지)
+    const isSystemCommand = selectedOption === '다른 옵션 보기' || selectedOption === '다른 옵션' || selectedOption === '새 옵션';
+
     // 경청모드가 아닌 경우 상담가 피드백 스트리밍 생성 (AI 의견)
-    if (counselorType && !counselorType.startsWith('listening-')) {
+    if (!isSystemCommand && counselorType && !counselorType.startsWith('listening-')) {
       for await (const chunk of this.openaiAgent.generateCounselorFeedbackStream(
         selectedOption,
         session.context,
@@ -454,70 +334,6 @@ export class ChatService {
     }
   }
 
-  async setMode(sessionId: string, mode: ResponseMode) {
-    await this.sessionService.setResponseMode(sessionId, mode);
-
-    // 세션 이름 자동 생성 (alias가 없을 경우)
-    await this.tryGenerateSessionName(sessionId);
-
-    return this.generateResponse(sessionId);
-  }
-
-  async generateResponse(sessionId: string, userMessage?: string) {
-    // 입력 검증
-    if (userMessage) {
-      this.validateInput(userMessage);
-    }
-
-    const session = await this.sessionService.findById(sessionId);
-    if (!session) throw new NotFoundException('Session not found');
-
-    // 채팅 모드에서 메시지 수 제한
-    const chatMessageCount = session.context.filter((c: string) => c.startsWith('나:')).length;
-    if (chatMessageCount >= MAX_CHAT_MESSAGES) {
-      throw new BadRequestException('대화 한도에 도달했습니다. 상담을 마무리해주세요.');
-    }
-
-    if (userMessage) {
-      const crisisResult = detectCrisis(userMessage);
-      if (crisisResult.isCrisis) {
-        await this.sessionService.addContext(
-          sessionId,
-          `[위기 감지: ${crisisResult.level}] 나: ${userMessage}`,
-        );
-
-        const crisisResponse =
-          crisisResult.level === 'high'
-            ? `지금 정말 힘드시군요. 당신의 마음이 느껴집니다.\n\n${crisisResult.recommendedAction}`
-            : `많이 힘든 상황이시네요. ${crisisResult.recommendedAction}`;
-
-        await this.sessionService.addContext(
-          sessionId,
-          `상담사: ${crisisResponse}`,
-        );
-
-        return {
-          response: crisisResponse,
-          isCrisis: true,
-          crisisLevel: crisisResult.level,
-        };
-      }
-    }
-
-    const response = await this.openaiAgent.generateResponse(
-      session.context,
-      session.responseMode as ResponseMode,
-      userMessage,
-      (session as any).counselorType as CounselorType,
-    );
-
-    if (userMessage) {
-      await this.sessionService.addContext(sessionId, `나: ${userMessage}`);
-    }
-    await this.sessionService.addContext(sessionId, `상담사: ${response}`);
-
-    return { response };
-  }
 
   async endSession(sessionId: string) {
     const session = await this.sessionService.complete(sessionId);
@@ -735,10 +551,16 @@ export class ChatService {
         session.counselorType as CounselorType,
       );
 
+      console.log('[resumeSession] generateOptions result:', {
+        question: options.question,
+        optionsLength: options.options?.length,
+        options: options.options,
+      });
+
       return {
         sessionId: session._id.toString(),
         question: options.question,
-        options: options.options,
+        options: options.options || [],
         canProceedToResponse: options.canProceedToResponse,
         canRequestFeedback: options.canRequestFeedback,
         previousContext: session.context.slice(-10), // 최근 10개

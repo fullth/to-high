@@ -13,7 +13,6 @@ import {
   startSessionWithText,
   summarizeText,
   startSessionWithImportSummary,
-  selectOption,
   selectOptionStream,
   setResponseModeStream,
   sendMessageStream,
@@ -71,6 +70,7 @@ function formatAsMarkdown(text: string): string {
 }
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getTimeBasedGreeting, getSeasonalMessage, suggestNotebookAliases, getNotebookMessages } from "@/lib/emotional-messages";
 
 // 마음 돌봄 콘텐츠
 const mindfulnessContents = [
@@ -275,6 +275,18 @@ export default function Home() {
 
   // 공개 통계
   const [publicStats, setPublicStats] = useState<PublicStats | null>(null);
+
+  // 감성적 메시지
+  const [timeBasedGreeting, setTimeBasedGreeting] = useState({ title: "안녕하세요", subtitle: "오늘 마음은 어떠세요" });
+  const [seasonalMessage, setSeasonalMessage] = useState<string | null>(null);
+  const [suggestedAliases, setSuggestedAliases] = useState<string[]>([]);
+  const [loadingMessage, setLoadingMessage] = useState<string>("");
+
+  // 클라이언트에서만 감성 메시지 설정 (SSR hydration 에러 방지)
+  useEffect(() => {
+    setTimeBasedGreeting(getTimeBasedGreeting());
+    setSeasonalMessage(getSeasonalMessage());
+  }, []);
 
   // 스크롤 ref
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -501,6 +513,9 @@ export default function Home() {
   // 카테고리 선택으로 세션 시작
   const handleCategorySelect = async (categoryId: string) => {
     setIsLoading(true);
+    // 공책 여는 메시지
+    const notebookMessages = getNotebookMessages();
+    setLoadingMessage(notebookMessages.opening[Math.floor(Math.random() * notebookMessages.opening.length)]);
     try {
       const res = await startSession(categoryId, token || undefined, selectedCounselorType || undefined);
       setSessionId(res.sessionId);
@@ -550,6 +565,9 @@ export default function Home() {
   const handleDirectInputSubmit = async () => {
     if (!directInput.trim()) return;
     setIsLoading(true);
+    // 공책 여는 메시지
+    const notebookMessages = getNotebookMessages();
+    setLoadingMessage(notebookMessages.opening[Math.floor(Math.random() * notebookMessages.opening.length)]);
     try {
       const res = await startSessionWithText(directInput.trim(), undefined, token || undefined, selectedCounselorType || undefined);
       setSessionId(res.sessionId);
@@ -703,19 +721,28 @@ export default function Home() {
               canProceed = true;
               responseModes = chunk.responseModes;
               setCanRequestFeedback(chunk.canRequestFeedback || false);
-              // 스트리밍은 비우지 않음 - setResponseModeStream에서 이어서 표시
+              // feedbackContent가 있으면 히스토리에 추가
+              if (feedbackContent) {
+                flushSync(() => {
+                  setStreamingContent("");
+                  setSelectionHistory(prev => [...prev, { type: "assistant", content: feedbackContent, timestamp: new Date() }]);
+                });
+                feedbackContent = "";
+              }
             } else if (chunk.question && chunk.options) {
               // 스트리밍에 question 추가해서 표시
               const withQuestion = feedbackContent ? feedbackContent + "\n\n" + chunk.question : chunk.question;
 
-              // 스트리밍 비우고 전체 내용을 히스토리에 추가
-              setStreamingContent("");
-              setSelectionHistory(prev => [...prev, {
-                type: "assistant",
-                content: withQuestion,
-                isQuestion: true,
-                timestamp: new Date(),
-              }]);
+              // 스트리밍 비우고 전체 내용을 히스토리에 추가 (flushSync로 한 번에)
+              flushSync(() => {
+                setStreamingContent("");
+                setSelectionHistory(prev => [...prev, {
+                  type: "assistant",
+                  content: withQuestion,
+                  isQuestion: true,
+                  timestamp: new Date(),
+                }]);
+              });
 
               // 초기화
               feedbackContent = "";
@@ -728,23 +755,8 @@ export default function Home() {
           }
         });
 
-        if (canProceed && responseModes) {
-          // 모드 선택 화면 없이 바로 기본 모드(comfort)로 진행
-          let content = "";
-          try {
-            await setResponseModeStream(sessionId, "comfort", token || undefined, (chunk) => {
-              content += chunk;
-              setStreamingContent(feedbackContent ? feedbackContent + "\n\n" + content : content);
-            });
-            const fullContent = feedbackContent ? feedbackContent + "\n\n" + content : content;
-            flushSync(() => {
-              setStreamingContent("");
-              setSelectionHistory(prev => [...prev, { type: "assistant", content: fullContent, timestamp: new Date() }]);
-            });
-          } catch (streamErr) {
-            console.error("Stream error:", streamErr);
-            setStreamingContent("");
-          }
+        // canProceed가 true이면 선택지 초기화 (사용자가 직접 메시지 입력 가능)
+        if (canProceed) {
           setOptions([]);
         }
       } catch (err) {
@@ -764,17 +776,22 @@ export default function Home() {
 
     setIsLoading(true);
     setIsLoadingNewOptions(true);
-    try {
-      const res: SelectOptionResponse = await selectOption(sessionId, "다른 옵션 보기", token || undefined);
+    setStreamingContent("");
 
-      // 새 옵션이 있으면 교체
-      if (res.question && res.options) {
-        setQuestion(res.question);
-        setOptions(res.options);
-      }
+    try {
+      // 스트리밍 버전 사용 (일관성 유지)
+      await selectOptionStream(sessionId, "다른 옵션 보기", token || undefined, (chunk) => {
+        if (chunk.type === 'next' && chunk.question && chunk.options) {
+          setQuestion(chunk.question);
+          setOptions(chunk.options);
+          setCanRequestFeedback(chunk.canRequestFeedback || false);
+          setContextCount(chunk.contextCount || 0);
+        }
+      });
     } catch (err) {
       console.error(err);
     } finally {
+      setStreamingContent("");
       setIsLoading(false);
       setIsLoadingNewOptions(false);
     }
@@ -873,6 +890,8 @@ export default function Home() {
   const handleNewSession = async () => {
     setSessionId(null);
     setPhase("selecting");
+    // 저장된 세션 상태 제거 (새로고침 시 이전 세션 복원 방지)
+    localStorage.removeItem(CURRENT_SESSION_KEY);
     setQuestion("");
     setOptions([]);
     setResponseModes([]);
@@ -939,9 +958,10 @@ export default function Home() {
     try {
       const res = await resumeSession(targetSessionId, token);
       console.log("[handleResumeSession] 성공", res);
+      console.log("[handleResumeSession] options:", res.options, "length:", res.options?.length);
       setSessionId(res.sessionId);
       setQuestion(res.question);
-      setOptions(res.options);
+      setOptions(res.options || []);
       setCanRequestFeedback(res.canRequestFeedback || false);
       setSelectedCounselorType(res.counselorType as CounselorType || null);
       setPhase("selecting");
@@ -1406,7 +1426,13 @@ export default function Home() {
                             {!isEditingSidebar && (
                               <div className="flex items-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); setEditingSessionId(session.sessionId); setEditingAlias(session.alias || ""); }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingSessionId(session.sessionId);
+                                    setEditingAlias(session.alias || "");
+                                    // 별칭 제안 생성
+                                    setSuggestedAliases(suggestNotebookAliases(session.category, session.summary));
+                                  }}
                                   className="p-1 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                                   title="별칭 수정"
                                 >
@@ -1482,569 +1508,593 @@ export default function Home() {
             </aside>
           )}
           <div className={sessionId ? "lg:pl-64" : ""}>
-          <div className="max-w-3xl mx-auto px-6 py-8 sm:py-12">
-            {!sessionId ? (
-              <div className="space-y-10 sm:space-y-14">
+            <div className="max-w-3xl mx-auto px-6 py-8 sm:py-12">
+              {!sessionId ? (
+                <div className="space-y-10 sm:space-y-14">
 
-                {/* 1. 히어로 섹션 - 토스 스타일 대형 타이포 */}
-                <section className="text-center space-y-6">
-                  {publicStats && publicStats.todayConversations > 0 && (
-                    <div className="flex justify-center animate-fade-in-up">
-                      <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-card border border-border">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
-                        </span>
-                        <span className="text-sm font-medium text-muted-foreground">오늘 <strong className="text-primary font-bold">{publicStats.todayConversations.toLocaleString()}</strong>명이 위로받았어요</span>
+                  {/* 1. 히어로 섹션 - 토스 스타일 대형 타이포 */}
+                  <section className="text-center space-y-6">
+                    {publicStats && publicStats.todayConversations > 0 && (
+                      <div className="flex justify-center animate-fade-in-up">
+                        <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-card border border-border">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                          </span>
+                          <span className="text-sm font-medium text-muted-foreground">오늘 <strong className="text-primary font-bold">{publicStats.todayConversations.toLocaleString()}</strong>명이 위로받았어요</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground tracking-tight animate-fade-in-up stagger-1 leading-[1.15]">
-                    {user?.name ? (
-                      <>
-                        <span className="text-primary">{user.name}</span>님,<br />
-                        오늘 하루도<br className="sm:hidden" /> 수고 많으셨어요
-                      </>
-                    ) : (
-                      <>오늘 하루도<br className="sm:hidden" /> 수고 많으셨어요</>
                     )}
-                  </h1>
 
-                  <p className="text-lg sm:text-xl text-muted-foreground animate-fade-in-up stagger-2 max-w-md mx-auto">
-                    마음에 걸리는 게 있다면<br className="sm:hidden" /> 편하게 말씀해 주세요
-                  </p>
-                </section>
+                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground tracking-tight animate-fade-in-up stagger-1 leading-[1.15]">
+                      {user?.name ? (
+                        <>
+                          <span className="text-primary">{user.name}</span>님,<br />
+                          {timeBasedGreeting.title}
+                        </>
+                      ) : (
+                        <>{timeBasedGreeting.title}</>
+                      )}
+                    </h1>
 
-                {/* 차별화 배너 - 일반 AI와의 차이점 */}
-                <section className="animate-fade-in-up stagger-2">
-                  <div className="rounded-2xl border border-border bg-card/50 p-5 sm:p-6 space-y-4">
-                    {/* 메인 메시지 */}
-                    <div className="space-y-2">
-                      <h3 className="text-base font-bold text-foreground">오래 대화할수록, 나만의 상담사가 됩니다</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        일반 AI 채팅은 대화가 길어질수록 느려지고, 앞의 내용을 놓치기 시작합니다.<br className="hidden sm:inline" />
-                        위로는 당신의 이야기를 안전하게 저장하고, 대화가 쌓일수록 당신을 더 깊이 이해합니다.
+                    <p className="text-lg sm:text-xl text-muted-foreground animate-fade-in-up stagger-2 max-w-md mx-auto">
+                      {timeBasedGreeting.subtitle}
+                    </p>
+
+                    {/* 계절/날씨 감성 메시지 (선택적) */}
+                    {seasonalMessage && (
+                      <p className="text-sm sm:text-base text-muted-foreground/80 animate-fade-in-up stagger-3 max-w-md mx-auto italic mt-2">
+                        {seasonalMessage}
                       </p>
-                    </div>
-
-                    {/* 차별점 리스트 */}
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>대화가 아무리 길어져도 처음부터 끝까지 기억합니다</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>과거 상담 기록을 바탕으로 맞춤형 응답을 제공합니다</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>대화 내용은 암호화되어 제3자에게 절대 공유되지 않습니다</span>
-                      </li>
-                    </ul>
-
-                    <a
-                      href="/privacy"
-                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                    >
-                      개인정보처리방침 보기
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </a>
-                  </div>
-                </section>
-
-                {/* 2. 로그인 유도 (비회원) */}
-                {!authLoading && !user && !sessionId && (
-                  <section className="animate-fade-in-up stagger-3">
-                    <button
-                      onClick={() => setShowLoginPrompt(true)}
-                      className="group w-full p-6 rounded-2xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 text-left"
-                    >
-                      <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-lg font-bold text-foreground">나만의 상담사를 만들어보세요</p>
-                          <p className="text-sm text-muted-foreground mt-1">로그인하시면 대화가 저장되고, 회원님을 기억합니다</p>
-                        </div>
-                        <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </button>
+                    )}
                   </section>
-                )}
 
-                {/* 3. 최근 상담 기록 (회원) - 사이드바 없는 화면에서만 표시 */}
-                {user && previousSessions.length > 0 && !sessionId && (
-                  <section className="animate-fade-in-up stagger-3 space-y-4 xl:hidden">
-                    <div className="flex items-center justify-between px-1">
-                      <h3 className="text-lg font-bold text-foreground">최근 상담</h3>
-                      <span className="text-sm text-muted-foreground">{previousSessions.length}개</span>
-                    </div>
-                    <div className="grid gap-3">
-                      {previousSessions.slice(0, 3).map((session) => {
-                        const categoryInfo = categories.find(c => c.id === session.category) || {
-                          label: session.category === 'direct' ? '직접 입력' : session.category,
-                          color: '#34d399',
-                        };
-                        const isEditing = editingSessionId === session.sessionId;
-                        const displayName = session.alias || session.summary?.slice(0, 20) || categoryInfo.label;
-
-                        return (
-                          <div
-                            key={session.sessionId}
-                            className="group w-full p-5 rounded-2xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 text-left flex items-center gap-4"
-                          >
-                            <button
-                              onClick={() => !isEditing && handleResumeSession(session.sessionId)}
-                              disabled={isEditing}
-                              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold transition-transform hover:scale-105"
-                              style={{ backgroundColor: `${categoryInfo.color}20`, color: categoryInfo.color }}
-                            >
-                              {categoryInfo.label[0]}
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  value={editingAlias}
-                                  onChange={(e) => setEditingAlias(e.target.value)}
-                                  onBlur={() => handleUpdateAlias(session.sessionId)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleUpdateAlias(session.sessionId);
-                                    if (e.key === 'Escape') {
-                                      setEditingSessionId(null);
-                                      setEditingAlias("");
-                                    }
-                                  }}
-                                  className="w-full text-base font-semibold bg-secondary border-2 border-primary rounded-lg px-3 py-1.5 focus:outline-none"
-                                  autoFocus
-                                  maxLength={50}
-                                  placeholder="별칭 입력"
-                                />
-                              ) : (
-                                <button
-                                  onClick={() => handleResumeSession(session.sessionId)}
-                                  className="block w-full text-left"
-                                >
-                                  <p className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors">{displayName}</p>
-                                  <p className="text-sm text-muted-foreground mt-0.5">{getTimeAgo(new Date(session.updatedAt))}</p>
-                                </button>
-                              )}
-                            </div>
-                            {!isEditing && (
-                              <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingSessionId(session.sessionId);
-                                    setEditingAlias(session.alias || "");
-                                  }}
-                                  className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                                  title="별칭 수정"
-                                >
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                  </svg>
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteSession(session.sessionId);
-                                  }}
-                                  className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                                  title="삭제"
-                                >
-                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
-                              </div>
-                            )}
-                            {!isEditing && (
-                              <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 hidden sm:block sm:group-hover:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                              </svg>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
-
-                {/* 4. 카테고리 선택 영역 (메인) */}
-                <section className="space-y-6 animate-fade-in-up stagger-4">
-                  <div className="text-center space-y-2">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-foreground">어떤 대화를 시작할까요?</h2>
-                    <p className="text-lg text-muted-foreground">당신의 이야기를 들을 준비가 되어 있습니다</p>
-                  </div>
-
-                  <div
-                    ref={categoryRef}
-                    className={`rounded-3xl border-2 p-5 sm:p-7 space-y-6 bg-card transition-all duration-500 ${
-                      highlightCategory
-                        ? "border-primary shadow-lg shadow-primary/30 animate-pulse"
-                        : "border-border"
-                    }`}
-                  >
-                    {/* 모드 선택 섹션 */}
-                    <div className={`space-y-3 pb-4 border-b border-border/50 transition-opacity duration-300 ${
-                      selectedTopMode !== null ? "opacity-50" : "opacity-100"
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-bold text-foreground">어떻게 들어드릴까요?</h4>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">선택하지 않아도 괜찮아요</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">편한 방식으로 들어드릴게요</p>
-
-                      <div className={`grid gap-4 transition-all duration-300 ${
-                        (selectedTopMode === "mbti" || selectedTopMode === "reaction" || selectedTopMode === "listening")
-                          ? "grid-cols-2"
-                          : "grid-cols-3"
-                      }`}>
-                      {topLevelModes.flatMap((mode) => {
-                        // 서브타입 선택 상태면 해당 서브타입만 표시
-                        if (selectedTopMode === "mbti") {
-                          if (mode.id !== "mbti") return [];
-                          return mbtiSubTypes.map((subType) => (
-                            <button
-                              key={subType.id}
-                              className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${
-                                isLoading ? "opacity-50 pointer-events-none" : ""
-                              }`}
-                              style={{
-                                border: `2px solid ${selectedCounselorType === subType.id ? subType.color : subType.color}`,
-                                boxShadow: selectedCounselorType === subType.id
-                                  ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
-                                  : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
-                              }}
-                              onClick={() => {
-                                if (selectedCounselorType === subType.id) {
-                                  setSelectedTopMode(null);
-                                  setSelectedCounselorType(null);
-                                } else {
-                                  setSelectedCounselorType(subType.id);
-                                  // 카테고리로 부드럽게 스크롤 + 강조
-                                  setTimeout(() => {
-                                    categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                                    setHighlightCategory(true);
-                                    setTimeout(() => setHighlightCategory(false), 2000);
-                                  }, 100);
-                                }
-                              }}
-                              disabled={isLoading}
-                            >
-                              <div
-                                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${
-                                  selectedCounselorType === subType.id ? "animate-pulse" : ""
-                                }`}
-                                style={{
-                                  boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
-                                }}
-                              />
-                              <div className="relative z-10 flex flex-col items-center">
-                                <div className="mb-2" style={{ color: subType.color }}>
-                                  {subType.icon}
-                                </div>
-                                <div className="text-xs font-semibold text-foreground">{subType.label}</div>
-                              </div>
-                            </button>
-                          ));
-                        }
-
-                        if (selectedTopMode === "reaction") {
-                          if (mode.id !== "reaction") return [];
-                          return reactionSubTypes.map((subType) => (
-                            <button
-                              key={subType.id}
-                              className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${
-                                isLoading ? "opacity-50 pointer-events-none" : ""
-                              }`}
-                              style={{
-                                border: `2px solid ${subType.color}`,
-                                boxShadow: selectedCounselorType === subType.id
-                                  ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
-                                  : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
-                              }}
-                              onClick={() => {
-                                if (selectedCounselorType === subType.id) {
-                                  setSelectedTopMode(null);
-                                  setSelectedCounselorType(null);
-                                } else {
-                                  setSelectedCounselorType(subType.id);
-                                  setTimeout(() => {
-                                    categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                                    setHighlightCategory(true);
-                                    setTimeout(() => setHighlightCategory(false), 2000);
-                                  }, 100);
-                                }
-                              }}
-                              disabled={isLoading}
-                            >
-                              <div
-                                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${
-                                  selectedCounselorType === subType.id ? "animate-pulse" : ""
-                                }`}
-                                style={{
-                                  boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
-                                }}
-                              />
-                              <div className="relative z-10 flex flex-col items-center">
-                                <div className="mb-2" style={{ color: subType.color }}>
-                                  {subType.icon}
-                                </div>
-                                <div className="text-xs font-semibold text-foreground">{subType.label}</div>
-                              </div>
-                            </button>
-                          ));
-                        }
-
-                        if (selectedTopMode === "listening") {
-                          if (mode.id !== "listening") return [];
-                          return listeningSubTypes.map((subType) => (
-                            <button
-                              key={subType.id}
-                              className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${
-                                isLoading ? "opacity-50 pointer-events-none" : ""
-                              }`}
-                              style={{
-                                border: `2px solid ${subType.color}`,
-                                boxShadow: selectedCounselorType === subType.id
-                                  ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
-                                  : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
-                              }}
-                              onClick={() => {
-                                if (selectedCounselorType === subType.id) {
-                                  setSelectedTopMode(null);
-                                  setSelectedCounselorType(null);
-                                } else {
-                                  setSelectedCounselorType(subType.id);
-                                  setTimeout(() => {
-                                    categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                                    setHighlightCategory(true);
-                                    setTimeout(() => setHighlightCategory(false), 2000);
-                                  }, 100);
-                                }
-                              }}
-                              disabled={isLoading}
-                            >
-                              <div
-                                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${
-                                  selectedCounselorType === subType.id ? "animate-pulse" : ""
-                                }`}
-                                style={{
-                                  boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
-                                }}
-                              />
-                              <div className="relative z-10 flex flex-col items-center">
-                                <div className="mb-2" style={{ color: subType.color }}>
-                                  {subType.icon}
-                                </div>
-                                <div className="text-xs font-semibold text-foreground">{subType.label}</div>
-                              </div>
-                            </button>
-                          ));
-                        }
-
-                        // 일반 모드 버튼 (서브타입 미선택 시만 표시)
-                        if (selectedTopMode !== null) return [];
-
-                        return [(
-                          <button
-                            key={mode.id}
-                            className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${
-                              isLoading ? "opacity-50 pointer-events-none" : ""
-                            }`}
-                            style={{
-                              border: `2px solid ${mode.color}`,
-                              boxShadow: selectedTopMode === mode.id
-                                ? `0 0 20px ${mode.color}60, inset 0 0 20px ${mode.color}20`
-                                : `0 0 10px ${mode.color}40, inset 0 0 10px ${mode.color}10`,
-                            }}
-                            onClick={() => {
-                              if (selectedTopMode === mode.id) {
-                                setSelectedTopMode(null);
-                                setSelectedCounselorType(null);
-                              } else {
-                                setSelectedTopMode(mode.id);
-                                setSelectedCounselorType(null); // 서브타입 선택을 위해 초기화
-                                // mbti/reaction/listening은 서브타입 선택으로 전환되므로 스크롤 안 함
-                              }
-                            }}
-                            disabled={isLoading}
-                          >
-                            <div
-                              className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${
-                                selectedTopMode === mode.id ? "animate-pulse" : ""
-                              }`}
-                              style={{
-                                boxShadow: `0 0 20px ${mode.color}60, inset 0 0 20px ${mode.color}20`,
-                              }}
-                            />
-                            <div className="relative z-10 flex flex-col items-center">
-                              <div
-                                className="w-10 h-10 rounded-lg overflow-hidden mb-2"
-                                style={{
-                                  backgroundColor: '#0a0a0a',
-                                }}
-                              >
-                                {mode.icon}
-                              </div>
-                              <div className="text-xs font-semibold text-foreground">{mode.label}</div>
-                            </div>
-                          </button>
-                        )];
-                      })}
-                      </div>
-                    </div>
-
-                    {/* 주제 선택 섹션 */}
-                    <div className={`space-y-3 transition-all duration-300 ${
-                      selectedTopMode !== null
-                        ? "ring-2 ring-primary/30 rounded-2xl p-4 -mx-2 bg-primary/5"
-                        : ""
-                    }`}>
-                      <div>
-                        <h4 className="text-sm font-bold text-foreground">무슨 이야기를 나눠볼까요?</h4>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {selectedTopMode !== null
-                            ? "이제 주제를 선택해주세요 ✨"
-                            : "말하고 싶은 이야기가 있다면 선택해주세요"
-                          }
+                  {/* 차별화 배너 - 일반 AI와의 차이점 */}
+                  <section className="animate-fade-in-up stagger-2">
+                    <div className="rounded-2xl border border-border bg-card/50 p-5 sm:p-6 space-y-4">
+                      {/* 메인 메시지 */}
+                      <div className="space-y-2">
+                        <h3 className="text-base font-bold text-foreground">오래 대화할수록, 나만의 상담사가 됩니다</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          일반 AI 채팅은 대화가 길어질수록 느려지고, 앞의 내용을 놓치기 시작합니다.<br className="hidden sm:inline" />
+                          위로는 당신의 이야기를 안전하게 저장하고, 대화가 쌓일수록 당신을 더 깊이 이해합니다.
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      {categories.map((category) => (
-                        <CategoryButtonVariant
-                          key={category.id}
-                          label={category.label}
-                          description={category.description}
-                          color={category.color}
-                          onClick={() => handleCategorySelect(category.id)}
-                          disabled={isLoading}
-                          variant="neon-cyber"
-                        />
-                      ))}
+                      {/* 차별점 리스트 */}
+                      <ul className="space-y-2 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>대화가 아무리 길어져도 처음부터 끝까지 기억합니다</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>과거 상담 기록을 바탕으로 맞춤형 응답을 제공합니다</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>대화 내용은 암호화되어 제3자에게 절대 공유되지 않습니다</span>
+                        </li>
+                      </ul>
+
+                      <a
+                        href="/privacy"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        개인정보처리방침 보기
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </a>
+                    </div>
+                  </section>
+
+                  {/* 2. 로그인 유도 (비회원) */}
+                  {!authLoading && !user && !sessionId && (
+                    <section className="animate-fade-in-up stagger-3">
+                      <button
+                        onClick={() => setShowLoginPrompt(true)}
+                        className="group w-full p-6 rounded-2xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 text-left"
+                      >
+                        <div className="flex items-center gap-5">
+                          <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-lg font-bold text-foreground">나만의 상담사를 만들어보세요</p>
+                            <p className="text-sm text-muted-foreground mt-1">로그인하시면 대화가 저장되고, 회원님을 기억합니다</p>
+                          </div>
+                          <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </button>
+                    </section>
+                  )}
+
+                  {/* 3. 최근 상담 기록 (회원) - 사이드바 없는 화면에서만 표시 */}
+                  {user && previousSessions.length > 0 && !sessionId && (
+                    <section className="animate-fade-in-up stagger-3 space-y-4 xl:hidden">
+                      <div className="flex items-center justify-between px-1">
+                        <h3 className="text-lg font-bold text-foreground">최근 상담</h3>
+                        <span className="text-sm text-muted-foreground">{previousSessions.length}개</span>
+                      </div>
+                      <div className="grid gap-3">
+                        {previousSessions.slice(0, 3).map((session) => {
+                          const categoryInfo = categories.find(c => c.id === session.category) || {
+                            label: session.category === 'direct' ? '직접 입력' : session.category,
+                            color: '#34d399',
+                          };
+                          const isEditing = editingSessionId === session.sessionId;
+                          const displayName = session.alias || session.summary?.slice(0, 20) || categoryInfo.label;
+
+                          return (
+                            <div
+                              key={session.sessionId}
+                              className="group w-full p-5 rounded-2xl bg-card border-2 border-border hover:border-primary/50 transition-all duration-300 text-left flex items-center gap-4"
+                            >
+                              <button
+                                onClick={() => !isEditing && handleResumeSession(session.sessionId)}
+                                disabled={isEditing}
+                                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold transition-transform hover:scale-105"
+                                style={{ backgroundColor: `${categoryInfo.color}20`, color: categoryInfo.color }}
+                              >
+                                {categoryInfo.label[0]}
+                              </button>
+                              <div className="flex-1 min-w-0">
+                                {isEditing ? (
+                                  <div className="space-y-2">
+                                    <input
+                                      type="text"
+                                      value={editingAlias}
+                                      onChange={(e) => setEditingAlias(e.target.value)}
+                                      onBlur={(e) => {
+                                        // 제안 버튼 클릭 시에는 blur 무시
+                                        if (e.relatedTarget?.classList.contains('alias-suggestion')) {
+                                          return;
+                                        }
+                                        handleUpdateAlias(session.sessionId);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleUpdateAlias(session.sessionId);
+                                        if (e.key === 'Escape') {
+                                          setEditingSessionId(null);
+                                          setEditingAlias("");
+                                        }
+                                      }}
+                                      className="w-full text-base font-semibold bg-secondary border-2 border-primary rounded-lg px-3 py-1.5 focus:outline-none"
+                                      autoFocus
+                                      maxLength={50}
+                                      placeholder="별칭 입력"
+                                    />
+                                    {/* 별칭 제안 */}
+                                    {suggestedAliases.length > 0 && (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        <span className="text-xs text-muted-foreground self-center">제안:</span>
+                                        {suggestedAliases.map((alias, idx) => (
+                                          <button
+                                            key={idx}
+                                            type="button"
+                                            className="alias-suggestion text-xs px-2 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                            onMouseDown={(e) => {
+                                              e.preventDefault();
+                                              setEditingAlias(alias);
+                                            }}
+                                          >
+                                            {alias}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleResumeSession(session.sessionId)}
+                                    className="block w-full text-left"
+                                  >
+                                    <p className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors">{displayName}</p>
+                                    <p className="text-sm text-muted-foreground mt-0.5">{getTimeAgo(new Date(session.updatedAt))}</p>
+                                  </button>
+                                )}
+                              </div>
+                              {!isEditing && (
+                                <div className="flex items-center gap-1 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingSessionId(session.sessionId);
+                                      setEditingAlias(session.alias || "");
+                                      // 별칭 제안 생성
+                                      setSuggestedAliases(suggestNotebookAliases(session.category, session.summary));
+                                    }}
+                                    className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                                    title="별칭 수정"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteSession(session.sessionId);
+                                    }}
+                                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                    title="삭제"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
+                              {!isEditing && (
+                                <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0 hidden sm:block sm:group-hover:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                </svg>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* 4. 카테고리 선택 영역 (메인) */}
+                  <section className="space-y-6 animate-fade-in-up stagger-4">
+                    <div className="text-center space-y-2">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-foreground">어떤 대화를 시작할까요?</h2>
+                      <p className="text-lg text-muted-foreground">당신의 이야기를 들을 준비가 되어 있습니다</p>
+                    </div>
+
+                    <div
+                      ref={categoryRef}
+                      className={`rounded-3xl border-2 p-5 sm:p-7 space-y-6 bg-card transition-all duration-500 ${highlightCategory
+                        ? "border-primary shadow-lg shadow-primary/30 animate-pulse"
+                        : "border-border"
+                        }`}
+                    >
+                      {/* 모드 선택 섹션 */}
+                      <div className={`space-y-3 pb-4 border-b border-border/50 transition-opacity duration-300 ${selectedTopMode !== null ? "opacity-50" : "opacity-100"
+                        }`}>
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-foreground">어떻게 들어드릴까요?</h4>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">선택하지 않아도 괜찮아요</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">편한 방식으로 들어드릴게요</p>
+
+                        <div className={`grid gap-4 transition-all duration-300 ${(selectedTopMode === "mbti" || selectedTopMode === "reaction" || selectedTopMode === "listening")
+                          ? "grid-cols-2"
+                          : "grid-cols-3"
+                          }`}>
+                          {topLevelModes.flatMap((mode) => {
+                            // 서브타입 선택 상태면 해당 서브타입만 표시
+                            if (selectedTopMode === "mbti") {
+                              if (mode.id !== "mbti") return [];
+                              return mbtiSubTypes.map((subType) => (
+                                <button
+                                  key={subType.id}
+                                  className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${isLoading ? "opacity-50 pointer-events-none" : ""
+                                    }`}
+                                  style={{
+                                    border: `2px solid ${selectedCounselorType === subType.id ? subType.color : subType.color}`,
+                                    boxShadow: selectedCounselorType === subType.id
+                                      ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
+                                      : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
+                                  }}
+                                  onClick={() => {
+                                    if (selectedCounselorType === subType.id) {
+                                      setSelectedTopMode(null);
+                                      setSelectedCounselorType(null);
+                                    } else {
+                                      setSelectedCounselorType(subType.id);
+                                      // 카테고리로 부드럽게 스크롤 + 강조
+                                      setTimeout(() => {
+                                        categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                        setHighlightCategory(true);
+                                        setTimeout(() => setHighlightCategory(false), 2000);
+                                      }, 100);
+                                    }
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  <div
+                                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${selectedCounselorType === subType.id ? "animate-pulse" : ""
+                                      }`}
+                                    style={{
+                                      boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
+                                    }}
+                                  />
+                                  <div className="relative z-10 flex flex-col items-center">
+                                    <div className="mb-2" style={{ color: subType.color }}>
+                                      {subType.icon}
+                                    </div>
+                                    <div className="text-xs font-semibold text-foreground">{subType.label}</div>
+                                  </div>
+                                </button>
+                              ));
+                            }
+
+                            if (selectedTopMode === "reaction") {
+                              if (mode.id !== "reaction") return [];
+                              return reactionSubTypes.map((subType) => (
+                                <button
+                                  key={subType.id}
+                                  className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${isLoading ? "opacity-50 pointer-events-none" : ""
+                                    }`}
+                                  style={{
+                                    border: `2px solid ${subType.color}`,
+                                    boxShadow: selectedCounselorType === subType.id
+                                      ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
+                                      : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
+                                  }}
+                                  onClick={() => {
+                                    if (selectedCounselorType === subType.id) {
+                                      setSelectedTopMode(null);
+                                      setSelectedCounselorType(null);
+                                    } else {
+                                      setSelectedCounselorType(subType.id);
+                                      setTimeout(() => {
+                                        categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                        setHighlightCategory(true);
+                                        setTimeout(() => setHighlightCategory(false), 2000);
+                                      }, 100);
+                                    }
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  <div
+                                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${selectedCounselorType === subType.id ? "animate-pulse" : ""
+                                      }`}
+                                    style={{
+                                      boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
+                                    }}
+                                  />
+                                  <div className="relative z-10 flex flex-col items-center">
+                                    <div className="mb-2" style={{ color: subType.color }}>
+                                      {subType.icon}
+                                    </div>
+                                    <div className="text-xs font-semibold text-foreground">{subType.label}</div>
+                                  </div>
+                                </button>
+                              ));
+                            }
+
+                            if (selectedTopMode === "listening") {
+                              if (mode.id !== "listening") return [];
+                              return listeningSubTypes.map((subType) => (
+                                <button
+                                  key={subType.id}
+                                  className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${isLoading ? "opacity-50 pointer-events-none" : ""
+                                    }`}
+                                  style={{
+                                    border: `2px solid ${subType.color}`,
+                                    boxShadow: selectedCounselorType === subType.id
+                                      ? `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`
+                                      : `0 0 10px ${subType.color}40, inset 0 0 10px ${subType.color}10`,
+                                  }}
+                                  onClick={() => {
+                                    if (selectedCounselorType === subType.id) {
+                                      setSelectedTopMode(null);
+                                      setSelectedCounselorType(null);
+                                    } else {
+                                      setSelectedCounselorType(subType.id);
+                                      setTimeout(() => {
+                                        categoryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                        setHighlightCategory(true);
+                                        setTimeout(() => setHighlightCategory(false), 2000);
+                                      }, 100);
+                                    }
+                                  }}
+                                  disabled={isLoading}
+                                >
+                                  <div
+                                    className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${selectedCounselorType === subType.id ? "animate-pulse" : ""
+                                      }`}
+                                    style={{
+                                      boxShadow: `0 0 20px ${subType.color}60, inset 0 0 20px ${subType.color}20`,
+                                    }}
+                                  />
+                                  <div className="relative z-10 flex flex-col items-center">
+                                    <div className="mb-2" style={{ color: subType.color }}>
+                                      {subType.icon}
+                                    </div>
+                                    <div className="text-xs font-semibold text-foreground">{subType.label}</div>
+                                  </div>
+                                </button>
+                              ));
+                            }
+
+                            // 일반 모드 버튼 (서브타입 미선택 시만 표시)
+                            if (selectedTopMode !== null) return [];
+
+                            return [(
+                              <button
+                                key={mode.id}
+                                className={`group relative flex flex-col items-center justify-center p-3 rounded-xl bg-background transition-all duration-300 hover:scale-105 ${isLoading ? "opacity-50 pointer-events-none" : ""
+                                  }`}
+                                style={{
+                                  border: `2px solid ${mode.color}`,
+                                  boxShadow: selectedTopMode === mode.id
+                                    ? `0 0 20px ${mode.color}60, inset 0 0 20px ${mode.color}20`
+                                    : `0 0 10px ${mode.color}40, inset 0 0 10px ${mode.color}10`,
+                                }}
+                                onClick={() => {
+                                  if (selectedTopMode === mode.id) {
+                                    setSelectedTopMode(null);
+                                    setSelectedCounselorType(null);
+                                  } else {
+                                    setSelectedTopMode(mode.id);
+                                    setSelectedCounselorType(null); // 서브타입 선택을 위해 초기화
+                                    // mbti/reaction/listening은 서브타입 선택으로 전환되므로 스크롤 안 함
+                                  }
+                                }}
+                                disabled={isLoading}
+                              >
+                                <div
+                                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl ${selectedTopMode === mode.id ? "animate-pulse" : ""
+                                    }`}
+                                  style={{
+                                    boxShadow: `0 0 20px ${mode.color}60, inset 0 0 20px ${mode.color}20`,
+                                  }}
+                                />
+                                <div className="relative z-10 flex flex-col items-center">
+                                  <div
+                                    className="w-10 h-10 rounded-lg overflow-hidden mb-2"
+                                    style={{
+                                      backgroundColor: '#0a0a0a',
+                                    }}
+                                  >
+                                    {mode.icon}
+                                  </div>
+                                  <div className="text-xs font-semibold text-foreground">{mode.label}</div>
+                                </div>
+                              </button>
+                            )];
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 주제 선택 섹션 */}
+                      <div className={`space-y-3 transition-all duration-300 ${selectedTopMode !== null
+                        ? "ring-2 ring-primary/30 rounded-2xl p-4 -mx-2 bg-primary/5"
+                        : ""
+                        }`}>
+                        <div>
+                          <h4 className="text-sm font-bold text-foreground">무슨 이야기를 나눠볼까요?</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {selectedTopMode !== null
+                              ? "이제 주제를 선택해주세요 ✨"
+                              : "말하고 싶은 이야기가 있다면 선택해주세요"
+                            }
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                          {categories.map((category) => (
+                            <CategoryButtonVariant
+                              key={category.id}
+                              label={category.label}
+                              description={category.description}
+                              color={category.color}
+                              onClick={() => handleCategorySelect(category.id)}
+                              disabled={isLoading}
+                              variant="neon-cyber"
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </section>
+                  </section>
 
-                {/* 5. 직접 입력 */}
-                <section className="animate-fade-in-up stagger-5 space-y-4">
-                  <h3 className="text-lg font-bold text-foreground px-1">직접 이야기하기</h3>
-                  <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
-                    <p className="text-muted-foreground">우리 천천히 얘기해봐요</p>
-                    <div className="flex gap-3 w-full">
-                      <input
-                        type="text"
-                        value={directInput}
-                        onChange={(e) => setDirectInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && directInput.trim() && handleDirectInputSubmit()}
-                        placeholder="당신의 이야기를 들려주세요"
-                        className="flex-1 min-w-0 px-4 sm:px-5 h-12 sm:h-14 rounded-xl bg-secondary border-2 border-transparent text-foreground text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
-                      />
-                      <Button onClick={handleDirectInputSubmit} disabled={!directInput.trim() || isLoading} size="lg" className="shrink-0 h-12 sm:h-14 px-4 sm:px-6">
-                        시작
-                      </Button>
+                  {/* 5. 직접 입력 */}
+                  <section className="animate-fade-in-up stagger-5 space-y-4">
+                    <h3 className="text-lg font-bold text-foreground px-1">직접 이야기하기</h3>
+                    <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
+                      <p className="text-muted-foreground">우리 천천히 얘기해봐요</p>
+                      <div className="flex gap-3 w-full">
+                        <input
+                          type="text"
+                          value={directInput}
+                          onChange={(e) => setDirectInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && directInput.trim() && handleDirectInputSubmit()}
+                          placeholder="당신의 이야기를 들려주세요"
+                          className="flex-1 min-w-0 px-4 sm:px-5 h-12 sm:h-14 rounded-xl bg-secondary border-2 border-transparent text-foreground text-base placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                        />
+                        <Button onClick={handleDirectInputSubmit} disabled={!directInput.trim() || isLoading} size="lg" className="shrink-0 h-12 sm:h-14 px-4 sm:px-6">
+                          시작
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </section>
+                  </section>
 
-                {/* 6. 대화 불러오기 */}
-                <section className="animate-fade-in-up stagger-6 pb-20">
-                  <button
-                    onClick={() => setShowImportModal(true)}
-                    className="w-full p-6 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 transition-all duration-300 group text-left flex items-center gap-5"
-                  >
-                    <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
-                      <svg className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">이전 대화를 이어가볼까요?</p>
-                      <p className="text-sm text-muted-foreground mt-1">나눴던 이야기를 이어갈 수 있어요</p>
-                    </div>
-                    <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </section>
-              </div>
-            ) : (
-              <div className="space-y-6 pb-80 sm:pb-64">
-                {/* 진단 대화 히스토리 */}
-                <div className="space-y-5">
-                  {selectionHistory.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex ${item.type === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
-                      style={{ animationDelay: idx >= animationBaseIndexRef.current ? '0ms' : `${idx * 80}ms` }}
+                  {/* 6. 대화 불러오기 */}
+                  <section className="animate-fade-in-up stagger-6 pb-20">
+                    <button
+                      onClick={() => setShowImportModal(true)}
+                      className="w-full p-6 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 transition-all duration-300 group text-left flex items-center gap-5"
                     >
-                      <div className={`flex gap-4 max-w-[90%] ${item.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                        {item.type !== "user" && (
+                      <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">
+                        <svg className="w-7 h-7 text-muted-foreground group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">이전 대화를 이어가볼까요?</p>
+                        <p className="text-sm text-muted-foreground mt-1">나눴던 이야기를 이어갈 수 있어요</p>
+                      </div>
+                      <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </section>
+                </div>
+              ) : (
+                <div className="space-y-6 pb-80 sm:pb-64">
+                  {/* 진단 대화 히스토리 */}
+                  <div className="space-y-5">
+                    {selectionHistory.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex ${item.type === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
+                        style={{ animationDelay: idx >= animationBaseIndexRef.current ? '0ms' : `${idx * 80}ms` }}
+                      >
+                        <div className={`flex gap-4 max-w-[90%] ${item.type === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                          {item.type !== "user" && (
+                            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                              <Logo size="sm" showText={false} />
+                            </div>
+                          )}
+                          <div className={`py-2 px-5 rounded-2xl ${item.type === "user" ? "bg-primary text-primary-foreground rounded-tr-md" : "bg-card border-2 border-border text-foreground rounded-tl-md"}`}>
+                            <div className="markdown-content text-base leading-relaxed">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {formatAsMarkdown(item.content)}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {streamingContent && (
+                      <div className="flex justify-start">
+                        <div className="flex gap-4 max-w-[90%]">
                           <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
                             <Logo size="sm" showText={false} />
                           </div>
-                        )}
-                        <div className={`py-2 px-5 rounded-2xl ${item.type === "user" ? "bg-primary text-primary-foreground rounded-tr-md" : "bg-card border-2 border-border text-foreground rounded-tl-md"}`}>
-                          <div className="markdown-content text-base leading-relaxed">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {formatAsMarkdown(item.content)}
-                            </ReactMarkdown>
+                          <div className="py-2 px-5 rounded-2xl bg-card border-2 border-border text-foreground rounded-tl-md">
+                            <div className="markdown-content text-base leading-relaxed">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {formatAsMarkdown(streamingContent)}
+                              </ReactMarkdown>
+                              <span className="inline-block w-1.5 h-4 bg-primary rounded-sm ml-0.5 animate-[blink_1s_infinite]" />
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  {streamingContent && (
-                    <div className="flex justify-start">
-                      <div className="flex gap-4 max-w-[90%]">
-                        <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                          <Logo size="sm" showText={false} />
-                        </div>
-                        <div className="py-2 px-5 rounded-2xl bg-card border-2 border-border text-foreground rounded-tl-md">
-                          <div className="markdown-content text-base leading-relaxed">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {formatAsMarkdown(streamingContent)}
-                            </ReactMarkdown>
-                            <span className="inline-block w-1.5 h-4 bg-primary rounded-sm ml-0.5 animate-[blink_1s_infinite]" />
-                          </div>
+                    )}
+                    {isLoading && !isLoadingNewOptions && !streamingContent && (
+                      <div className="flex justify-start animate-pulse">
+                        <div className="flex gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-muted shrink-0" />
+                          <div className="p-5 rounded-2xl bg-muted rounded-tl-md w-40 h-14" />
                         </div>
                       </div>
-                    </div>
-                  )}
-                  {isLoading && !isLoadingNewOptions && !streamingContent && (
-                    <div className="flex justify-start animate-pulse">
-                      <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-muted shrink-0" />
-                        <div className="p-5 rounded-2xl bg-muted rounded-tl-md w-40 h-14" />
-                      </div>
-                    </div>
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
 
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
         </div>
 
         {/* 진단 단계 하단 고정: 선택하기 + 입력창 */}
@@ -2123,9 +2173,8 @@ export default function Home() {
                           <button
                             key={idx}
                             onClick={() => setOptionsPage(idx)}
-                            className={`w-1.5 h-1.5 rounded-full transition-all ${
-                              idx === optionsPage ? "bg-primary w-4" : "bg-border"
-                            }`}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${idx === optionsPage ? "bg-primary w-4" : "bg-border"
+                              }`}
                           />
                         ))}
                       </div>
@@ -2187,7 +2236,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <p className="text-lg font-bold text-white">경청하려 자세를 고쳐앉는 중...</p>
+              <p className="text-lg font-bold text-white">{loadingMessage || "경청하려 자세를 고쳐앉는 중..."}</p>
             </div>
           </div>
         )}
