@@ -18,6 +18,7 @@ import { SessionService } from '../src/app/session/session.service';
 import { OpenAIAgent } from '../src/client/openai/openai.agent';
 import { JwtStrategy } from '../src/app/auth/strategy/jwt.strategy';
 import { ChatController } from '../src/controller/chat/chat.controller';
+import { NotificationService } from '../src/common/notification.service';
 
 describe('ChatController (e2e)', () => {
   let app: INestApplication<App>;
@@ -33,8 +34,31 @@ describe('ChatController (e2e)', () => {
       options: ['직장 문제', '인간관계', '건강 문제'],
       canProceedToResponse: false,
     }),
-    generateResponse: jest.fn().mockResolvedValue('힘들었겠다. 충분히 그럴 수 있어.'),
+    generateOptionsStream: jest.fn().mockImplementation(async function* () {
+      // question 스트리밍
+      const question = '오늘 어떤 일이 있었나요?';
+      for (const char of question) {
+        yield { type: 'question_chunk', content: char };
+      }
+      // options 전송
+      yield {
+        type: 'options',
+        options: ['직장 문제', '인간관계', '건강 문제'],
+        canProceedToResponse: false,
+        canRequestFeedback: true,
+      };
+    }),
+    generateResponseStream: jest.fn().mockImplementation(async function* () {
+      const response = '힘들었겠다. 충분히 그럴 수 있어.';
+      for (const char of response) {
+        yield char;
+      }
+    }),
     summarizeSession: jest.fn().mockResolvedValue('직장 스트레스로 인한 상담'),
+  };
+
+  const mockNotificationService = {
+    notifyNewUser: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeAll(async () => {
@@ -67,6 +91,7 @@ describe('ChatController (e2e)', () => {
         SessionRepository,
         JwtStrategy,
         { provide: OpenAIAgent, useValue: mockOpenAIAgent },
+        { provide: NotificationService, useValue: mockNotificationService },
       ],
     }).compile();
 
@@ -137,8 +162,8 @@ describe('ChatController (e2e)', () => {
     });
   });
 
-  describe('POST /chat/select', () => {
-    it('선택지 선택 성공', async () => {
+  describe('POST /chat/select/stream', () => {
+    it('선택지 선택 스트리밍 성공', async () => {
       // given
       const session = await sessionModel.create({
         userId: testUser._id,
@@ -149,44 +174,20 @@ describe('ChatController (e2e)', () => {
 
       // when
       const response = await request(app.getHttpServer())
-        .post('/chat/select')
+        .post('/chat/select/stream')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ sessionId: session._id.toString(), selectedOption: '직장 문제' });
 
       // then
-      expect(response.status).toBe(201);
-      expect(response.body.sessionId).toBe(session._id.toString());
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toBe('text/event-stream');
+
+      const text = response.text;
+      expect(text).toContain('data: {"type":"question_chunk"');
+      expect(text).toContain('data: {"done":true}');
     });
 
-    it('canProceedToResponse가 true일 때 responseModes 반환', async () => {
-      // given
-      mockOpenAIAgent.generateOptions.mockResolvedValueOnce({
-        question: null,
-        options: null,
-        canProceedToResponse: true,
-      });
-      const session = await sessionModel.create({
-        userId: testUser._id,
-        context: ['카테고리: 직장', '선택: 직장 문제'],
-        category: '직장',
-        status: 'active',
-      });
-
-      // when
-      const response = await request(app.getHttpServer())
-        .post('/chat/select')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ sessionId: session._id.toString(), selectedOption: '상사와 갈등' });
-
-      // then
-      expect(response.status).toBe(201);
-      expect(response.body.canProceedToResponse).toBe(true);
-      expect(response.body.responseModes).toBeDefined();
-    });
-  });
-
-  describe('POST /chat/mode', () => {
-    it('응답 모드 설정 성공', async () => {
+    it('question_chunk와 next 타입 순서대로 전송', async () => {
       // given
       const session = await sessionModel.create({
         userId: testUser._id,
@@ -197,57 +198,30 @@ describe('ChatController (e2e)', () => {
 
       // when
       const response = await request(app.getHttpServer())
-        .post('/chat/mode')
+        .post('/chat/select/stream')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ sessionId: session._id.toString(), mode: 'comfort' });
+        .send({ sessionId: session._id.toString(), selectedOption: '직장 문제' });
 
       // then
-      expect(response.status).toBe(201);
-      expect(response.body.response).toBeDefined();
-    });
+      const lines = response.text.split('\n').filter(line => line.startsWith('data: '));
+      const chunks = lines.map(line => {
+        try {
+          return JSON.parse(line.replace('data: ', ''));
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
 
-    it('잘못된 mode 값 시 400 반환', async () => {
-      // given
-      const session = await sessionModel.create({
-        userId: testUser._id,
-        context: ['카테고리: 직장'],
-        category: '직장',
-        status: 'active',
-      });
+      const questionChunks = chunks.filter((c: any) => c.type === 'question_chunk');
+      const nextChunk = chunks.find((c: any) => c.type === 'next');
 
-      // when
-      const response = await request(app.getHttpServer())
-        .post('/chat/mode')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ sessionId: session._id.toString(), mode: 'invalid' });
-
-      // then
-      expect(response.status).toBe(400);
+      expect(questionChunks.length).toBeGreaterThan(0);
+      expect(nextChunk).toBeDefined();
+      expect(nextChunk.question).toBeDefined();
+      expect(nextChunk.options).toBeDefined();
     });
   });
 
-  describe('POST /chat/message', () => {
-    it('메시지 전송 성공', async () => {
-      // given
-      const session = await sessionModel.create({
-        userId: testUser._id,
-        context: ['카테고리: 직장'],
-        category: '직장',
-        status: 'active',
-        responseMode: 'comfort',
-      });
-
-      // when
-      const response = await request(app.getHttpServer())
-        .post('/chat/message')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ sessionId: session._id.toString(), message: '오늘 너무 힘들었어요' });
-
-      // then
-      expect(response.status).toBe(201);
-      expect(response.body.response).toBe('힘들었겠다. 충분히 그럴 수 있어.');
-    });
-  });
 
   describe('POST /chat/end', () => {
     it('세션 종료 성공', async () => {
