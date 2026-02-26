@@ -692,7 +692,6 @@ export default function Home() {
       setStreamingContent("");
 
       const newHistoryItems: HistoryItem[] = [];
-      let feedbackContent = "";
       let canProceed = false;
       let responseModes: any = null;
 
@@ -706,11 +705,6 @@ export default function Home() {
               canProceed = true;
               responseModes = chunk.responseModes;
             }
-          } else if (chunk.type === 'feedback_chunk') {
-            feedbackContent += chunk.content;
-            setStreamingContent(feedbackContent);
-          } else if (chunk.type === 'feedback_done') {
-            // feedback 완료, 다음 단계 대기
           } else if (chunk.type === 'contextSummary') {
             flushSync(() => {
               setStreamingContent("");
@@ -721,31 +715,17 @@ export default function Home() {
               canProceed = true;
               responseModes = chunk.responseModes;
               setCanRequestFeedback(chunk.canRequestFeedback || false);
-              // feedbackContent가 있으면 히스토리에 추가
-              if (feedbackContent) {
-                flushSync(() => {
-                  setStreamingContent("");
-                  setSelectionHistory(prev => [...prev, { type: "assistant", content: feedbackContent, timestamp: new Date() }]);
-                });
-                feedbackContent = "";
-              }
             } else if (chunk.question && chunk.options) {
-              // 스트리밍에 question 추가해서 표시
-              const withQuestion = feedbackContent ? feedbackContent + "\n\n" + chunk.question : chunk.question;
-
-              // 스트리밍 비우고 전체 내용을 히스토리에 추가 (flushSync로 한 번에)
+              // 질문을 히스토리에 추가
               flushSync(() => {
                 setStreamingContent("");
                 setSelectionHistory(prev => [...prev, {
                   type: "assistant",
-                  content: withQuestion,
+                  content: chunk.question,
                   isQuestion: true,
                   timestamp: new Date(),
                 }]);
               });
-
-              // 초기화
-              feedbackContent = "";
 
               setQuestion(chunk.question);
               setOptions(chunk.options);
