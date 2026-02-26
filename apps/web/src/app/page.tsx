@@ -2073,9 +2073,7 @@ export default function Home() {
                           </div>
                           <div className="py-2 px-5 rounded-2xl bg-card border-2 border-border text-foreground rounded-tl-md">
                             <div className="markdown-content text-base leading-relaxed">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {formatAsMarkdown(streamingContent)}
-                              </ReactMarkdown>
+                              {streamingContent.replace(/\n+/g, ' ')}
                               <span className="inline-block w-1.5 h-4 bg-primary rounded-sm ml-0.5 animate-[blink_1s_infinite]" />
                             </div>
                           </div>
