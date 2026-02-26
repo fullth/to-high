@@ -355,14 +355,14 @@ ${adviceModePrompt}
 현재 수집된 컨텍스트 수: ${contextCount}개
 현재 사용자 턴 수: ${userTurnCount}턴
 
-**중요: question만 생성하세요. options는 생성하지 마세요.**`;
+**중요: 질문 텍스트만 작성하세요. JSON 형식, 객체, 배열 등을 사용하지 마세요. 순수한 질문 문장만 작성하세요.**`;
 
     const userPrompt = `현재까지 대화 흐름:
 ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
 ${isAdviceRequested ? '⚠️ 사용자가 조언을 요청했습니다. 질문하지 말고 구체적인 조언만 제공하세요.' : '사용자의 마지막 선택/입력에 공감하면서, 질문이 필요한지 아니면 경청이 필요한지 판단하여 응답해주세요.'}
 
-question만 생성하세요.`;
+질문 텍스트만 작성하세요. 절대로 JSON, 객체, 배열 형식을 사용하지 마세요. 순수한 문장만 작성하세요.`;
 
     // question 스트리밍 생성
     let fullQuestion = '';
