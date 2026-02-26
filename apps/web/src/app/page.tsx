@@ -716,16 +716,8 @@ export default function Home() {
               setSelectionHistory(prev => [...prev, { type: "assistant", content: chunk.content, timestamp: new Date() }]);
             });
           } else if (chunk.type === 'next') {
-            console.log('[DEBUG] next chunk received:', {
-              hasQuestion: !!chunk.question,
-              hasOptions: !!chunk.options,
-              optionsLength: chunk.options?.length,
-              questionContentLength: questionContent.length
-            });
-
             // canProceedToResponse와 관계없이 항상 일반 선택지 표시
             if (chunk.question && chunk.options) {
-              console.log('[DEBUG] Setting question and options from chunk');
               // 스트리밍 완료, 질문을 히스토리에 추가
               flushSync(() => {
                 setStreamingContent("");
@@ -741,9 +733,7 @@ export default function Home() {
               setOptions(chunk.options);
               setCanRequestFeedback(chunk.canRequestFeedback || false);
               setContextCount(chunk.contextCount || 0);
-              console.log('[DEBUG] Options set:', chunk.options);
             } else if (questionContent && chunk.options) {
-              console.log('[DEBUG] Using questionContent with options');
               // questionContent가 있으면 그것을 사용
               flushSync(() => {
                 setStreamingContent("");
@@ -759,9 +749,6 @@ export default function Home() {
               setOptions(chunk.options);
               setCanRequestFeedback(chunk.canRequestFeedback || false);
               setContextCount(chunk.contextCount || 0);
-              console.log('[DEBUG] Options set from questionContent:', chunk.options);
-            } else {
-              console.log('[DEBUG] No question or options in chunk');
             }
           }
         });
@@ -959,26 +946,20 @@ export default function Home() {
 
   // 이전 세션 재개
   const handleResumeSession = async (targetSessionId: string) => {
-    console.log("[handleResumeSession] 시작", { targetSessionId, hasToken: !!token });
     if (!token) {
       alert("로그인이 필요합니다.");
       return;
     }
     setIsSwitchingSession(true);
     setIsLoading(false); // 로딩 상태 초기화
-    console.log("[handleResumeSession] API 호출 중...");
     try {
       const res = await resumeSession(targetSessionId, token);
-      console.log("[handleResumeSession] 성공", res);
-      console.log("[handleResumeSession] options:", res.options, "length:", res.options?.length);
       setSessionId(res.sessionId);
       setQuestion(res.question);
       setOptions(res.options || []);
       setCanRequestFeedback(res.canRequestFeedback || false);
       setSelectedCounselorType(res.counselorType as CounselorType || null);
       setPhase("selecting");
-
-      console.log("[handleResumeSession] State updated, checking if options will be visible");
 
       const historyItems: HistoryItem[] = [];
 
