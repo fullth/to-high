@@ -393,9 +393,11 @@ question만 생성하세요.`;
     }
 
     // options 별도 생성 (JSON 모드)
+    const modeOptionsPrompt = counselorType ? COUNSELOR_MODE_OPTIONS_PROMPTS[counselorType] : '[질문 모드 선택지] 반말체, 8개, 15자 이내\n- 방금 생성한 질문의 맥락과 내용에 맞는 구체적인 답변 제공\n- 긍정적 답변, 부정적 답변, 구체적 상황, 애매한 답변, 주제 전환 등 다양하게\n- 8번째 선택지는 반드시 "조언해줘" 또는 "정리해줘"';
+
     const optionsSystemPrompt = `${modePrompt}
 
-${COUNSELOR_MODE_OPTIONS_PROMPTS[counselorType] || '[질문 모드 선택지] 반말체, 8개, 15자 이내\n- 방금 생성한 질문의 맥락과 내용에 맞는 구체적인 답변 제공\n- 긍정적 답변, 부정적 답변, 구체적 상황, 애매한 답변, 주제 전환 등 다양하게\n- 8번째 선택지는 반드시 "조언해줘" 또는 "정리해줘"'}
+${modeOptionsPrompt}
 
 질문: "${question}"
 
