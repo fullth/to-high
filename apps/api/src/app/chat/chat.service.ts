@@ -255,18 +255,30 @@ export class ChatService {
 
       const updatedSession = await this.sessionService.findById(sessionId);
 
-      const options = await this.openaiAgent.generateOptions(
+      // 질문 스트리밍 생성
+      let fullQuestion = '';
+      let optionsResult: any = null;
+
+      for await (const chunk of this.openaiAgent.generateOptionsStream(
         updatedSession!.context,
         'collecting',
         updatedSession!.category as Category,
         (updatedSession as any).counselorType as CounselorType,
-      );
+      )) {
+        if (chunk.type === 'question_chunk') {
+          fullQuestion += chunk.content;
+          yield { type: 'question_chunk', content: chunk.content };
+        } else if (chunk.type === 'options') {
+          optionsResult = chunk;
+        }
+      }
 
       yield {
         type: 'next',
         sessionId,
+        question: fullQuestion,
         contextCount: updatedSession!.context.length,
-        ...options,
+        ...optionsResult,
       };
       return;
     }
@@ -282,15 +294,26 @@ export class ChatService {
       ? [`[이전 대화 요약] ${rollingSummary}`, ...updatedSession!.context]
       : updatedSession!.context;
 
-    const options = await this.openaiAgent.generateOptions(
+    // 질문 스트리밍 생성
+    let fullQuestion = '';
+    let optionsResult: any = null;
+
+    for await (const chunk of this.openaiAgent.generateOptionsStream(
       contextForAI,
       'collecting',
       updatedSession!.category as Category,
       (updatedSession as any).counselorType as CounselorType,
-    );
+    )) {
+      if (chunk.type === 'question_chunk') {
+        fullQuestion += chunk.content;
+        yield { type: 'question_chunk', content: chunk.content };
+      } else if (chunk.type === 'options') {
+        optionsResult = chunk;
+      }
+    }
 
     // AI 응답(질문) 저장
-    await this.sessionService.addContext(sessionId, `상담사: ${options.question}`);
+    await this.sessionService.addContext(sessionId, `상담사: ${fullQuestion}`);
 
     // 롤링 요약: context가 20개 이상이면 오래된 것 요약
     const finalSession = await this.sessionService.findById(sessionId);
@@ -298,12 +321,12 @@ export class ChatService {
       await this.performRollingSummary(sessionId, finalSession);
     }
 
-    if (options.canProceedToResponse) {
+    if (optionsResult?.canProceedToResponse) {
       yield {
         type: 'next',
         sessionId,
         canProceedToResponse: true,
-        canRequestFeedback: options.canRequestFeedback,
+        canRequestFeedback: optionsResult.canRequestFeedback,
         responseModes: RESPONSE_MODE_OPTIONS,
         contextCount: updatedSession!.context.length + 1,
       };
@@ -311,8 +334,9 @@ export class ChatService {
       yield {
         type: 'next',
         sessionId,
+        question: fullQuestion,
         contextCount: updatedSession!.context.length + 1,
-        ...options,
+        ...optionsResult,
       };
     }
   }

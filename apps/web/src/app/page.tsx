@@ -694,6 +694,7 @@ export default function Home() {
       const newHistoryItems: HistoryItem[] = [];
       let canProceed = false;
       let responseModes: any = null;
+      let questionContent = "";
 
       try {
         await selectOptionStream(sessionId, selected, token || undefined, (chunk) => {
@@ -705,6 +706,10 @@ export default function Home() {
               canProceed = true;
               responseModes = chunk.responseModes;
             }
+          } else if (chunk.type === 'question_chunk') {
+            // 질문 스트리밍
+            questionContent += chunk.content;
+            setStreamingContent(questionContent);
           } else if (chunk.type === 'contextSummary') {
             flushSync(() => {
               setStreamingContent("");
@@ -716,7 +721,7 @@ export default function Home() {
               responseModes = chunk.responseModes;
               setCanRequestFeedback(chunk.canRequestFeedback || false);
             } else if (chunk.question && chunk.options) {
-              // 질문을 히스토리에 추가
+              // 스트리밍 완료, 질문을 히스토리에 추가
               flushSync(() => {
                 setStreamingContent("");
                 setSelectionHistory(prev => [...prev, {
