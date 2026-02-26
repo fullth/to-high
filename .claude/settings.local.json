@@ -94,7 +94,8 @@
       "Bash(test:*)",
       "Bash(chmod:*)",
       "Bash(./test-streaming.sh)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(npx playwright test:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
