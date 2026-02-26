@@ -956,6 +956,7 @@ export default function Home() {
       return;
     }
     setIsSwitchingSession(true);
+    setIsLoading(false); // 로딩 상태 초기화
     console.log("[handleResumeSession] API 호출 중...");
     try {
       const res = await resumeSession(targetSessionId, token);
@@ -967,6 +968,8 @@ export default function Home() {
       setCanRequestFeedback(res.canRequestFeedback || false);
       setSelectedCounselorType(res.counselorType as CounselorType || null);
       setPhase("selecting");
+
+      console.log("[handleResumeSession] State updated, checking if options will be visible");
 
       const historyItems: HistoryItem[] = [];
 
