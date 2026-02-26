@@ -717,6 +717,23 @@ export default function Home() {
             });
           } else if (chunk.type === 'next') {
             if (chunk.canProceedToResponse) {
+              // 응답 모드 선택 단계로 진입
+
+              // 스트리밍된 질문을 히스토리에 추가하고 응답 모드 UI 표시
+              flushSync(() => {
+                if (questionContent) {
+                  setSelectionHistory(prev => [...prev, {
+                    type: "assistant",
+                    content: questionContent,
+                    isQuestion: true,
+                    timestamp: new Date(),
+                  }]);
+                }
+                setStreamingContent("");
+                setShowModeSelection(true);
+                setResponseModes(chunk.responseModes || []);
+              });
+
               canProceed = true;
               responseModes = chunk.responseModes;
               setCanRequestFeedback(chunk.canRequestFeedback || false);
