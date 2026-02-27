@@ -13,11 +13,16 @@ import { UserRepository } from '../src/persistence/user/user.repository';
 import { AuthService } from '../src/app/auth/auth.service';
 import { JwtStrategy } from '../src/app/auth/strategy/jwt.strategy';
 import { AuthController } from '../src/controller/auth/auth.controller';
+import { NotificationService } from '../src/common/notification.service';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
   let jwtService: JwtService;
   let userModel: Model<UserDocument>;
+
+  const mockNotificationService = {
+    notifyNewUser: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -38,7 +43,12 @@ describe('AuthController (e2e)', () => {
         }),
       ],
       controllers: [AuthController],
-      providers: [AuthService, UserRepository, JwtStrategy],
+      providers: [
+        AuthService,
+        UserRepository,
+        JwtStrategy,
+        { provide: NotificationService, useValue: mockNotificationService },
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication();

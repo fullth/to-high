@@ -62,10 +62,10 @@ export const mbtiSubTypes = [
 
 export const reactionSubTypes = [
     {
-        id: "reaction-bright" as CounselorType,
-        label: "밝은 반응",
-        description: "긍정적이고 활기찬 톤",
-        color: "#FFB84D",
+        id: "reaction" as CounselorType,
+        label: "리액션",
+        description: "자연스럽고 따뜻한 반응",
+        color: "#9B8AA4",
         icon: (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <circle cx="12" cy="12" r="10" />
@@ -75,47 +75,19 @@ export const reactionSubTypes = [
             </svg>
         ),
     },
-    {
-        id: "reaction-calm" as CounselorType,
-        label: "차분한 반응",
-        description: "편안하고 조용한 톤",
-        color: "#A0B9D9",
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M8 15h8" />
-                <line x1="9" y1="9" x2="9.01" y2="9" />
-                <line x1="15" y1="9" x2="15.01" y2="9" />
-            </svg>
-        ),
-    },
 ];
 
 export const listeningSubTypes = [
     {
-        id: "listening-quiet" as CounselorType,
-        label: "조용한 경청",
-        description: "최소한의 반응",
-        color: "#B8B8D0",
+        id: "listening" as CounselorType,
+        label: "경청",
+        description: "그냥 들어줄게요",
+        color: "#7C9885",
         icon: (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                 <line x1="12" y1="19" x2="12" y2="22" />
-            </svg>
-        ),
-    },
-    {
-        id: "listening-active" as CounselorType,
-        label: "적극적 경청",
-        description: "고개 끄덕이는 느낌",
-        color: "#9BC4BC",
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="22" />
-                <path d="M8 14l2 2 4-4" />
             </svg>
         ),
     },

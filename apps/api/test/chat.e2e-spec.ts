@@ -10,8 +10,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 import { UserDocument, UserSchema } from '../src/database/user.schema';
 import { SessionDocument, SessionSchema } from '../src/database/session.schema';
+import { UserProfileDocument, UserProfileSchema } from '../src/database/user-profile.schema';
 import { UserRepository } from '../src/persistence/user/user.repository';
 import { SessionRepository } from '../src/persistence/session/session.repository';
+import { UserProfileRepository } from '../src/persistence/user-profile/user-profile.repository';
 import { AuthService } from '../src/app/auth/auth.service';
 import { ChatService } from '../src/app/chat/chat.service';
 import { SessionService } from '../src/app/session/session.service';
@@ -33,6 +35,7 @@ describe('ChatController (e2e)', () => {
       question: '오늘 어떤 일이 있었나요?',
       options: ['직장 문제', '인간관계', '건강 문제'],
       canProceedToResponse: false,
+      canRequestFeedback: true,
     }),
     generateOptionsStream: jest.fn().mockImplementation(async function* () {
       // question 스트리밍
@@ -75,6 +78,7 @@ describe('ChatController (e2e)', () => {
         MongooseModule.forFeature([
           { name: UserDocument.name, schema: UserSchema },
           { name: SessionDocument.name, schema: SessionSchema },
+          { name: UserProfileDocument.name, schema: UserProfileSchema },
         ]),
         PassportModule,
         JwtModule.register({
@@ -89,6 +93,7 @@ describe('ChatController (e2e)', () => {
         SessionService,
         UserRepository,
         SessionRepository,
+        UserProfileRepository,
         JwtStrategy,
         { provide: OpenAIAgent, useValue: mockOpenAIAgent },
         { provide: NotificationService, useValue: mockNotificationService },
