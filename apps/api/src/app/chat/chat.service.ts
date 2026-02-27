@@ -255,7 +255,7 @@ export class ChatService {
 
       const updatedSession = await this.sessionService.findById(sessionId);
 
-      // 질문 스트리밍 생성
+      // 실시간 스트리밍으로 질문 생성
       let fullQuestion = '';
       let optionsResult: any = null;
 
@@ -296,7 +296,7 @@ export class ChatService {
       ? [`[이전 대화 요약] ${rollingSummary}`, ...updatedSession!.context]
       : updatedSession!.context;
 
-    // 질문 스트리밍 생성
+    // 실시간 스트리밍으로 질문 생성
     let fullQuestion = '';
     let optionsResult: any = null;
 
@@ -355,38 +355,10 @@ export class ChatService {
 
   /**
    * 세션 이름 자동 생성 시도 (alias가 없고 context가 있을 때)
+   * NOTE: generateSessionName이 제거되어 현재 비활성화
    */
-  private async tryGenerateSessionName(sessionId: string): Promise<void> {
-    try {
-      const session = await this.sessionService.findById(sessionId);
-      if (!session) return;
-
-      // 이미 alias가 있거나, context가 없거나, 익명 사용자면 스킵
-      if (session.alias || session.context.length === 0 || !session.userId) {
-        return;
-      }
-
-      // context에서 실제 사용자 입력만 추출 (시스템 메시지 제외)
-      const userContext = session.context.filter(
-        (c: string) => !c.startsWith('[이전 상담') && !c.startsWith('상담사:')
-      );
-
-      if (userContext.length === 0) {
-        return;
-      }
-
-      const autoName = await this.openaiAgent.generateSessionName(session.context);
-      if (autoName) {
-        await this.sessionRepository.updateAlias(
-          sessionId,
-          session.userId.toString(),
-          autoName
-        );
-      }
-    } catch (error) {
-      // 세션 이름 생성 실패는 무시 (핵심 기능이 아님)
-      console.error('tryGenerateSessionName error:', error);
-    }
+  private async tryGenerateSessionName(_sessionId: string): Promise<void> {
+    // generateSessionName 메서드가 제거되어 자동 이름 생성 비활성화
   }
 
   /**
