@@ -222,6 +222,8 @@ export default function Home() {
   const [crisisMessage, setCrisisMessage] = useState<string | null>(null);
   const [supplementInput, setSupplementInput] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
+  const [cursorFading, setCursorFading] = useState(false);
+  const prevStreamingRef = useRef("");
   const [directInput, setDirectInput] = useState("");
   const [selectedCounselorType, setSelectedCounselorType] = useState<CounselorType | null>(null);
   const [selectedTopMode, setSelectedTopMode] = useState<TopLevelMode>(null);
@@ -367,6 +369,16 @@ export default function Home() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selectionHistory, messages, streamingContent]);
+
+  // 스트리밍 종료 시 커서 페이드아웃
+  useEffect(() => {
+    if (prevStreamingRef.current && !streamingContent) {
+      setCursorFading(true);
+      const timer = setTimeout(() => setCursorFading(false), 400);
+      return () => clearTimeout(timer);
+    }
+    prevStreamingRef.current = streamingContent;
+  }, [streamingContent]);
 
   // 로그인 시 이전 세션 목록 및 저장된 세션 가져오기
   useEffect(() => {
@@ -752,11 +764,6 @@ export default function Home() {
             }
           }
         });
-
-        // canProceed가 true이면 선택지 초기화 (사용자가 직접 메시지 입력 가능)
-        if (canProceed) {
-          setOptions([]);
-        }
       } catch (err) {
         console.error(err);
         setStreamingContent("");
@@ -1546,44 +1553,76 @@ export default function Home() {
 
                   {/* 차별화 배너 - 일반 AI와의 차이점 */}
                   <section className="animate-fade-in-up stagger-2">
-                    <div className="rounded-2xl border border-border bg-card/50 p-5 sm:p-6 space-y-4">
+                    <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-card/80 to-primary/5 p-6 sm:p-8 space-y-5 shadow-lg shadow-primary/10">
                       {/* 메인 메시지 */}
-                      <div className="space-y-2">
-                        <h3 className="text-base font-bold text-foreground">오래 대화할수록, 나만의 상담사가 됩니다</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          일반 AI 채팅은 대화가 길어질수록 느려지고, 앞의 내용을 놓치기 시작합니다.<br className="hidden sm:inline" />
-                          위로는 당신의 이야기를 안전하게 저장하고, 대화가 쌓일수록 당신을 더 깊이 이해합니다.
+                      <div className="space-y-3">
+                        <h3 className="text-lg sm:text-xl font-bold text-foreground leading-tight">
+                          다른 AI는 대화가 길어지면<br />
+                          당신을 잊어버립니다
+                        </h3>
+                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                          마치 처음 만난 사람처럼, 앞에서 나눈 이야기를 기억하지 못하고<br className="hidden sm:inline" />
+                          같은 질문을 반복하거나 엉뚱한 대답을 하게 돼요.<br className="sm:hidden" />
+                          <strong className="text-foreground">위로는 다릅니다.</strong>
+                        </p>
+                      </div>
+
+                      {/* 강조 문구 */}
+                      <div className="py-4 px-5 rounded-xl bg-primary/10 border border-primary/20">
+                        <p className="text-base sm:text-lg font-semibold text-primary text-center leading-relaxed">
+                          오래 대화할수록,<br className="sm:hidden" /> 당신을 더 잘 이해하는<br className="hidden sm:inline" /> 나만의 상담사가 됩니다
                         </p>
                       </div>
 
                       {/* 차별점 리스트 */}
-                      <ul className="space-y-2 text-sm text-muted-foreground">
-                        <li className="flex items-start gap-2">
-                          <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <ul className="space-y-3">
+                        <li className="flex items-start gap-3 p-4 rounded-xl bg-background/50">
+                          <svg className="w-5 h-5 text-primary shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
-                          <span>대화가 아무리 길어져도 처음부터 끝까지 기억합니다</span>
+                          <div className="space-y-1">
+                            <p className="font-semibold text-foreground text-sm sm:text-base">
+                              몇 달 전 이야기도 기억해요
+                            </p>
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                              대화가 아무리 길어져도, 처음 나눴던 이야기부터 차근차근 기억합니다
+                            </p>
+                          </div>
                         </li>
-                        <li className="flex items-start gap-2">
-                          <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <li className="flex items-start gap-3 p-4 rounded-xl bg-background/50">
+                          <svg className="w-5 h-5 text-primary shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
-                          <span>과거 상담 기록을 바탕으로 맞춤형 응답을 제공합니다</span>
+                          <div className="space-y-1">
+                            <p className="font-semibold text-foreground text-sm sm:text-base">
+                              당신의 상황을 진짜로 이해해요
+                            </p>
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                              지난 대화를 바탕으로, 지금 당신에게 꼭 맞는 위로와 조언을 드립니다
+                            </p>
+                          </div>
                         </li>
-                        <li className="flex items-start gap-2">
-                          <svg className="w-4 h-4 text-primary shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <li className="flex items-start gap-3 p-4 rounded-xl bg-background/50">
+                          <svg className="w-5 h-5 text-primary shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                           </svg>
-                          <span>대화 내용은 암호화되어 제3자에게 절대 공유되지 않습니다</span>
+                          <div className="space-y-1">
+                            <p className="font-semibold text-foreground text-sm sm:text-base">
+                              비밀이 새어나갈 걱정 없어요
+                            </p>
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                              나눈 이야기는 안전하게 보관되며, 다른 누구에게도 공유되지 않습니다
+                            </p>
+                          </div>
                         </li>
                       </ul>
 
                       <a
                         href="/privacy"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-primary hover:underline font-medium"
                       >
                         개인정보처리방침 보기
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </a>
@@ -2053,6 +2092,9 @@ export default function Home() {
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {formatAsMarkdown(item.content)}
                               </ReactMarkdown>
+                              {cursorFading && !streamingContent && item.type !== "user" && idx === selectionHistory.length - 1 && (
+                                <span className="inline-block w-1.5 h-4 bg-primary rounded-sm ml-0.5 animate-[cursorFadeOut_0.4s_ease-out_forwards]" />
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2073,7 +2115,7 @@ export default function Home() {
                         </div>
                       </div>
                     )}
-                    {isLoading && !isLoadingNewOptions && !streamingContent && (
+                    {isLoading && !isLoadingNewOptions && !streamingContent && !cursorFading && (
                       <div className="flex justify-start animate-pulse">
                         <div className="flex gap-4">
                           <div className="w-10 h-10 rounded-xl bg-muted shrink-0" />
