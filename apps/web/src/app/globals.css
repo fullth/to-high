@@ -178,6 +178,16 @@
   }
 }
 
+/* 커서 페이드아웃 애니메이션 */
+@keyframes cursorFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 /* 입장 애니메이션 */
 @keyframes fadeInUp {
   from {
