@@ -127,7 +127,11 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
     setError(null);
     try {
       const res = await startSession(categoryId, token || undefined);
-      router.push(`/chat/${res.sessionId}`);
+      const params = new URLSearchParams({
+        question: res.question,
+        options: JSON.stringify(res.options),
+      });
+      router.push(`/chat/${res.sessionId}?${params.toString()}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "세션을 시작할 수 없어요";
       setError(message);

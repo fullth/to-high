@@ -21,9 +21,10 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   // CORS 설정 - 프로덕션과 개발 환경 분리
+  const devOrigins = ['http://localhost:3001', 'http://localhost:3002'];
   const allowedOrigins = process.env.FRONTEND_URL
-    ? [process.env.FRONTEND_URL, 'http://localhost:3001']
-    : ['http://localhost:3001'];
+    ? [process.env.FRONTEND_URL, ...devOrigins]
+    : devOrigins;
 
   app.enableCors({
     origin: allowedOrigins,
