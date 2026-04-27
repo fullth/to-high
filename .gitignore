@@ -22,6 +22,8 @@ build/
 
 # Claude Code
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+.playwright-mcp/
 
 # OS
 .DS_Store
