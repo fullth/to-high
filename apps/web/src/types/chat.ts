@@ -1,4 +1,4 @@
-export type ChatPhase = "selecting" | "mode" | "chatting" | "ended";
+export type ChatPhase = "selecting" | "loginWall" | "mode" | "chatting" | "ended";
 
 export type ResponseMode =
   | "comfort"
@@ -34,8 +34,6 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
-
-export type TopLevelMode = "mbti" | "reaction" | "listening" | null;
 
 export interface HistoryItem {
   type: "user" | "assistant" | "system";
