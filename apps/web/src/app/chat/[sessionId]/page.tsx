@@ -1,17 +1,65 @@
 "use client";
 
 import "@/components/chat/chat.css";
+import { ChatBubble } from "@/components/chat/chat-bubble";
+import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { useAuth } from "@/contexts/auth-context";
 import { endSession, saveSession, selectOptionStream, setResponseModeStream, sendMessageStream } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseModeOption } from "@/types/chat";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
+
+function AuthShell({
+  token,
+  user,
+  sessionId,
+  onLogout,
+  children,
+}: {
+  token: string | null;
+  user: { name?: string | null; email?: string | null } | null;
+  sessionId: string;
+  onLogout: () => void;
+  children: ReactNode;
+}) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  if (!token) return <>{children}</>;
+  return (
+    <div className={`ch-shell${drawerOpen ? " sb-open" : ""}`}>
+      <div
+        className="ch-sb-scrim"
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+      />
+      <ChatSidebar
+        token={token}
+        userName={user?.name || undefined}
+        userEmail={user?.email || undefined}
+        activeSessionId={sessionId}
+        onLogout={onLogout}
+        onClose={() => setDrawerOpen(false)}
+      />
+      <button
+        type="button"
+        className="ch-mobile-hamburger"
+        onClick={() => setDrawerOpen(true)}
+        aria-label="메뉴 열기"
+        style={{ position: "fixed", top: 14, left: 14, zIndex: 35 }}
+      >
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+          <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      </button>
+      {children}
+    </div>
+  );
+}
 
 function ChatContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { token, login } = useAuth();
+  const { token, user, login, logout } = useAuth();
 
   const sessionId = params.sessionId as string;
 
@@ -227,16 +275,29 @@ function ChatContent() {
     }
   }, [sessionId, token]);
 
+  const wrap = (el: ReactNode) => (
+    <AuthShell token={token} user={user} sessionId={sessionId} onLogout={logout}>
+      {el}
+    </AuthShell>
+  );
+
   if (phase === "selecting" || phase === "mode" || phase === "loginWall") {
     const dockHidden = phase !== "selecting";
-    return (
+    return wrap(
       <main className="ch-frame" style={{ height: "100vh" }}>
         <div className="ch-inner">
           <header className="ch-header">
-            <span className="ch-logo">
-              <span className="ch-logo-mark" aria-hidden="true" />
-              위로 <span className="ch-logo-sub">To High</span>
-            </span>
+            {token ? (
+              <span className="ch-status">
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", animation: "chatPulse 2.2s ease infinite" }} />
+                {phase === "selecting" ? "이야기 시작 중" : phase === "mode" ? "방식 고르는 중" : "이어가는 중"}
+              </span>
+            ) : (
+              <span className="ch-logo">
+                <span className="ch-logo-mark" aria-hidden="true" />
+                위로 <span className="ch-logo-sub">To High</span>
+              </span>
+            )}
             <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
           </header>
 
@@ -369,7 +430,7 @@ function ChatContent() {
   }
 
   if (phase === "chatting") {
-    return (
+    return wrap(
       <main className="ch-frame" style={{ height: "100vh" }}>
         <div className="ch-inner">
           <header className="ch-header">
@@ -396,19 +457,17 @@ function ChatContent() {
               </div>
             ))}
             {messages.map((msg, idx) => (
-              <div key={idx} className={`ch-row ${msg.role === "user" ? "user" : ""}`}>
-                <div className={`ch-bubble ${msg.role === "user" ? "user" : "ai glow"}`}>
-                  {msg.content}
-                </div>
-              </div>
+              <ChatBubble
+                key={idx}
+                role={msg.role}
+                content={msg.content}
+                variant={msg.role === "assistant" ? "ai glow" : undefined}
+              />
             ))}
             {isLoading && streamingContent && (
-              <div className="ch-row">
-                <div className="ch-bubble ai glow">
-                  {streamingContent}
-                  <span className="ch-caret" />
-                </div>
-              </div>
+              <ChatBubble role="assistant" content={streamingContent} variant="ai glow">
+                <span className="ch-caret" />
+              </ChatBubble>
             )}
             {isLoading && !streamingContent && (
               <div className="ch-row">
@@ -448,14 +507,21 @@ function ChatContent() {
   }
 
   if (phase === "ended") {
-    return (
+    return wrap(
       <main className="ch-frame" style={{ height: "100vh" }}>
         <div className="ch-inner">
           <header className="ch-header">
-            <span className="ch-logo">
-              <span className="ch-logo-mark" aria-hidden="true" />
-              위로 <span className="ch-logo-sub">To High</span>
-            </span>
+            {token ? (
+              <span className="ch-status muted">
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#94a3a3" }} />
+                마무리됨
+              </span>
+            ) : (
+              <span className="ch-logo">
+                <span className="ch-logo-mark" aria-hidden="true" />
+                위로 <span className="ch-logo-sub">To High</span>
+              </span>
+            )}
           </header>
 
           <div className="ch-messages anchor-end">
@@ -467,11 +533,7 @@ function ChatContent() {
               </div>
             ))}
             {messages.map((msg, idx) => (
-              <div key={idx} className={`ch-row ${msg.role === "user" ? "user" : ""} no-anim`}>
-                <div className={`ch-bubble ${msg.role === "user" ? "user" : "ai"}`}>
-                  {msg.content}
-                </div>
-              </div>
+              <ChatBubble key={idx} role={msg.role} content={msg.content} />
             ))}
 
             <div className="ch-row">
