@@ -139,7 +139,10 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
     }
   };
 
-  const handlePrimaryStart = () => handleStart("daily");
+  const handlePrimaryStart = () => {
+    const el = document.getElementById("verticals");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const trustCount = publicStatsToday ?? 1847;
 
   return (
@@ -153,12 +156,19 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
             </span>
           </a>
           <nav className="nav-actions">
+            {token && (
+              <a className="btn btn-ghost" href="/sessions">
+                이전 이야기
+              </a>
+            )}
             <a className="btn btn-ghost" href="/subscribe">
               멤버십
             </a>
-            <button type="button" className="btn btn-ghost" onClick={onLoginClick}>
-              로그인
-            </button>
+            {!token && (
+              <button type="button" className="btn btn-ghost" onClick={onLoginClick}>
+                로그인
+              </button>
+            )}
             <button type="button" className="btn btn-primary" onClick={handlePrimaryStart} disabled={!!starting}>
               마음 들으러 가기 <ArrowIcon />
             </button>
@@ -225,7 +235,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
           </div>
         </section>
 
-        <section className="section verticals-section">
+        <section id="verticals" className="section verticals-section">
           <div className="container">
             <div className="section-head">
               <span className="eyebrow">3 Verticals</span>
