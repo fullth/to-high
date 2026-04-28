@@ -1,9 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import "@/components/chat/chat.css";
 import { useAuth } from "@/contexts/auth-context";
-import { endSession, selectOption, setResponseModeStream, sendMessageStream } from "@/lib/api";
+import { endSession, saveSession, selectOptionStream, setResponseModeStream, sendMessageStream } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseModeOption } from "@/types/chat";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -12,7 +11,7 @@ function ChatContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, login } = useAuth();
 
   const sessionId = params.sessionId as string;
 
@@ -27,6 +26,7 @@ function ChatContent() {
   const [crisisMessage, setCrisisMessage] = useState<string | null>(null);
   const [supplementInput, setSupplementInput] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   // 선택 히스토리를 저장 (대화 형태로 보여주기 위함)
   const [selectionHistory, setSelectionHistory] = useState<Array<{
@@ -74,53 +74,74 @@ function ChatContent() {
       }]);
 
       try {
-        const res = await selectOption(sessionId, selected, token || undefined);
+        let metadata: any = null;
+        let contextSummary = "";
+        let streamedQuestion = "";
+        let streamedQuestionAdded = false;
 
-        if (res.isCrisis && res.crisisMessage) {
-          setCrisisMessage(res.crisisMessage);
-        }
+        await selectOptionStream(
+          sessionId,
+          selected,
+          token || undefined,
+          (chunk) => {
+            if (chunk.type === "metadata") {
+              metadata = chunk;
+              if (chunk.isCrisis && chunk.crisisMessage) {
+                setCrisisMessage(chunk.crisisMessage);
+              }
+            } else if (chunk.type === "contextSummary") {
+              contextSummary = chunk.content;
+              setSelectionHistory(prev => [...prev, {
+                type: "assistant",
+                content: contextSummary,
+              }]);
+            } else if (chunk.type === "question_chunk") {
+              streamedQuestion += chunk.content;
+              if (!streamedQuestionAdded) {
+                streamedQuestionAdded = true;
+                setSelectionHistory(prev => [...prev, {
+                  type: "assistant",
+                  content: streamedQuestion,
+                  isQuestion: true,
+                  options: [],
+                }]);
+              } else {
+                setSelectionHistory(prev => {
+                  const next = [...prev];
+                  const last = next[next.length - 1];
+                  if (last && last.isQuestion) {
+                    next[next.length - 1] = { ...last, content: streamedQuestion };
+                  }
+                  return next;
+                });
+              }
+            } else if (chunk.type === "next") {
+              setQuestion(chunk.question);
+              setOptions(chunk.options);
+              setSelectionHistory(prev => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                if (last && last.isQuestion) {
+                  next[next.length - 1] = {
+                    ...last,
+                    content: chunk.question,
+                    options: chunk.options,
+                  };
+                }
+                return next;
+              });
+              const modes = chunk.responseModes || metadata?.responseModes;
+              if (chunk.canProceedToResponse && modes) {
+                setPhase("mode");
+                setResponseModes(modes);
+              }
+            }
+          },
+        );
 
-        // 히스토리에 AI 응답 추가
-        const newHistoryItems: Array<{
-          type: "user" | "assistant";
-          content: string;
-          isQuestion?: boolean;
-          options?: string[];
-        }> = [];
-
-        // 공감 코멘트가 있으면 추가
-        if (res.empathyComment) {
-          newHistoryItems.push({
-            type: "assistant",
-            content: res.empathyComment,
-          });
-        }
-
-        // 컨텍스트 요약이 있으면 추가
-        if (res.contextSummary) {
-          newHistoryItems.push({
-            type: "assistant",
-            content: res.contextSummary,
-          });
-        }
-
-        if (res.canProceedToResponse && res.responseModes) {
+        if (metadata?.isCrisis && metadata.canProceedToResponse && metadata.responseModes && !streamedQuestionAdded) {
           setPhase("mode");
-          setResponseModes(res.responseModes);
-        } else if (res.question && res.options) {
-          // 다음 질문을 히스토리에 추가
-          newHistoryItems.push({
-            type: "assistant",
-            content: res.question,
-            isQuestion: true,
-            options: res.options,
-          });
-          setQuestion(res.question);
-          setOptions(res.options);
-        }
-
-        if (newHistoryItems.length > 0) {
-          setSelectionHistory(prev => [...prev, ...newHistoryItems]);
+          setResponseModes(metadata.responseModes);
         }
       } catch (err) {
         console.error(err);
@@ -208,88 +229,72 @@ function ChatContent() {
 
   if (phase === "selecting") {
     return (
-      <main className="h-screen max-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/20 overflow-hidden">
-        {/* 고정 헤더 */}
-        <header className="flex-shrink-0 border-b border-border/50 p-4 flex justify-between items-center bg-background/80 backdrop-blur-sm">
-          <h1 className="font-medium text-foreground/90">이야기 나누는 중</h1>
-          <button
-            onClick={() => router.push("/")}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            홈으로
-          </button>
-        </header>
+      <main className="ch-frame" style={{ height: "100vh" }}>
+        <div className="ch-inner">
+          <header className="ch-header">
+            <span className="ch-logo">
+              <span className="ch-logo-mark" aria-hidden="true" />
+              위로 <span className="ch-logo-sub">To High</span>
+            </span>
+            <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
+          </header>
 
-        {/* 스크롤되는 대화 영역 */}
-        <div className="flex-1 min-h-0 overflow-auto p-4">
-          <div className="max-w-lg mx-auto space-y-4">
+          <div className="ch-messages">
             {selectionHistory.map((item, idx) => (
-              <div
-                key={idx}
-                className={`flex ${item.type === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    item.type === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary/50 text-foreground/90"
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{item.content}</p>
+              <div key={idx} className={`ch-row ${item.type === "user" ? "user" : ""}`}>
+                <div className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}>
+                  {item.content}
                 </div>
               </div>
             ))}
-
-            {/* 로딩 표시 */}
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-secondary/50 rounded-2xl px-4 py-3">
-                  <p className="text-sm text-muted-foreground">귀 기울여 듣는 중...</p>
+              <div className="ch-row">
+                <div className="ch-typing">
+                  <i /><i /><i />
+                  <span className="ch-typing-text">귀 기울여 듣는 중...</span>
                 </div>
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
-        </div>
 
-        {/* 하단 고정 영역: 옵션 + 입력창 */}
-        <div className="flex-shrink-0 border-t border-border/50 bg-background/80 backdrop-blur-sm">
-          <div className="max-w-lg mx-auto p-4 space-y-3">
-            {/* 옵션 버튼들 */}
+          <div className="ch-dock">
             {options.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                {options.map((option, idx) => (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    className="w-full h-auto py-2.5 px-3 text-left justify-start whitespace-normal text-sm transition-all duration-200 hover:border-primary/40 hover:bg-secondary/30"
-                    onClick={() => handleSelectOption(option)}
-                    disabled={isLoading}
-                  >
-                    {option}
-                  </Button>
-                ))}
-              </div>
+              <>
+                <div className="ch-dock-label">선택해 주세요</div>
+                <div className="ch-options">
+                  {options.map((option, idx) => (
+                    <button
+                      type="button"
+                      key={idx}
+                      className="ch-option"
+                      onClick={() => handleSelectOption(option)}
+                      disabled={isLoading}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
-
-            {/* 직접 입력 */}
-            <div className="flex gap-2">
+            <div className="ch-input-row">
               <input
                 type="text"
+                className="ch-input"
                 value={supplementInput}
                 onChange={(e) => setSupplementInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSupplementSubmit()}
                 placeholder="직접 말씀해 주셔도 좋아요..."
-                className="flex-1 px-4 h-11 text-sm rounded-xl border border-border/50 bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
                 disabled={isLoading}
               />
-              <Button
-                className="h-11 px-5"
+              <button
+                type="button"
+                className="ch-send"
                 onClick={handleSupplementSubmit}
                 disabled={isLoading || !supplementInput.trim()}
               >
                 전송
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -299,48 +304,47 @@ function ChatContent() {
 
   if (phase === "mode") {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-background via-background to-secondary/20">
-        <div className="max-w-md w-full space-y-6">
-          {crisisMessage && (
-            <Card className="border-destructive/30 bg-destructive/5">
-              <CardHeader className="p-4">
-                <CardTitle className="text-lg text-destructive flex items-center gap-2">
-                  <span>도움이 필요하신가요?</span>
-                </CardTitle>
-                <CardDescription className="text-destructive/80 whitespace-pre-wrap">
-                  {crisisMessage}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          )}
+      <main className="ch-frame" style={{ minHeight: "100vh" }}>
+        <div className="ch-inner">
+          <header className="ch-header thin">
+            <span className="ch-logo">
+              <span className="ch-logo-mark" aria-hidden="true" />
+              위로 <span className="ch-logo-sub">To High</span>
+            </span>
+            <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
+          </header>
+          <div className="ch-center">
+            <div className="ch-center-stack">
+              {crisisMessage && (
+                <div className="ch-summary" style={{ borderColor: "rgba(239,68,68,0.4)", marginBottom: 24 }}>
+                  <div className="ch-summary-eyebrow" style={{ color: "#ef4444" }}>도움이 필요하신가요?</div>
+                  <p style={{ color: "#fca5a5", whiteSpace: "pre-wrap" }}>{crisisMessage}</p>
+                </div>
+              )}
 
-          <div className="text-center space-y-2">
-            <h2 className="text-xl font-medium text-foreground/90">어떻게 이야기할까요?</h2>
-            <p className="text-muted-foreground text-sm">
-              이야기 잘 들었어요. 어떤 방식이 좋을까요?
-            </p>
+              <h2 className="ch-h">어떻게 이야기할까요?</h2>
+              <p className="ch-sub">이야기 잘 들었어요. 어떤 방식이 좋을까요?</p>
+
+              <div className="ch-mode-list">
+                {responseModes.map((rm) => (
+                  <button
+                    type="button"
+                    key={rm.mode}
+                    className="ch-mode"
+                    onClick={() => handleSelectMode(rm.mode)}
+                    disabled={isLoading}
+                  >
+                    <div className="ch-mode-label">{rm.label}</div>
+                    <div className="ch-mode-desc">{rm.description}</div>
+                  </button>
+                ))}
+              </div>
+
+              {isLoading && (
+                <p className="ch-sub" style={{ marginTop: 24, textAlign: "center" }}>귀 기울여 듣는 중...</p>
+              )}
+            </div>
           </div>
-
-          <div className="grid gap-3">
-            {responseModes.map((rm) => (
-              <Card
-                key={rm.mode}
-                className="cursor-pointer transition-all duration-200 hover:border-primary/40 hover:shadow-sm hover:bg-card/80"
-                onClick={() => handleSelectMode(rm.mode)}
-              >
-                <CardHeader className="p-4">
-                  <CardTitle className="text-base font-medium">
-                    {rm.label}
-                  </CardTitle>
-                  <CardDescription className="text-sm">{rm.description}</CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-
-          {isLoading && (
-            <p className="text-center text-muted-foreground text-sm">귀 기울여 듣는 중...</p>
-          )}
         </div>
       </main>
     );
@@ -348,66 +352,70 @@ function ChatContent() {
 
   if (phase === "chatting") {
     return (
-      <main className="h-screen max-h-screen flex flex-col bg-gradient-to-b from-background via-background to-secondary/10 overflow-hidden">
-        <header className="flex-shrink-0 border-b border-border/50 p-4 flex justify-between items-center bg-background/80 backdrop-blur-sm">
-          <h1 className="font-medium text-foreground/90">이야기 중</h1>
-          <Button variant="outline" size="sm" onClick={handleEndSession} disabled={isLoading}>
-            여기까지
-          </Button>
-        </header>
-
-        <div className="flex-1 min-h-0 overflow-auto p-4 space-y-4">
-          {messages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary/50 text-foreground/90"
-                }`}
-              >
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-              </div>
-            </div>
-          ))}
-          {/* 스트리밍 중인 응답 표시 */}
-          {isLoading && streamingContent && (
-            <div className="flex justify-start">
-              <div className="bg-secondary/50 rounded-2xl px-4 py-3 max-w-[80%]">
-                <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">
-                  {streamingContent}
-                  <span className="animate-pulse">▋</span>
-                </p>
-              </div>
-            </div>
-          )}
-          {/* 로딩 중이지만 아직 스트리밍 시작 전 */}
-          {isLoading && !streamingContent && (
-            <div className="flex justify-start">
-              <div className="bg-secondary/50 rounded-2xl px-4 py-3">
-                <p className="text-sm text-muted-foreground">귀 기울여 듣는 중...</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex-shrink-0 border-t border-border/50 p-4 bg-background/80 backdrop-blur-sm">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-              placeholder="메시지를 입력하세요..."
-              className="flex-1 px-4 py-2 border border-border/50 rounded-full bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
+      <main className="ch-frame" style={{ height: "100vh" }}>
+        <div className="ch-inner">
+          <header className="ch-header">
+            <span className="ch-status">
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", animation: "chatPulse 2.2s ease infinite" }} />
+              이야기 중
+            </span>
+            <button
+              type="button"
+              className="ch-ghostbtn"
+              onClick={handleEndSession}
               disabled={isLoading}
-            />
-            <Button onClick={handleSendMessage} disabled={isLoading || !inputMessage.trim()}>
-              전송
-            </Button>
+            >
+              여기까지
+            </button>
+          </header>
+
+          <div className="ch-messages">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`ch-row ${msg.role === "user" ? "user" : ""}`}>
+                <div className={`ch-bubble ${msg.role === "user" ? "user" : "ai glow"}`}>
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {isLoading && streamingContent && (
+              <div className="ch-row">
+                <div className="ch-bubble ai glow">
+                  {streamingContent}
+                  <span className="ch-caret" />
+                </div>
+              </div>
+            )}
+            {isLoading && !streamingContent && (
+              <div className="ch-row">
+                <div className="ch-typing">
+                  <i /><i /><i />
+                  <span className="ch-typing-text">귀 기울여 듣는 중...</span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className="ch-dock">
+            <div className="ch-input-row">
+              <input
+                type="text"
+                className="ch-input"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                placeholder="마음을 적어보세요..."
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                className="ch-send"
+                onClick={handleSendMessage}
+                disabled={isLoading || !inputMessage.trim()}
+              >
+                전송
+              </button>
+            </div>
           </div>
         </div>
       </main>
@@ -416,23 +424,78 @@ function ChatContent() {
 
   if (phase === "ended") {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-background via-background to-secondary/20">
-        <div className="max-w-md w-full space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-xl font-medium text-foreground/90">오늘 이야기는 여기까지</h2>
-            <p className="text-muted-foreground text-sm">이야기 나눠줘서 고마워요. 언제든 다시 와요.</p>
+      <main className="ch-frame" style={{ minHeight: "100vh" }}>
+        <div className="ch-inner">
+          <header className="ch-header thin">
+            <span className="ch-logo">
+              <span className="ch-logo-mark" aria-hidden="true" />
+              위로 <span className="ch-logo-sub">To High</span>
+            </span>
+          </header>
+          <div className="ch-center">
+            <div className="ch-center-stack">
+              <h2 className="ch-h">오늘 이야기는 여기까지</h2>
+              <p className="ch-sub">이야기 나눠주셔서 고마워요. 마음 무거운 날 다시 와도 좋아요.</p>
+
+              {summary && (
+                <div className={`ch-summary${summary.length <= 60 ? " compact" : ""}`}>
+                  <div className="ch-summary-eyebrow">오늘 나눈 이야기</div>
+                  <p style={{ whiteSpace: "pre-wrap" }}>{summary}</p>
+                </div>
+              )}
+
+              {!token && (
+                <p className="ch-end-hint">
+                  로그인하면 다음에도 이 이야기를 다시 꺼내볼 수 있어요
+                </p>
+              )}
+
+              <div className="ch-end-actions">
+                <button type="button" className="ch-primary" onClick={() => router.push("/")}>
+                  다시 이야기하기
+                </button>
+
+                {token ? (
+                  <button
+                    type="button"
+                    className={`ch-secondary${saveState === "saved" ? " saved" : ""}`}
+                    disabled={saveState === "saving" || saveState === "saved"}
+                    onClick={async () => {
+                      if (!token) return;
+                      setSaveState("saving");
+                      try {
+                        await saveSession(sessionId, token);
+                        setSaveState("saved");
+                      } catch {
+                        setSaveState("error");
+                      }
+                    }}
+                  >
+                    {saveState === "saved" ? (
+                      <>
+                        <span aria-hidden="true" style={{ marginRight: 6 }}>✓</span>
+                        저장되었어요
+                      </>
+                    ) : saveState === "saving" ? (
+                      "저장 중..."
+                    ) : saveState === "error" ? (
+                      "다시 시도"
+                    ) : (
+                      "대화 기록 저장하기"
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ch-secondary"
+                    onClick={() => login()}
+                  >
+                    로그인하고 저장하기
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-
-          <Card className="border-primary/20 bg-card/80">
-            <CardHeader>
-              <CardTitle className="text-base font-medium">오늘 나눈 이야기</CardTitle>
-              <CardDescription className="whitespace-pre-wrap text-foreground/80 leading-relaxed">{summary}</CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Button className="w-full transition-all" onClick={() => router.push("/")}>
-            다시 이야기하기
-          </Button>
         </div>
       </main>
     );
