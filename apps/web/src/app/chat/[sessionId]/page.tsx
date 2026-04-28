@@ -2,7 +2,7 @@
 
 import "@/components/chat/chat.css";
 import { useAuth } from "@/contexts/auth-context";
-import { endSession, selectOptionStream, setResponseModeStream, sendMessageStream } from "@/lib/api";
+import { endSession, saveSession, selectOptionStream, setResponseModeStream, sendMessageStream } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseModeOption } from "@/types/chat";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -11,7 +11,7 @@ function ChatContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, login } = useAuth();
 
   const sessionId = params.sessionId as string;
 
@@ -26,6 +26,7 @@ function ChatContent() {
   const [crisisMessage, setCrisisMessage] = useState<string | null>(null);
   const [supplementInput, setSupplementInput] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   // 선택 히스토리를 저장 (대화 형태로 보여주기 위함)
   const [selectionHistory, setSelectionHistory] = useState<Array<{
@@ -129,9 +130,10 @@ function ChatContent() {
                 }
                 return next;
               });
-              if (chunk.canProceedToResponse && metadata?.responseModes) {
+              const modes = chunk.responseModes || metadata?.responseModes;
+              if (chunk.canProceedToResponse && modes) {
                 setPhase("mode");
-                setResponseModes(metadata.responseModes);
+                setResponseModes(modes);
               }
             }
           },
@@ -433,18 +435,65 @@ function ChatContent() {
           <div className="ch-center">
             <div className="ch-center-stack">
               <h2 className="ch-h">오늘 이야기는 여기까지</h2>
-              <p className="ch-sub">이야기 나눠줘서 고마워요. 언제든 다시 와요.</p>
+              <p className="ch-sub">이야기 나눠주셔서 고마워요. 마음 무거운 날 다시 와도 좋아요.</p>
 
               {summary && (
-                <div className="ch-summary">
+                <div className={`ch-summary${summary.length <= 60 ? " compact" : ""}`}>
                   <div className="ch-summary-eyebrow">오늘 나눈 이야기</div>
                   <p style={{ whiteSpace: "pre-wrap" }}>{summary}</p>
                 </div>
               )}
 
-              <button type="button" className="ch-primary" onClick={() => router.push("/")}>
-                다시 이야기하기
-              </button>
+              {!token && (
+                <p className="ch-end-hint">
+                  로그인하면 다음에도 이 이야기를 다시 꺼내볼 수 있어요
+                </p>
+              )}
+
+              <div className="ch-end-actions">
+                <button type="button" className="ch-primary" onClick={() => router.push("/")}>
+                  다시 이야기하기
+                </button>
+
+                {token ? (
+                  <button
+                    type="button"
+                    className={`ch-secondary${saveState === "saved" ? " saved" : ""}`}
+                    disabled={saveState === "saving" || saveState === "saved"}
+                    onClick={async () => {
+                      if (!token) return;
+                      setSaveState("saving");
+                      try {
+                        await saveSession(sessionId, token);
+                        setSaveState("saved");
+                      } catch {
+                        setSaveState("error");
+                      }
+                    }}
+                  >
+                    {saveState === "saved" ? (
+                      <>
+                        <span aria-hidden="true" style={{ marginRight: 6 }}>✓</span>
+                        저장되었어요
+                      </>
+                    ) : saveState === "saving" ? (
+                      "저장 중..."
+                    ) : saveState === "error" ? (
+                      "다시 시도"
+                    ) : (
+                      "대화 기록 저장하기"
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ch-secondary"
+                    onClick={() => login()}
+                  >
+                    로그인하고 저장하기
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
