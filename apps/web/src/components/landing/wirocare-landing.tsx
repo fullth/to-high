@@ -309,8 +309,8 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                     <circle cx="19" cy="18" r="2.4" fill="#022c22" stroke="#34d399" strokeWidth="1.4" />
                   </svg>
                 </div>
-                <h4>T · F 응답 스타일</h4>
-                <p>논리적인 정리가 필요한 날, 그저 공감받고 싶은 날 — 원하는 톤으로 받아보세요.</p>
+                <h4>이야기 받는 방식</h4>
+                <p>그냥 위로받고 싶은 날, 정리받고 싶은 날 — 그날의 결대로 받아보세요.</p>
               </div>
               <div className="feature">
                 <div className="ficon">

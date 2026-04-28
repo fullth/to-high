@@ -35,8 +35,6 @@ export interface ChatMessage {
   content: string;
 }
 
-export type TopLevelMode = "mbti" | "reaction" | "listening" | null;
-
 export interface HistoryItem {
   type: "user" | "assistant" | "system";
   content: string;

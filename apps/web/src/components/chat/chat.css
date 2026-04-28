@@ -411,6 +411,49 @@
   text-align: center; color: #7d8691; font-size: 12px; margin: 14px 0 4px;
 }
 
+/* inline single-flow pattern */
+@keyframes chBubbleIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ch-messages.anchor-end { justify-content: flex-end; }
+.ch-messages > .ch-row:not(.no-anim),
+.ch-messages > .ch-inline-card,
+.ch-messages > .ch-inline-end {
+  animation: chBubbleIn 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.ch-bubble { white-space: pre-wrap; }
+.ch-inline-card {
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(52,211,153,0.07), transparent 60%),
+    #1a2f23;
+  border: 1px solid #2d4a3a; border-radius: 22px;
+  padding: 20px 20px 18px; margin-top: 4px;
+}
+.ch-inline-end {
+  background:
+    radial-gradient(80% 60% at 100% 0%, rgba(52,211,153,0.10), transparent 60%),
+    #1a2f23;
+  border: 1px solid #2d4a3a; border-radius: 22px;
+  padding: 22px 22px 20px; margin-top: 4px;
+}
+.ch-inline-modes {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin-top: 10px;
+}
+.ch-inline-mode {
+  background: #243d2e; border: 1px solid #2d4a3a; border-radius: 14px;
+  padding: 12px 14px; color: #fff; cursor: pointer; text-align: left;
+  font-family: inherit; transition: 0.2s;
+}
+.ch-inline-mode:hover:not(:disabled) { background: #2d4a3a; border-color: #3a5c49; }
+.ch-inline-mode:disabled { opacity: 0.5; cursor: not-allowed; }
+.ch-dock { transition: opacity 0.25s, max-height 0.3s, padding 0.3s; }
+.ch-dock.fade-out {
+  max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0;
+  pointer-events: none; overflow: hidden;
+}
+
 /* mobile responsive */
 @media (max-width: 640px) {
   .ch-header { padding: 14px 16px; }
@@ -437,5 +480,7 @@
   .ch-wall-scroll { padding: 20px 14px 28px; }
   .ch-wall-card { padding: 22px 20px 20px; border-radius: 18px; }
   .ch-wall-h { font-size: 19px; }
+  .ch-inline-modes { grid-template-columns: 1fr; }
+  .ch-inline-card, .ch-inline-end { padding: 18px 16px 16px; border-radius: 16px; }
   .ch-wall-sub { font-size: 13.5px; margin-bottom: 18px; }
 }
