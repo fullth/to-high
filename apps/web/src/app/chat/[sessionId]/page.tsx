@@ -387,7 +387,14 @@ function ChatContent() {
             </button>
           </header>
 
-          <div className="ch-messages">
+          <div className="ch-messages anchor-end">
+            {selectionHistory.map((item, idx) => (
+              <div key={`hist-${idx}`} className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}>
+                <div className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}>
+                  {item.content}
+                </div>
+              </div>
+            ))}
             {messages.map((msg, idx) => (
               <div key={idx} className={`ch-row ${msg.role === "user" ? "user" : ""}`}>
                 <div className={`ch-bubble ${msg.role === "user" ? "user" : "ai glow"}`}>
@@ -452,6 +459,13 @@ function ChatContent() {
           </header>
 
           <div className="ch-messages anchor-end">
+            {selectionHistory.map((item, idx) => (
+              <div key={`hist-${idx}`} className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}>
+                <div className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}>
+                  {item.content}
+                </div>
+              </div>
+            ))}
             {messages.map((msg, idx) => (
               <div key={idx} className={`ch-row ${msg.role === "user" ? "user" : ""} no-anim`}>
                 <div className={`ch-bubble ${msg.role === "user" ? "user" : "ai"}`}>
