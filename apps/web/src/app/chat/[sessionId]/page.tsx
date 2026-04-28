@@ -313,26 +313,51 @@ function ChatContent() {
             </span>
             <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
           </header>
-          <div className="ch-center">
-            <div className="ch-center-stack">
-              <h2 className="ch-h">조금 더 깊이 이야기 나눠볼까요?</h2>
-              <p className="ch-sub">
-                지금까지 잘 들었어요. 이어지는 위로와 응답을 받으려면 잠시 로그인이 필요해요.
-              </p>
-              <p className="ch-end-hint">
-                로그인하면 오늘 나눈 이야기를 저장하고, 다음에도 이어서 풀어갈 수 있어요
-              </p>
-              <div className="ch-end-actions">
-                <button type="button" className="ch-primary" onClick={() => login()}>
-                  로그인하고 이어가기
-                </button>
-                <button
-                  type="button"
-                  className="ch-secondary"
-                  onClick={() => setPhase("mode")}
-                >
-                  로그인 없이 계속하기
-                </button>
+
+          <div className="ch-wall-scroll">
+            <div className="ch-wall-stack">
+              {selectionHistory.length > 0 && (
+                <div className="ch-wall-history" aria-hidden="false">
+                  {selectionHistory.map((item, idx) => (
+                    <div key={idx} className={`ch-row ${item.type === "user" ? "user" : ""}`}>
+                      <div className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}>
+                        {item.content}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <span className="ch-wall-pause">
+                <i />잠시 멈춤
+              </span>
+
+              <div className="ch-wall-card">
+                <span className="ch-wall-eyebrow">함께 이어가기</span>
+                <h2 className="ch-wall-h">조금 더 깊이 이야기 나눠볼까요?</h2>
+                <p className="ch-wall-sub">
+                  여기까지 나눈 마음, 잃어버리지 않게 잠깐 자리를 만들어볼게요.
+                  <br />
+                  로그인하시면 다음에도 이 흐름을 이어갈 수 있어요.
+                </p>
+                <div className="ch-wall-actions">
+                  <button type="button" className="ch-primary" onClick={() => login()}>
+                    로그인하고 이어가기
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="ch-secondary"
+                    onClick={() => setPhase("mode")}
+                  >
+                    로그인 없이 이어가기
+                  </button>
+                </div>
+                <p className="ch-wall-fineprint">
+                  로그인 없이도 오늘 대화는 마저 나눌 수 있어요.
+                </p>
               </div>
             </div>
           </div>
