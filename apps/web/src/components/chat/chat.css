@@ -35,7 +35,13 @@
   mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 75%);
   -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 30%, transparent 75%);
 }
-.ch-inner { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.ch-inner {
+  position: relative; z-index: 1; flex: 1;
+  display: flex; flex-direction: column; min-height: 0;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+}
 
 .ch-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -297,6 +303,42 @@
   color: #86efac;
 }
 .ch-secondary:disabled { cursor: default; }
+
+.sessions-list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.session-card {
+  display: block;
+  background: #1a2f23;
+  border: 1px solid #2d4a3a;
+  border-radius: 16px;
+  padding: 16px 18px;
+  text-decoration: none; color: inherit;
+  transition: all 0.18s ease;
+}
+.session-card:hover {
+  background: #243d2e;
+  border-color: #3a5c49;
+  transform: translateY(-1px);
+}
+.session-card-top {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.session-card-cat {
+  font-size: 11.5px; font-weight: 600;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: #34d399;
+}
+.session-card-date { font-size: 12.5px; color: #9ca3af; }
+.session-card-title {
+  font-size: 15px; font-weight: 600; color: #fff;
+  margin-bottom: 6px; letter-spacing: -0.01em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.session-card-meta { font-size: 12.5px; color: #9ca3af; }
 
 .ch-primary {
   width: 100%; height: 52px;
