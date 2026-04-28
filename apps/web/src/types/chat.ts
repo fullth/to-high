@@ -1,4 +1,4 @@
-export type ChatPhase = "selecting" | "mode" | "chatting" | "ended";
+export type ChatPhase = "selecting" | "loginWall" | "mode" | "chatting" | "ended";
 
 export type ResponseMode =
   | "comfort"
