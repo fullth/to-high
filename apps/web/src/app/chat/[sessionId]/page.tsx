@@ -132,16 +132,16 @@ function ChatContent() {
               });
               const modes = chunk.responseModes || metadata?.responseModes;
               if (chunk.canProceedToResponse && modes) {
-                setPhase("mode");
                 setResponseModes(modes);
+                setPhase(token ? "mode" : "loginWall");
               }
             }
           },
         );
 
         if (metadata?.isCrisis && metadata.canProceedToResponse && metadata.responseModes && !streamedQuestionAdded) {
-          setPhase("mode");
           setResponseModes(metadata.responseModes);
+          setPhase(token ? "mode" : "loginWall");
         }
       } catch (err) {
         console.error(err);
@@ -295,6 +295,45 @@ function ChatContent() {
               >
                 전송
               </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (phase === "loginWall") {
+    return (
+      <main className="ch-frame" style={{ minHeight: "100vh" }}>
+        <div className="ch-inner">
+          <header className="ch-header thin">
+            <span className="ch-logo">
+              <span className="ch-logo-mark" aria-hidden="true" />
+              위로 <span className="ch-logo-sub">To High</span>
+            </span>
+            <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
+          </header>
+          <div className="ch-center">
+            <div className="ch-center-stack">
+              <h2 className="ch-h">조금 더 깊이 이야기 나눠볼까요?</h2>
+              <p className="ch-sub">
+                지금까지 잘 들었어요. 이어지는 위로와 응답을 받으려면 잠시 로그인이 필요해요.
+              </p>
+              <p className="ch-end-hint">
+                로그인하면 오늘 나눈 이야기를 저장하고, 다음에도 이어서 풀어갈 수 있어요
+              </p>
+              <div className="ch-end-actions">
+                <button type="button" className="ch-primary" onClick={() => login()}>
+                  로그인하고 이어가기
+                </button>
+                <button
+                  type="button"
+                  className="ch-secondary"
+                  onClick={() => setPhase("mode")}
+                >
+                  로그인 없이 계속하기
+                </button>
+              </div>
             </div>
           </div>
         </div>
