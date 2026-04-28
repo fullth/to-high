@@ -280,6 +280,7 @@ export class ChatService {
         options: optionsResult.options,
         canProceedToResponse: optionsResult.canProceedToResponse,
         canRequestFeedback: optionsResult.canRequestFeedback,
+        responseModes: optionsResult.canProceedToResponse ? RESPONSE_MODE_OPTIONS : undefined,
         contextCount: updatedSession!.context.length,
       };
       return;
@@ -331,6 +332,7 @@ export class ChatService {
       options: optionsResult.options,
       canProceedToResponse: optionsResult.canProceedToResponse,
       canRequestFeedback: optionsResult.canRequestFeedback,
+      responseModes: optionsResult.canProceedToResponse ? RESPONSE_MODE_OPTIONS : undefined,
       contextCount: updatedSession!.context.length + 1,
     };
   }
