@@ -358,10 +358,10 @@ function ChatContent() {
                   </div>
                 </div>
                 <div className="ch-inline-card">
-                  <span className="ch-wall-eyebrow">함께 이어가기</span>
-                  <h2 className="ch-wall-h">조금 더 깊이 이야기 나눠볼까요?</h2>
+                  <span className="ch-wall-eyebrow">잠시 자리 만들기</span>
+                  <h2 className="ch-wall-h">오늘 흐름, 잠깐 자리에 두고 갈까요?</h2>
                   <p className="ch-wall-sub">
-                    로그인하시면 다음에도 이 흐름을 이어갈 수 있어요.
+                    로그인하시면 다음에 와서도 같은 자리에서 이어갈 수 있어요. 지금은 가입 없이 더 이야기하셔도 괜찮아요.
                   </p>
                   <div className="ch-wall-actions">
                     <button type="button" className="ch-primary" onClick={() => login()}>
@@ -375,7 +375,7 @@ function ChatContent() {
                       className="ch-secondary"
                       onClick={() => setPhase("mode")}
                     >
-                      로그인 없이 이어가기
+                      지금은 그냥 이야기할게요
                     </button>
                   </div>
                 </div>

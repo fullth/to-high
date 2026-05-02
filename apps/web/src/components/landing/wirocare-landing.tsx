@@ -12,7 +12,6 @@ interface VerticalConfig {
   id: VerticalId;
   className: string;
   badge: string;
-  meta: string;
   title: string;
   subtitle: string;
   tags: string[];
@@ -25,10 +24,9 @@ const VERTICALS: VerticalConfig[] = [
   {
     id: "daily",
     className: "main",
-    badge: "MAIN",
-    meta: "Vertical 01",
+    badge: "일상",
     title: "일상",
-    subtitle: "일상의 마음 정리",
+    subtitle: "하루의 무게가 마음에 남았을 때",
     tags: ["#나", "#일상", "#관계", "#미래"],
     artGradientId: "m1",
     artColor: "#7C9885",
@@ -37,10 +35,9 @@ const VERTICALS: VerticalConfig[] = [
   {
     id: "love",
     className: "love",
-    badge: "LOVE",
-    meta: "Vertical 02",
+    badge: "사랑",
     title: "사랑",
-    subtitle: "사랑이 무거울 때",
+    subtitle: "사랑이 무겁거나 흔들릴 때",
     tags: ["#이별", "#짝사랑", "#권태기", "#싸움"],
     artGradientId: "l1",
     artColor: "#C49B9B",
@@ -49,10 +46,9 @@ const VERTICALS: VerticalConfig[] = [
   {
     id: "work",
     className: "work",
-    badge: "WORK",
-    meta: "Vertical 03",
+    badge: "커리어",
     title: "커리어",
-    subtitle: "직장이 버거울 때",
+    subtitle: "일이 마음을 무겁게 누를 때",
     tags: ["#이직", "#사수", "#번아웃", "#업무"],
     artGradientId: "w1",
     artColor: "#B4A48B",
@@ -143,7 +139,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
     const el = document.getElementById("verticals");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const trustCount = publicStatsToday ?? 1847;
+  const hasTrustCount = typeof publicStatsToday === "number" && publicStatsToday > 0;
 
   return (
     <div className="wirocare-landing">
@@ -193,13 +189,12 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   조용히 마음 두는 곳
                 </span>
                 <h1>
-                  복잡한 마음,<br />
-                  <span className="accent">버튼 하나로 풀어가요</span>
+                  오늘 마음,
+                  <br />
+                  <span className="accent">조용히 들어볼게요</span>
                 </h1>
                 <p className="lede">
-                  처음부터 다 말하기 어려울 때,<br />
-                  선택지를 따라 천천히 이야기를 풀어보세요.<br />
-                  위로가 필요한 그 순간, 곁에 있을게요.
+                  말로 풀기 어려운 날엔, 선택지를 따라가도 괜찮아요. 처음부터 다 말씀하지 않으셔도 돼요.
                 </p>
                 <div className="hero-cta">
                   <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
@@ -210,11 +205,13 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   <p style={{ color: "#ef4444", marginTop: 12, fontSize: 14 }}>{error}</p>
                 )}
                 <div className="trust">
-                  <span className="trust-avatars">
-                    <span /><span /><span /><span />
-                  </span>
+                  <span className="trust-mark" aria-hidden="true" />
                   <span className="trust-text">
-                    이번 주 <b>{trustCount.toLocaleString()}분</b>이 위로받았어요
+                    {hasTrustCount ? (
+                      <>이번 주 <b>{publicStatsToday!.toLocaleString()}분</b>이 위로받았어요</>
+                    ) : (
+                      <>가입 없이도 시작할 수 있어요</>
+                    )}
                   </span>
                 </div>
               </div>
@@ -238,7 +235,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
         <section id="verticals" className="section verticals-section">
           <div className="container">
             <div className="section-head">
-              <span className="eyebrow">3 Verticals</span>
+              <span className="eyebrow">세 가지 결</span>
               <h2 className="section-title">오늘은 어떤 이야기인가요</h2>
               <p className="section-sub">상황에 맞춰 다르게 응답해요. 어디서부터 풀어도 괜찮아요.</p>
             </div>
@@ -259,11 +256,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                 >
                   <div className="vbg" />
                   <VerticalArt config={v} />
-                  <span className="vbadge">{v.badge}</span>
-                  <div className="vmeta">
-                    <span className="swatch" />
-                    {v.meta}
-                  </div>
+                  <span className="vbadge"><span className="swatch" />{v.badge}</span>
                   <h3>{v.title}</h3>
                   <div className="vsub">{v.subtitle}</div>
                   <div className="vtags">
@@ -285,9 +278,9 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
         <section className="section">
           <div className="container">
             <div className="section-head">
-              <span className="eyebrow">Why 위로</span>
+              <span className="eyebrow">위로의 약속</span>
               <h2 className="section-title">왜 위로인가요?</h2>
-              <p className="section-sub">진료가 아닌, 곁에 앉아 듣는 사람처럼. 편하게 시작해서 안전하게 마쳐요.</p>
+              <p className="section-sub">진료가 아니라, 옆자리에 앉아 듣는 마음으로요. 부담 없이 시작하고, 안심하고 마무리해요.</p>
             </div>
             <div className="features">
               <div className="feature">
@@ -297,8 +290,8 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                     <circle cx="12" cy="12" r="2.4" fill="#34d399" opacity="0.85" />
                   </svg>
                 </div>
-                <h4>버튼으로 천천히</h4>
-                <p>말로 표현하기 어려운 마음도, 선택지를 따라가다 보면 자연스럽게 풀려요.</p>
+                <h4>말할 힘도 없는 날</h4>
+                <p>한마디 꺼낼 기운이 없어도, 선택지를 따라가다 보면 마음이 천천히 풀려요.</p>
               </div>
               <div className="feature">
                 <div className="ficon">
@@ -309,8 +302,8 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                     <circle cx="19" cy="18" r="2.4" fill="#022c22" stroke="#34d399" strokeWidth="1.4" />
                   </svg>
                 </div>
-                <h4>이야기 받는 방식</h4>
-                <p>그냥 위로받고 싶은 날, 정리받고 싶은 날 — 그날의 결대로 받아보세요.</p>
+                <h4>조언이 부담스러운 날</h4>
+                <p>그저 들어주길 바라는 날, 정리하고 싶은 날 — 받고 싶은 방식으로 응답해요.</p>
               </div>
               <div className="feature">
                 <div className="ficon">
@@ -319,8 +312,8 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                     <path d="M9 12l2 2 4-4.2" stroke="#34d399" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
-                <h4>익명, 그리고 안전하게</h4>
-                <p>가입 없이도 시작할 수 있어요. 위기 순간에는 1393으로 즉시 연결돼요.</p>
+                <h4>조용히 풀고 싶은 날</h4>
+                <p>이름 없이도 시작할 수 있어요. 위기 순간엔 자살예방상담전화 1393을 곧바로 알려드려요.</p>
               </div>
             </div>
           </div>
@@ -329,7 +322,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
         <section className="section modes-section">
           <div className="container">
             <div className="section-head">
-              <span className="eyebrow">Response modes</span>
+              <span className="eyebrow">이야기 받는 방식</span>
               <h2 className="section-title">원하는 방식으로 받아요</h2>
               <p className="section-sub">조언이 필요한 날, 그저 들어주길 바라는 날 — 모드만 바꾸면 응답이 달라져요.</p>
             </div>
