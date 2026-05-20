@@ -174,7 +174,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                 로그인
               </button>
             )}
-            <button type="button" className="btn btn-primary" onClick={handlePrimaryStart} disabled={!!starting}>
+            <button type="button" className="btn btn-soft" onClick={handlePrimaryStart} disabled={!!starting}>
               마음 들으러 가기 <ArrowIcon />
             </button>
           </nav>
@@ -202,7 +202,10 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   <br />
                   <span className="accent">조용히 들어볼게요</span>
                 </h1>
-                <p className="hero-meta">지금은 일상 카테고리부터 만나요. 사랑·커리어는 곧 열어둘게요.</p>
+                <p className="hero-meta">
+                  <span className="hero-meta-swatch" aria-hidden="true" />
+                  지금은 <b>일상</b> 카테고리부터 만나요. 사랑·커리어는 곧 열어둘게요.
+                </p>
                 <p className="lede">
                   오늘 하루의 무게가 마음에 남으셨다면, 일상부터 함께 들어볼게요.
                 </p>
@@ -227,7 +230,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
               </div>
               <div className="hero-preview" aria-hidden="true">
                 <div className="row">
-                  <div className="bubble b-ai">오늘 어떤 이야기를 나눠볼까요?</div>
+                  <div className="bubble b-ai">오늘 하루는 어떤 마음으로 끝나셨어요?</div>
                 </div>
                 <div className="row">
                   <div className="bubble b-user">요즘 너무 지쳐서… 그냥 누가 들어줬으면 좋겠어요</div>
@@ -278,10 +281,15 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                     <div className="vbg" />
                     <VerticalArt config={v} />
                     <span className="vbadge"><span className="swatch" />{v.badge}</span>
-                    {disabled && (
+                    {disabled ? (
                       <span className="vribbon">
                         <span className="vrdot" aria-hidden="true" />
                         OPEN 예정
+                      </span>
+                    ) : (
+                      <span className="vribbon vribbon-live">
+                        <span className="vrpulse" aria-hidden="true" />
+                        오늘 만나요
                       </span>
                     )}
                     <h3>{v.title}</h3>
