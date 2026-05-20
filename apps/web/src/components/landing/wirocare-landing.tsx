@@ -18,6 +18,7 @@ interface VerticalConfig {
   artGradientId: string;
   artColor: string;
   artShape: "circle" | "ellipse" | "rect";
+  comingSoon?: boolean;
 }
 
 const VERTICALS: VerticalConfig[] = [
@@ -42,6 +43,7 @@ const VERTICALS: VerticalConfig[] = [
     artGradientId: "l1",
     artColor: "#C49B9B",
     artShape: "ellipse",
+    comingSoon: true,
   },
   {
     id: "work",
@@ -53,6 +55,7 @@ const VERTICALS: VerticalConfig[] = [
     artGradientId: "w1",
     artColor: "#B4A48B",
     artShape: "rect",
+    comingSoon: true,
   },
 ];
 
@@ -119,6 +122,8 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
 
   const handleStart = async (categoryId: VerticalId) => {
     if (starting) return;
+    const target = VERTICALS.find((v) => v.id === categoryId);
+    if (target?.comingSoon) return;
     setStarting(categoryId);
     setError(null);
     try {
@@ -152,6 +157,10 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
             </span>
           </a>
           <nav className="nav-actions">
+            <a className="nav-crisis" href="tel:1393" aria-label="자살예방상담전화 1393">
+              <span className="nav-crisis-dot" aria-hidden="true" />
+              위기 상담 1393
+            </a>
             {token && (
               <a className="btn btn-ghost" href="/sessions">
                 이전 이야기
@@ -193,8 +202,9 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   <br />
                   <span className="accent">조용히 들어볼게요</span>
                 </h1>
+                <p className="hero-meta">지금은 일상 카테고리부터 만나요. 사랑·커리어는 곧 열어둘게요.</p>
                 <p className="lede">
-                  말로 풀기 어려운 날엔, 선택지를 따라가도 괜찮아요. 처음부터 다 말씀하지 않으셔도 돼요.
+                  오늘 하루의 무게가 마음에 남으셨다면, 일상부터 함께 들어볼게요.
                 </p>
                 <div className="hero-cta">
                   <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
@@ -234,43 +244,66 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
 
         <section id="verticals" className="section verticals-section">
           <div className="container">
+            <div className="mini-bridge" aria-hidden="true">
+              <span className="mini-bridge-glow" />
+              일상부터 만나보세요. 짧은 이야기여도 괜찮아요.
+            </div>
             <div className="section-head">
-              <span className="eyebrow">세 가지 결</span>
+              <span className="eyebrow">먼저 일상부터</span>
               <h2 className="section-title">오늘은 어떤 이야기인가요</h2>
-              <p className="section-sub">상황에 맞춰 다르게 응답해요. 어디서부터 풀어도 괜찮아요.</p>
+              <p className="section-sub">지금은 일상부터 함께 들어요. 사랑·커리어는 곧 열어둘게요.</p>
             </div>
             <div className="verticals">
-              {VERTICALS.map((v) => (
-                <article
-                  key={v.id}
-                  className={`vcard ${v.className}`}
-                  tabIndex={0}
-                  onClick={() => handleStart(v.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleStart(v.id);
+              {VERTICALS.map((v) => {
+                const disabled = !!v.comingSoon;
+                return (
+                  <article
+                    key={v.id}
+                    className={`vcard ${v.className}${disabled ? " coming-soon" : ""}`}
+                    tabIndex={disabled ? -1 : 0}
+                    aria-disabled={disabled || undefined}
+                    onClick={disabled ? undefined : () => handleStart(v.id)}
+                    onKeyDown={
+                      disabled
+                        ? undefined
+                        : (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleStart(v.id);
+                            }
+                          }
                     }
-                  }}
-                  role="button"
-                >
-                  <div className="vbg" />
-                  <VerticalArt config={v} />
-                  <span className="vbadge"><span className="swatch" />{v.badge}</span>
-                  <h3>{v.title}</h3>
-                  <div className="vsub">{v.subtitle}</div>
-                  <div className="vtags">
-                    {v.tags.map((tag) => (
-                      <span key={tag} className="vtag">{tag}</span>
-                    ))}
-                  </div>
-                  <div className="vfoot vfoot-end">
-                    <span className="vcta">
-                      {starting === v.id ? "곁에 자리 만드는 중..." : "여기부터 들어볼게요"} <ArrowIcon size={14} />
-                    </span>
-                  </div>
-                </article>
-              ))}
+                    role={disabled ? undefined : "button"}
+                  >
+                    <div className="vbg" />
+                    <VerticalArt config={v} />
+                    <span className="vbadge"><span className="swatch" />{v.badge}</span>
+                    {disabled && (
+                      <span className="vribbon">
+                        <span className="vrdot" aria-hidden="true" />
+                        OPEN 예정
+                      </span>
+                    )}
+                    <h3>{v.title}</h3>
+                    <div className="vsub">{v.subtitle}</div>
+                    <div className="vtags">
+                      {v.tags.map((tag) => (
+                        <span key={tag} className="vtag">{tag}</span>
+                      ))}
+                    </div>
+                    <div className="vfoot vfoot-end">
+                      <span className="vcta">
+                        {disabled
+                          ? "곧 만나요"
+                          : starting === v.id
+                            ? "곁에 자리 만드는 중..."
+                            : "여기부터 들어볼게요"}{" "}
+                        <ArrowIcon size={14} />
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -279,7 +312,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
           <div className="container">
             <div className="section-head">
               <span className="eyebrow">위로의 약속</span>
-              <h2 className="section-title">왜 위로인가요?</h2>
+              <h2 className="section-title">어떤 날에 찾아오세요</h2>
               <p className="section-sub">진료가 아니라, 옆자리에 앉아 듣는 마음으로요. 부담 없이 시작하고, 안심하고 마무리해요.</p>
             </div>
             <div className="features">
@@ -303,7 +336,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   </svg>
                 </div>
                 <h4>조언이 부담스러운 날</h4>
-                <p>그저 들어주길 바라는 날, 정리하고 싶은 날 — 받고 싶은 방식으로 응답해요.</p>
+                <p>해결책 없이, 조용히 들어드릴게요.</p>
               </div>
               <div className="feature">
                 <div className="ficon">
@@ -324,7 +357,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
             <div className="section-head">
               <span className="eyebrow">이야기 받는 방식</span>
               <h2 className="section-title">원하는 방식으로 받아요</h2>
-              <p className="section-sub">조언이 필요한 날, 그저 들어주길 바라는 날 — 모드만 바꾸면 응답이 달라져요.</p>
+              <p className="section-sub">일상 이야기를 어떻게 받을지, 모드만 바꾸면 응답이 달라져요.</p>
             </div>
             <div className="modes">
               {RESPONSE_MODES.map((mode) => (
@@ -334,15 +367,16 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                 </span>
               ))}
             </div>
+            <p className="modes-hint">탭하시면 그 결로 일상 카테고리에서 시작해드려요.</p>
           </div>
         </section>
 
         <section className="final">
           <div className="container">
             <h2>오늘은 여기서 잠깐 쉬어가세요</h2>
-            <p>먼저 와주신 마음, 천천히 들을게요. 가입은 나중에 하셔도 돼요.</p>
+            <p>먼저 와주신 마음, 일상부터 천천히 들을게요. 가입은 나중에 하셔도 돼요.</p>
             <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
-              {starting ? "곁에 자리 만드는 중..." : "지금 마음, 들어볼게요"} <ArrowIcon size={18} />
+              {starting ? "곁에 자리 만드는 중..." : "오늘 마음, 들어볼게요"} <ArrowIcon size={18} />
             </button>
           </div>
         </section>
