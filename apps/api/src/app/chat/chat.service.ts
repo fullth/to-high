@@ -207,6 +207,18 @@ export class ChatService {
     return patterns.some((pattern) => option.includes(pattern));
   }
 
+  /**
+   * "조언해주세요"/"정리해주세요" 등 조언(응답)을 요청하는 선택지인지 확인.
+   * 매 턴의 8번째 선택지로 항상 제공되며, 선택 시 질문 루프를 멈추고
+   * 응답 모드 선택 단계로 진입시킨다.
+   */
+  private isAdviceRequestOption(option: string): boolean {
+    const t = option.trim();
+    // "정리가 안 돼요"는 말하기 어려움 흐름이므로 제외
+    if (this.isDifficultToTalkOption(t)) return false;
+    return t.includes('조언') || t.includes('정리');
+  }
+
 
   async *selectOptionStream(sessionId: string, selectedOption: string) {
     // 입력 검증
@@ -282,6 +294,23 @@ export class ChatService {
         canRequestFeedback: optionsResult.canRequestFeedback,
         responseModes: optionsResult.canProceedToResponse ? RESPONSE_MODE_OPTIONS : undefined,
         contextCount: updatedSession!.context.length,
+      };
+      return;
+    }
+
+    // "조언해주세요"/"정리해주세요" 선택 시: 질문 루프를 멈추고 응답 모드 선택으로 전환
+    if (this.isAdviceRequestOption(selectedOption)) {
+      await this.sessionService.addContext(sessionId, `나: ${selectedOption}`);
+      const advisedSession = await this.sessionService.findById(sessionId);
+      yield {
+        type: 'next',
+        sessionId,
+        question: '',
+        options: [],
+        canProceedToResponse: true,
+        canRequestFeedback: true,
+        responseModes: RESPONSE_MODE_OPTIONS,
+        contextCount: advisedSession!.context.length,
       };
       return;
     }

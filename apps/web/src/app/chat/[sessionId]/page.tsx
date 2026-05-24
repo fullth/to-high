@@ -4,10 +4,39 @@ import "@/components/chat/chat.css";
 import { ChatBubble } from "@/components/chat/chat-bubble";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
 import { useAuth } from "@/contexts/auth-context";
-import { endSession, saveSession, selectOptionStream, setResponseModeStream, sendMessageStream } from "@/lib/api";
+import { endSession, getSessionDetail, saveSession, selectOptionStream, setResponseModeStream, sendMessageStream } from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseModeOption } from "@/types/chat";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
+
+type SessionHistoryItem = { type: "user" | "assistant"; content: string };
+
+// 저장된 세션의 context 배열을 대화 말풍선으로 변환한다.
+// 내부 컨텍스트(카테고리·이전 상담 주입)는 표시하지 않는다.
+function parseSessionHistory(entries: string[]): SessionHistoryItem[] {
+  const history: SessionHistoryItem[] = [];
+  for (const raw of entries) {
+    const entry = (raw ?? "").trim();
+    if (!entry) continue;
+    if (entry.startsWith("카테고리:")) continue;
+    if (entry.startsWith("[이전 상담 기록]")) continue;
+    if (entry.startsWith("[이전 상담 불러오기")) continue;
+
+    if (entry.startsWith("상담사:")) {
+      history.push({ type: "assistant", content: entry.replace(/^상담사:\s*/, "") });
+    } else if (entry.startsWith("나:")) {
+      history.push({ type: "user", content: entry.replace(/^나:\s*/, "") });
+    } else if (entry.startsWith("[사용자 직접 입력]")) {
+      history.push({ type: "user", content: entry.replace(/^\[사용자 직접 입력\]\s*/, "") });
+    } else if (entry.startsWith("[말하기 어려움 선택]")) {
+      history.push({ type: "user", content: entry.replace(/^\[말하기 어려움 선택\]\s*/, "") });
+    } else {
+      const crisis = entry.match(/^\[위기 감지:[^\]]*\]\s*(?:나:\s*)?([\s\S]*)$/);
+      if (crisis) history.push({ type: "user", content: crisis[1].trim() });
+    }
+  }
+  return history;
+}
 
 function AuthShell({
   token,
@@ -59,7 +88,7 @@ function ChatContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { token, user, login, logout } = useAuth();
+  const { token, user, login, logout, isLoading: authLoading } = useAuth();
 
   const sessionId = params.sessionId as string;
 
@@ -75,6 +104,11 @@ function ChatContent() {
   const [supplementInput, setSupplementInput] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  // 새 세션은 랜딩에서 질문/선택지를 쿼리로 받는다. 쿼리가 없으면 기존 세션을 불러온다.
+  const [initializing, setInitializing] = useState(
+    () => !(searchParams.get("question") && searchParams.get("options")),
+  );
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // 선택 히스토리를 저장 (대화 형태로 보여주기 위함)
   const [selectionHistory, setSelectionHistory] = useState<Array<{
@@ -86,6 +120,8 @@ function ChatContent() {
 
   // 스크롤 자동 이동을 위한 ref
   const chatEndRef = useRef<HTMLDivElement>(null);
+  // 초기화는 한 번만 수행 (토큰 변경 등으로 진행 중 대화가 초기화되지 않도록)
+  const didInit = useRef(false);
 
   // 대화 내용이 변경되면 스크롤 이동
   useEffect(() => {
@@ -93,22 +129,62 @@ function ChatContent() {
   }, [selectionHistory, messages, streamingContent]);
 
   useEffect(() => {
+    if (didInit.current) return;
+
     const q = searchParams.get("question");
     const opts = searchParams.get("options");
 
+    // 새 세션: 랜딩에서 전달한 첫 질문/선택지로 시작
     if (q && opts) {
-      const parsedOptions = JSON.parse(opts);
-      setQuestion(q);
-      setOptions(parsedOptions);
-      // 초기 질문을 히스토리에 추가
-      setSelectionHistory([{
-        type: "assistant",
-        content: q,
-        isQuestion: true,
-        options: parsedOptions,
-      }]);
+      didInit.current = true;
+      try {
+        const parsedOptions = JSON.parse(opts);
+        setQuestion(q);
+        setOptions(parsedOptions);
+        // 초기 질문을 히스토리에 추가
+        setSelectionHistory([{
+          type: "assistant",
+          content: q,
+          isQuestion: true,
+          options: parsedOptions,
+        }]);
+      } catch {
+        // 파싱 실패 시 빈 상태로 둠
+      }
+      setInitializing(false);
+      return;
     }
-  }, [searchParams]);
+
+    // 기존 세션: 저장된 대화를 불러와 표시 (이전 이야기 목록·사이드바 진입)
+    if (authLoading) return;
+
+    didInit.current = true;
+    let cancelled = false;
+    getSessionDetail(sessionId, token ?? "")
+      .then((detail) => {
+        if (cancelled) return;
+        const entries = detail.fullContext?.length ? detail.fullContext : detail.context;
+        setSelectionHistory(parseSessionHistory(entries ?? []));
+        if (detail.status === "completed") {
+          setSummary(detail.summary || "");
+          setPhase("ended");
+        } else {
+          setPhase("chatting");
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : "대화를 불러올 수 없어요");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setInitializing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, sessionId, token, authLoading]);
 
   const handleSelectOption = useCallback(
     async (selected: string) => {
@@ -280,6 +356,58 @@ function ChatContent() {
       {el}
     </AuthShell>
   );
+
+  if (initializing) {
+    return wrap(
+      <main className="ch-frame" style={{ height: "100vh" }}>
+        <div className="ch-inner">
+          <header className="ch-header">
+            <span className="ch-logo">
+              <span className="ch-logo-mark" aria-hidden="true" />
+              위로 <span className="ch-logo-sub">To High</span>
+            </span>
+          </header>
+          <div className="ch-messages anchor-end">
+            <div className="ch-row">
+              <div className="ch-typing">
+                <i /><i /><i />
+                <span className="ch-typing-text">지난 이야기를 불러오는 중...</span>
+              </div>
+            </div>
+          </div>
+          <div className="ch-dock fade-out" aria-hidden="true" />
+        </div>
+      </main>
+    );
+  }
+
+  if (loadError) {
+    return wrap(
+      <main className="ch-frame" style={{ height: "100vh" }}>
+        <div className="ch-inner">
+          <header className="ch-header">
+            <span className="ch-logo">
+              <span className="ch-logo-mark" aria-hidden="true" />
+              위로 <span className="ch-logo-sub">To High</span>
+            </span>
+            <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
+          </header>
+          <div className="ch-messages anchor-end">
+            <div className="ch-inline-card">
+              <span className="ch-wall-eyebrow">이야기를 불러오지 못했어요</span>
+              <p className="ch-wall-sub">{loadError}</p>
+              <div className="ch-wall-actions">
+                <button type="button" className="ch-primary" onClick={() => router.push("/sessions")}>
+                  이전 이야기로 돌아가기
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="ch-dock fade-out" aria-hidden="true" />
+        </div>
+      </main>
+    );
+  }
 
   if (phase === "selecting" || phase === "mode" || phase === "loginWall") {
     const dockHidden = phase !== "selecting";
