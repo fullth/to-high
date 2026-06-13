@@ -13,8 +13,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://to-high.vercel.app
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "To high; 위로 | AI 심리 상담",
-    template: "%s | To high; 위로",
+    default: "위로 | AI 심리 상담",
+    template: "%s | 위로",
   },
   description:
     "처음부터 힘든 점을 다 말하기 어려울 때, 선택지를 통해 점진적으로 함께 이야기하는 AI 심리 상담 서비스",
@@ -27,14 +27,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ko_KR",
     url: SITE_URL,
-    siteName: "To high; 위로",
-    title: "To high; 위로 | AI 심리 상담",
+    siteName: "위로",
+    title: "위로 | AI 심리 상담",
     description:
       "처음부터 힘든 점을 다 말하기 어려울 때, 선택지를 통해 점진적으로 함께 이야기해요",
   },
   twitter: {
     card: "summary_large_image",
-    title: "To high; 위로 | AI 심리 상담",
+    title: "위로 | AI 심리 상담",
     description:
       "처음부터 힘든 점을 다 말하기 어려울 때, 선택지를 통해 점진적으로 함께 이야기해요",
   },
@@ -65,7 +65,7 @@ export default function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: "To high; 위로",
+    name: "위로",
     url: SITE_URL,
     description:
       "선택지를 통해 점진적으로 함께 이야기하는 AI 심리 상담 서비스",

@@ -18,7 +18,7 @@ export default function GlobalError({
     <html>
       <body>
         <div className="flex min-h-screen flex-col items-center justify-center">
-          <h2 className="text-xl font-semibold">문제가 발생했습니다</h2>
+          <h2 className="text-xl font-semibold">문제가 생겼어요</h2>
           <button
             className="mt-4 rounded bg-blue-500 px-4 py-2 text-white"
             onClick={() => reset()}

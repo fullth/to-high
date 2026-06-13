@@ -1,14 +1,9 @@
 "use client";
 
 import { getSessions, SessionListItem } from "@/lib/api";
+import { CATEGORY_LABELS } from "@/lib/category-labels";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  daily: "일상",
-  love: "연애",
-  work: "일",
-};
 
 interface ChatSidebarProps {
   token: string;
@@ -100,7 +95,7 @@ export function ChatSidebar({
       <div className="ch-sb-top">
         <Link className="ch-logo" href="/">
           <span className="ch-logo-mark" aria-hidden="true" />
-          위로 <span className="ch-logo-sub">To High</span>
+          위로
         </Link>
         {onClose && (
           <button type="button" className="ch-sb-close" onClick={onClose} aria-label="닫기">
@@ -122,7 +117,7 @@ export function ChatSidebar({
         ) : sessions.length === 0 ? (
           <div className="ch-sb-empty">
             <span className="ch-sb-empty-mark" aria-hidden="true" />
-            <p>아직 시작된 이야기가 없어요</p>
+            <p>아직 나눈 이야기가 없어요</p>
             <span className="ch-sb-empty-sub">처음 한 마디부터 함께해요.</span>
           </div>
         ) : (
@@ -168,7 +163,7 @@ export function ChatSidebar({
             </Link>
             <Link href="/membership" className="ch-pop-item" role="menuitem" onClick={() => setPopoverOpen(false)}>
               멤버십 관리
-              {membership === "free" && <span className="ch-pop-badge">UPGRADE</span>}
+              {membership === "free" && <span className="ch-pop-badge">업그레이드</span>}
               {membership === "pro" && <span className="ch-pop-badge pro">PRO</span>}
             </Link>
             <Link href="/settings" className="ch-pop-item" role="menuitem" onClick={() => setPopoverOpen(false)}>
@@ -214,11 +209,11 @@ function SessionGroup({
             className={`ch-sb-card ${active ? "active" : ""}`}
           >
             <div className="ch-sb-card-summary">
-              {s.summary || s.alias || "마음을 나눈 대화"}
+              {s.summary || s.alias || "제목 없는 이야기"}
             </div>
             <div className="ch-sb-card-meta">
               <span>{formatRelative(s.updatedAt)}</span>
-              <span className="ch-sb-tag">{CATEGORY_LABEL[s.category] || s.category}</span>
+              <span className="ch-sb-tag">{CATEGORY_LABELS[s.category] || s.category}</span>
             </div>
           </Link>
         );

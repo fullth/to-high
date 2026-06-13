@@ -17,7 +17,7 @@ const inquiryTypes: { id: InquiryType; label: string; description: string }[] = 
   {
     id: "contact",
     label: "버그 신고",
-    description: "오류나 문제를 알려주세요",
+    description: "오류나 문제를 알려주세요.",
   },
   {
     id: "feature",
@@ -66,7 +66,7 @@ export function ContactSidebar() {
   const handleSelectType = (type: InquiryType) => {
     // 비로그인 사용자는 이메일 필수
     if (!user && !email.trim()) {
-      setAlertMessage("답변 받으실 이메일을 입력해주세요.");
+      setAlertMessage("답변 받으실 이메일을 입력해 주세요.");
       return;
     }
 
@@ -74,7 +74,7 @@ export function ContactSidebar() {
     if (!user && email.trim()) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
-        setAlertMessage("올바른 이메일 형식을 입력해주세요.");
+        setAlertMessage("이메일 형식을 확인해 주세요.");
         return;
       }
     }
@@ -113,7 +113,7 @@ export function ContactSidebar() {
 
     // 비회원인 경우 이메일 필수
     if (!user && !email.trim()) {
-      setAlertMessage("답변 받으실 이메일을 입력해주세요.");
+      setAlertMessage("답변 받으실 이메일을 입력해 주세요.");
       return;
     }
 
@@ -136,7 +136,7 @@ export function ContactSidebar() {
       }
     } catch {
       setMessages((prev) => prev.slice(0, -1));
-      setAlertMessage("문의 전송에 실패했습니다. 다시 시도해주세요.");
+      setAlertMessage("문의를 보내지 못했어요. 다시 시도해 주세요.");
     } finally {
       setSending(false);
     }
@@ -264,14 +264,14 @@ export function ContactSidebar() {
             {showTypeSelector && (
               <div className="p-4 space-y-3">
                 <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 space-y-1">
-                  <p className="text-xs text-primary font-medium">📬 문의 안내</p>
+                  <p className="text-xs text-primary font-medium">문의 안내</p>
                   <p className="text-xs text-foreground/80">
                     {user
-                      ? `답변은 ${user.email}로 전송됩니다.`
-                      : "답변 받으실 이메일을 입력해주세요."}
+                      ? `답변은 ${user.email}로 보내드려요.`
+                      : "답변 받으실 이메일을 입력해 주세요."}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    문의 내역은 영구 보관되며, 언제든 확인 가능합니다.
+                    문의 내역은 계속 보관되니 언제든 확인할 수 있어요.
                   </p>
                 </div>
 
@@ -319,7 +319,7 @@ export function ContactSidebar() {
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {inquiries.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    아직 문의 내역이 없습니다.
+                    아직 문의 내역이 없어요.
                   </p>
                 ) : (
                   inquiries.map((inquiry) => (
@@ -337,7 +337,7 @@ export function ContactSidebar() {
                             ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                             : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                         }`}>
-                          {inquiry.status === "open" ? "진행중" : "종료"}
+                          {inquiry.status === "open" ? "진행 중" : "종료"}
                         </span>
                       </div>
                       <p className="text-sm text-foreground truncate">

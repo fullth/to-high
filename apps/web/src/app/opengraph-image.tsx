@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "To high; 위로 - AI 심리 상담";
+export const alt = "위로 - AI 심리 상담";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -92,7 +92,6 @@ export default function OgImage() {
             gap: 12,
           }}
         >
-          <span>To high;</span>
           <span style={{ color: "#34d399" }}>위로</span>
         </div>
 
