@@ -104,7 +104,7 @@ export default function OgImage() {
             display: "flex",
           }}
         >
-          선택지를 통해 점진적으로 함께 이야기하는 AI 심리 상담
+          말로 풀기 어려운 날엔, 선택지부터
         </div>
 
         {/* 하단 태그 */}

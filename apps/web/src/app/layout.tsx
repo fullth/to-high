@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: "%s | 위로",
   },
   description:
-    "처음부터 힘든 점을 다 말하기 어려울 때, 선택지를 통해 점진적으로 함께 이야기하는 AI 심리 상담 서비스",
+    "말로 풀기 어려운 날엔 선택지부터 따라오세요. 일상부터 천천히 들어드리는 AI 심리 상담 서비스",
   keywords: ["AI 상담", "심리 상담", "마음 치유", "고민 상담", "위로", "to-high"],
   icons: {
     icon: "/logo.svg",
@@ -30,13 +30,13 @@ export const metadata: Metadata = {
     siteName: "위로",
     title: "위로 | AI 심리 상담",
     description:
-      "처음부터 힘든 점을 다 말하기 어려울 때, 선택지를 통해 점진적으로 함께 이야기해요",
+      "말로 풀기 어려운 날엔 선택지부터 따라오세요. 일상부터 천천히 들어드릴게요",
   },
   twitter: {
     card: "summary_large_image",
     title: "위로 | AI 심리 상담",
     description:
-      "처음부터 힘든 점을 다 말하기 어려울 때, 선택지를 통해 점진적으로 함께 이야기해요",
+      "말로 풀기 어려운 날엔 선택지부터 따라오세요. 일상부터 천천히 들어드릴게요",
   },
   robots: {
     index: true,
@@ -68,7 +68,7 @@ export default function RootLayout({
     name: "위로",
     url: SITE_URL,
     description:
-      "선택지를 통해 점진적으로 함께 이야기하는 AI 심리 상담 서비스",
+      "말로 풀기 어려운 날엔 선택지부터 따라오세요. 일상부터 천천히 들어드리는 AI 심리 상담 서비스",
     applicationCategory: "HealthApplication",
     operatingSystem: "Web",
     inLanguage: "ko",
