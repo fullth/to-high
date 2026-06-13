@@ -196,9 +196,9 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   조용히 마음 두는 곳
                 </span>
                 <h1>
-                  말하기 어려운 하루였다면,
+                  지치셨다면,
                   <br />
-                  <span className="accent">직접 들려주시기 어렵다면, 선택지로 제공해드릴게요</span>
+                  <span className="accent">잘 오셨어요 저희가 들어드릴게요</span>
                 </h1>
                 <p className="hero-meta">
                   <span className="hero-meta-swatch" aria-hidden="true" />
