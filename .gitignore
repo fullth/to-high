@@ -41,6 +41,10 @@ coverage/
 tmp/
 temp/
 
+# Orchestrator working dir (audit notes, not product code)
+_workspace/
+_workspace_prev/
+
 # Playwright
 apps/web/playwright-report/
 apps/web/test-results/
