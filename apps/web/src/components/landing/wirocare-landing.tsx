@@ -196,20 +196,20 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   조용히 마음 두는 곳
                 </span>
                 <h1>
-                  오늘 마음,
+                  어떤 하루였어요?
                   <br />
-                  <span className="accent">조용히 들어볼게요</span>
+                  <span className="accent">그래서 일상부터 함께 들어볼게요</span>
                 </h1>
                 <p className="hero-meta">
                   <span className="hero-meta-swatch" aria-hidden="true" />
                   지금은 <b>일상</b> 카테고리부터 만나요. 사랑·커리어는 곧 열어둘게요.
                 </p>
                 <p className="lede">
-                  오늘 하루의 무게가 마음에 남으셨다면, 일상부터 함께 들어볼게요.
+                  말로 풀기 어려운 날엔, 선택지부터 따라오셔도 돼요.
                 </p>
                 <div className="hero-cta">
                   <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
-                    {starting ? "이야기 여는 중..." : "오늘 마음, 들어볼게요"} <ArrowIcon size={18} />
+                    {starting ? "이야기 여는 중..." : "지금 이야기 시작하기"} <ArrowIcon size={18} />
                   </button>
                 </div>
                 {error && (
@@ -251,7 +251,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
             </div>
             <div className="section-head">
               <span className="eyebrow">먼저 일상부터</span>
-              <h2 className="section-title">오늘은 어떤 이야기인가요</h2>
+              <h2 className="section-title">오늘은 이런 이야기가 어떤가요?</h2>
               <p className="section-sub">지금은 일상부터 함께 들어요. 사랑·커리어는 곧 열어둘게요.</p>
             </div>
             <div className="verticals">
@@ -382,7 +382,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
             <h2>오늘은 여기서 잠깐 쉬어가세요</h2>
             <p>먼저 와주신 마음, 일상부터 천천히 들을게요. 가입은 나중에 하셔도 돼요.</p>
             <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
-              {starting ? "이야기 여는 중..." : "지금 마음, 들어볼게요"} <ArrowIcon size={18} />
+              {starting ? "이야기 여는 중..." : "지금 이야기 시작하기"} <ArrowIcon size={18} />
             </button>
           </div>
         </section>
