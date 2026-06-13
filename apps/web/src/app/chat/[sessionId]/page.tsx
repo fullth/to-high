@@ -174,7 +174,7 @@ function ChatContent() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : "대화를 불러올 수 없어요");
+          setLoadError(err instanceof Error ? err.message : "이야기를 불러올 수 없어요");
         }
       })
       .finally(() => {
@@ -343,7 +343,7 @@ function ChatContent() {
     try {
       const res = await endSession(sessionId, token || undefined);
       setPhase("ended");
-      setSummary(res.summary || "상담이 종료되었습니다.");
+      setSummary(res.summary || "오늘 이야기를 마쳤어요.");
     } catch (err) {
       console.error(err);
     } finally {
@@ -364,14 +364,14 @@ function ChatContent() {
           <header className="ch-header">
             <span className="ch-logo">
               <span className="ch-logo-mark" aria-hidden="true" />
-              위로 <span className="ch-logo-sub">To High</span>
+              위로
             </span>
           </header>
           <div className="ch-messages anchor-end">
             <div className="ch-row">
               <div className="ch-typing">
                 <i /><i /><i />
-                <span className="ch-typing-text">지난 이야기를 불러오는 중...</span>
+                <span className="ch-typing-text">불러오는 중이에요...</span>
               </div>
             </div>
           </div>
@@ -388,7 +388,7 @@ function ChatContent() {
           <header className="ch-header">
             <span className="ch-logo">
               <span className="ch-logo-mark" aria-hidden="true" />
-              위로 <span className="ch-logo-sub">To High</span>
+              위로
             </span>
             <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
           </header>
@@ -423,7 +423,7 @@ function ChatContent() {
             ) : (
               <span className="ch-logo">
                 <span className="ch-logo-mark" aria-hidden="true" />
-                위로 <span className="ch-logo-sub">To High</span>
+                위로
               </span>
             )}
             <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
@@ -482,14 +482,14 @@ function ChatContent() {
               <>
                 <div className="ch-row">
                   <div className="ch-bubble ai">
-                    여기까지 나눈 마음, 잃어버리지 않게 잠깐 자리를 만들어볼게요.
+                    여기까지 나눈 이야기, 사라지지 않게 저장해 둘까요?
                   </div>
                 </div>
                 <div className="ch-inline-card">
-                  <span className="ch-wall-eyebrow">잠시 자리 만들기</span>
-                  <h2 className="ch-wall-h">오늘 흐름, 잠깐 자리에 두고 갈까요?</h2>
+                  <span className="ch-wall-eyebrow">이야기 저장하기</span>
+                  <h2 className="ch-wall-h">오늘 이야기, 저장하고 이어갈까요?</h2>
                   <p className="ch-wall-sub">
-                    로그인하시면 다음에 와서도 같은 자리에서 이어갈 수 있어요. 지금은 가입 없이 더 이야기하셔도 괜찮아요.
+                    로그인하면 다음에 와도 이 이야기를 이어갈 수 있어요. 지금은 가입 없이 더 이야기하셔도 괜찮아요.
                   </p>
                   <div className="ch-wall-actions">
                     <button type="button" className="ch-primary" onClick={() => login()}>
@@ -572,7 +572,7 @@ function ChatContent() {
               onClick={handleEndSession}
               disabled={isLoading}
             >
-              여기까지
+              이야기 마치기
             </button>
           </header>
 
@@ -647,7 +647,7 @@ function ChatContent() {
             ) : (
               <span className="ch-logo">
                 <span className="ch-logo-mark" aria-hidden="true" />
-                위로 <span className="ch-logo-sub">To High</span>
+                위로
               </span>
             )}
           </header>
@@ -710,7 +710,7 @@ function ChatContent() {
                     ) : saveState === "error" ? (
                       "다시 시도"
                     ) : (
-                      "대화 기록 저장하기"
+                      "이야기 저장하기"
                     )}
                   </button>
                 ) : (
@@ -738,7 +738,7 @@ export default function ChatPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <p className="text-muted-foreground">로딩 중...</p>
+          <p className="text-muted-foreground">불러오는 중...</p>
         </div>
       }
     >
