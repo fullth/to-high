@@ -198,7 +198,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                 <h1>
                   지치셨다면,
                   <br />
-                  <span className="accent">잘 오셨어요 저희가 들어드릴게요</span>
+                  <span className="accent">잘 오셨어요</span>
                 </h1>
                 <p className="hero-meta">
                   <span className="hero-meta-swatch" aria-hidden="true" />
