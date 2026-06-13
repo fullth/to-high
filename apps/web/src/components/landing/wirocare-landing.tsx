@@ -196,9 +196,9 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   조용히 마음 두는 곳
                 </span>
                 <h1>
-                  어떤 하루였어요?
+                  말하기 어려운 하루였다면,
                   <br />
-                  <span className="accent">그래서 일상부터 함께 들어볼게요</span>
+                  <span className="accent">직접 들려주시기 어렵다면, 선택지로 제공해드릴게요</span>
                 </h1>
                 <p className="hero-meta">
                   <span className="hero-meta-swatch" aria-hidden="true" />
@@ -251,7 +251,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
             </div>
             <div className="section-head">
               <span className="eyebrow">먼저 일상부터</span>
-              <h2 className="section-title">오늘은 이런 이야기가 어떤가요?</h2>
+              <h2 className="section-title">오늘 나눌 이야기 고르기</h2>
               <p className="section-sub">지금은 일상부터 함께 들어요. 사랑·커리어는 곧 열어둘게요.</p>
             </div>
             <div className="verticals">
