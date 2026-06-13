@@ -27,8 +27,8 @@ export class InquiryService {
     // 비회원인 경우 inquiryId만으로 조회
     const query = userId ? { _id: inquiryId, userId } : { _id: inquiryId };
     const inquiry = await this.inquiryModel.findOne(query);
-    if (!inquiry) throw new NotFoundException('문의를 찾을 수 없습니다.');
-    if (inquiry.status === 'closed') throw new Error('종료된 문의입니다.');
+    if (!inquiry) throw new NotFoundException('문의를 찾을 수 없어요.');
+    if (inquiry.status === 'closed') throw new Error('이미 종료된 문의예요.');
 
     inquiry.messages.push({ role: 'user', content, createdAt: new Date() });
     await inquiry.save();
@@ -44,7 +44,7 @@ export class InquiryService {
 
   async getInquiry(inquiryId: string, userId: string) {
     const inquiry = await this.inquiryModel.findOne({ _id: inquiryId, userId }).lean();
-    if (!inquiry) throw new NotFoundException('문의를 찾을 수 없습니다.');
+    if (!inquiry) throw new NotFoundException('문의를 찾을 수 없어요.');
     return inquiry;
   }
 
@@ -55,7 +55,7 @@ export class InquiryService {
 
   async adminReply(inquiryId: string, content: string) {
     const inquiry = await this.inquiryModel.findById(inquiryId);
-    if (!inquiry) throw new NotFoundException('문의를 찾을 수 없습니다.');
+    if (!inquiry) throw new NotFoundException('문의를 찾을 수 없어요.');
 
     inquiry.messages.push({ role: 'admin', content, createdAt: new Date() });
     await inquiry.save();
@@ -64,7 +64,7 @@ export class InquiryService {
 
   async closeInquiry(inquiryId: string) {
     const inquiry = await this.inquiryModel.findById(inquiryId);
-    if (!inquiry) throw new NotFoundException('문의를 찾을 수 없습니다.');
+    if (!inquiry) throw new NotFoundException('문의를 찾을 수 없어요.');
 
     inquiry.status = 'closed';
     await inquiry.save();
