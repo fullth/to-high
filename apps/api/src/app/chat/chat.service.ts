@@ -19,6 +19,12 @@ const MAX_CHAT_MESSAGES = 100; // 채팅 모드 최대 메시지 수
 // 무료 사용자 세션 제한
 const FREE_USER_SESSION_LIMIT = 3;
 
+// 무료-우선 런칭 단계 플래그.
+// true이면 세션 한도(paywall)를 적용하지 않고 모두 무제한 무료로 개방한다.
+// 구독/결제를 재개할 때 false로 되돌리면 아래 한도 로직(무료 3권 + 구독 티어)이
+// 그대로 복원된다. (구독 시스템 자체는 subscribe 페이지에 '준비중'으로 유지)
+const FREE_LAUNCH_MODE: boolean = true;
+
 @Injectable()
 export class ChatService {
   constructor(
@@ -75,8 +81,8 @@ export class ChatService {
       }
     }
 
-    // 세션 제한 체크
-    if (userId !== 'anonymous') {
+    // 세션 제한 체크 (무료-우선 런칭 동안 FREE_LAUNCH_MODE로 비활성화)
+    if (!FREE_LAUNCH_MODE && userId !== 'anonymous') {
       const user = await this.userRepository.findById(userId);
 
       // 레거시 사용자는 무제한
