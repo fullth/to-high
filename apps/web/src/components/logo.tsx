@@ -57,7 +57,7 @@ export function Logo({ size = "md", showText = true, href = "/", onClick }: Logo
         <span className={`font-bold text-foreground/90 ${text} whitespace-nowrap`}>
           <span className="text-primary">
             <span className="sm:hidden">위로: AI 심리 상담</span>
-            <span className="hidden sm:inline">위로(TO-HIGH): AI 기반 심리 상담</span>
+            <span className="hidden sm:inline">위로: AI 기반 심리 상담</span>
           </span>
         </span>
       )}

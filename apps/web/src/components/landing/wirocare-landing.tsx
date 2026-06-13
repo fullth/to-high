@@ -134,7 +134,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
       });
       router.push(`/chat/${res.sessionId}?${params.toString()}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "세션을 시작할 수 없어요";
+      const message = err instanceof Error ? err.message : "지금은 시작할 수 없어요. 잠시 후 다시 시도해 주세요.";
       setError(message);
       setStarting(null);
     }
@@ -152,9 +152,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
         <div className="container nav-inner">
           <a className="logo" href="/">
             <span className="logo-mark" aria-hidden="true" />
-            <span>
-              위로 <span className="logo-sub">To High</span>
-            </span>
+            <span>위로</span>
           </a>
           <nav className="nav-actions">
             <a className="nav-crisis" href="tel:1393" aria-label="자살예방상담전화 1393">
@@ -175,7 +173,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
               </button>
             )}
             <button type="button" className="btn btn-soft" onClick={handlePrimaryStart} disabled={!!starting}>
-              마음 들으러 가기 <ArrowIcon />
+              이야기 시작하기 <ArrowIcon />
             </button>
           </nav>
         </div>
@@ -211,7 +209,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                 </p>
                 <div className="hero-cta">
                   <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
-                    {starting ? "마음 가는 길 열어두는 중..." : "오늘 마음, 들어볼게요"} <ArrowIcon size={18} />
+                    {starting ? "이야기 여는 중..." : "오늘 마음, 들어볼게요"} <ArrowIcon size={18} />
                   </button>
                 </div>
                 {error && (
@@ -221,7 +219,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   <span className="trust-mark" aria-hidden="true" />
                   <span className="trust-text">
                     {hasTrustCount ? (
-                      <>이번 주 <b>{publicStatsToday!.toLocaleString()}분</b>이 위로받았어요</>
+                      <>오늘 <b>{publicStatsToday!.toLocaleString()}명</b>이 위로받았어요</>
                     ) : (
                       <>가입 없이도 시작할 수 있어요</>
                     )}
@@ -304,7 +302,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                         {disabled
                           ? "곧 만나요"
                           : starting === v.id
-                            ? "곁에 자리 만드는 중..."
+                            ? "이야기 여는 중..."
                             : "여기부터 들어볼게요"}{" "}
                         <ArrowIcon size={14} />
                       </span>
@@ -384,7 +382,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
             <h2>오늘은 여기서 잠깐 쉬어가세요</h2>
             <p>먼저 와주신 마음, 일상부터 천천히 들을게요. 가입은 나중에 하셔도 돼요.</p>
             <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
-              {starting ? "곁에 자리 만드는 중..." : "오늘 마음, 들어볼게요"} <ArrowIcon size={18} />
+              {starting ? "이야기 여는 중..." : "지금 마음, 들어볼게요"} <ArrowIcon size={18} />
             </button>
           </div>
         </section>
@@ -395,9 +393,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
           <div className="foot-top">
             <a className="logo" href="/">
               <span className="logo-mark" />
-              <span>
-                위로 <span className="logo-sub">To High</span>
-              </span>
+              <span>위로</span>
             </a>
             <div className="foot-links">
               <a href="/privacy">개인정보처리방침</a>
@@ -408,11 +404,11 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
           <div className="crisis">
             <span className="crisis-mark" />
             <span>
-              위기 상황이라면 즉시 전문 상담을 받으세요. <b>자살 예방 상담전화 1393</b> · 24시간 무료
+              위기 상황이라면 즉시 전문 상담을 받으세요. <b>자살예방상담전화 1393</b> · 24시간 무료
             </span>
           </div>
           <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-400)" }}>
-            © 2026 위로 (To High). 위로는 의료기기가 아니며, 정신건강 진단·치료를 대체하지 않습니다.
+            © 2026 위로. 위로는 의료기기가 아니며, 정신건강 진단·치료를 대체하지 않습니다.
           </div>
         </div>
       </footer>

@@ -3,15 +3,10 @@
 import "@/components/chat/chat.css";
 import { useAuth } from "@/contexts/auth-context";
 import { getSessions, SessionListItem } from "@/lib/api";
+import { CATEGORY_LABELS } from "@/lib/category-labels";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-
-const CATEGORY_LABEL: Record<string, string> = {
-  daily: "일상",
-  love: "사랑",
-  work: "커리어",
-};
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -52,7 +47,7 @@ export default function SessionsPage() {
           <header className="ch-header thin">
             <Link className="ch-logo" href="/">
               <span className="ch-logo-mark" aria-hidden="true" />
-              위로 <span className="ch-logo-sub">To High</span>
+              위로
             </Link>
           </header>
           <div className="ch-center">
@@ -72,7 +67,7 @@ export default function SessionsPage() {
           <header className="ch-header thin">
             <Link className="ch-logo" href="/">
               <span className="ch-logo-mark" aria-hidden="true" />
-              위로 <span className="ch-logo-sub">To High</span>
+              위로
             </Link>
           </header>
           <div className="ch-center">
@@ -102,7 +97,7 @@ export default function SessionsPage() {
         <header className="ch-header thin">
           <Link className="ch-logo" href="/">
             <span className="ch-logo-mark" aria-hidden="true" />
-            위로 <span className="ch-logo-sub">To High</span>
+            위로
           </Link>
           <button
             type="button"
@@ -118,7 +113,7 @@ export default function SessionsPage() {
             이전 이야기
           </h2>
           <p className="ch-sub" style={{ marginBottom: 24 }}>
-            지난 대화들을 이어가거나 다시 꺼내볼 수 있어요.
+            지난 이야기를 이어가거나 다시 꺼내볼 수 있어요.
           </p>
 
           {error && (
@@ -127,7 +122,7 @@ export default function SessionsPage() {
 
           {sessions.length === 0 ? (
             <div className="ch-summary compact">
-              <p>아직 나눈 이야기가 없어요. 홈에서 이야기를 시작해보세요.</p>
+              <p>아직 나눈 이야기가 없어요. 첫 이야기를 시작해 보세요.</p>
             </div>
           ) : (
             <ul className="sessions-list">
@@ -136,7 +131,7 @@ export default function SessionsPage() {
                   <Link href={`/chat/${s.sessionId}`} className="session-card">
                     <div className="session-card-top">
                       <span className="session-card-cat">
-                        {CATEGORY_LABEL[s.category] ?? s.category}
+                        {CATEGORY_LABELS[s.category] ?? s.category}
                       </span>
                       <span className="session-card-date">{formatDate(s.updatedAt)}</span>
                     </div>

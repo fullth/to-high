@@ -47,7 +47,7 @@ export class PaymentService {
     // 금액 검증
     const plan = SUBSCRIPTION_PLANS[tier];
     if (!plan || plan.price !== amount) {
-      throw new BadRequestException('잘못된 결제 금액입니다.');
+      throw new BadRequestException('결제 금액이 올바르지 않아요.');
     }
 
     try {
@@ -105,7 +105,7 @@ export class PaymentService {
         status: 'failed',
       });
 
-      const errorMessage = error.response?.data?.message || '결제 처리 중 오류가 발생했습니다.';
+      const errorMessage = error.response?.data?.message || '결제 중 문제가 생겼어요.';
       throw new BadRequestException(errorMessage);
     }
   }
@@ -135,7 +135,7 @@ export class PaymentService {
   async cancelSubscription(userId: string) {
     const user = await this.userRepository.findById(userId);
     if (!user || !user.isSubscribed) {
-      throw new BadRequestException('활성화된 구독이 없습니다.');
+      throw new BadRequestException('이용 중인 구독이 없어요.');
     }
 
     // 구독 종료일까지는 유지, 갱신만 중단
@@ -143,7 +143,7 @@ export class PaymentService {
       isSubscribed: false,
     });
 
-    return { success: true, message: '구독이 취소되었습니다. 남은 기간은 계속 이용 가능합니다.' };
+    return { success: true, message: '구독을 취소했어요. 남은 기간은 계속 이용할 수 있어요.' };
   }
 
   /**
@@ -152,15 +152,15 @@ export class PaymentService {
   async cancelPayment(userId: string, paymentKey: string, cancelReason: string) {
     const payment = await this.paymentRepository.findByPaymentKey(paymentKey);
     if (!payment) {
-      throw new NotFoundException('결제 내역을 찾을 수 없습니다.');
+      throw new NotFoundException('결제 내역을 찾을 수 없어요.');
     }
 
     if (payment.userId.toString() !== userId) {
-      throw new BadRequestException('권한이 없습니다.');
+      throw new BadRequestException('권한이 없어요.');
     }
 
     if (payment.status !== 'completed') {
-      throw new BadRequestException('취소할 수 없는 결제입니다.');
+      throw new BadRequestException('취소할 수 없는 결제예요.');
     }
 
     try {
@@ -188,9 +188,9 @@ export class PaymentService {
         subscriptionEndDate: new Date(),
       });
 
-      return { success: true, message: '환불이 완료되었습니다.' };
+      return { success: true, message: '환불이 완료됐어요.' };
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || '환불 처리 중 오류가 발생했습니다.';
+      const errorMessage = error.response?.data?.message || '환불 중 문제가 생겼어요.';
       throw new BadRequestException(errorMessage);
     }
   }
@@ -219,7 +219,7 @@ export class PaymentService {
   async getSubscriptionInfo(userId: string) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      throw new NotFoundException('사용자를 찾을 수 없어요.');
     }
 
     const plan = user.subscriptionTier ? SUBSCRIPTION_PLANS[user.subscriptionTier as SubscriptionTier] : null;
