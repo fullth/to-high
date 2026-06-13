@@ -164,9 +164,6 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                 이전 이야기
               </a>
             )}
-            <a className="btn btn-ghost" href="/subscribe">
-              멤버십
-            </a>
             {!token && (
               <button type="button" className="btn btn-ghost" onClick={onLoginClick}>
                 로그인
