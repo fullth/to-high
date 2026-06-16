@@ -100,7 +100,7 @@ function SubscribeContent() {
         router.replace("/subscribe?success=true");
         window.location.reload();
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : "결제 처리 중 오류가 발생했습니다.";
+        const errorMessage = err instanceof Error ? err.message : "결제 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.";
         setError(errorMessage);
       } finally {
         setIsProcessing(false);
@@ -118,7 +118,7 @@ function SubscribeContent() {
 
     try {
       const plan = plans.find((p) => p.tier === tier);
-      if (!plan) throw new Error("요금제를 찾을 수 없습니다.");
+      if (!plan) throw new Error("요금제를 찾을 수 없어요.");
 
       // 주문 생성
       const { orderId } = await createOrder(tier, token);
@@ -129,7 +129,7 @@ function SubscribeContent() {
       // 토스페이먼츠 결제 위젯 호출
       const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
       if (!clientKey) {
-        throw new Error("결제 설정이 완료되지 않았습니다.");
+        throw new Error("결제 설정이 끝나지 않았어요.");
       }
 
       const tossPayments = window.TossPayments(clientKey);
@@ -146,7 +146,7 @@ function SubscribeContent() {
         // 사용자가 결제 취소
         localStorage.removeItem("pendingTier");
       } else {
-        setError(paymentErr.message || "결제 요청 중 오류가 발생했습니다.");
+        setError(paymentErr.message || "결제 요청 중 문제가 생겼어요.");
       }
     } finally {
       setIsProcessing(false);
@@ -182,7 +182,7 @@ function SubscribeContent() {
         {/* 성공 메시지 */}
         {isSuccess && (
           <div className="mb-8 p-4 bg-green-500/20 border border-green-500/50 rounded-xl text-center">
-            <p className="text-green-400 font-medium">구독이 완료되었습니다!</p>
+            <p className="text-green-400 font-medium">구독이 시작됐어요!</p>
           </div>
         )}
 
@@ -198,7 +198,7 @@ function SubscribeContent() {
           <div className="mb-8 p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-2xl">
             <h2 className="text-xl font-bold mb-2">현재 구독 중</h2>
             <p className="text-slate-300">
-              {subscription.plan?.name} 플랜 · 월 {subscription.plan?.sessionLimit}권 공책
+              {subscription.plan?.name} 플랜 · 매달 이야기 {subscription.plan?.sessionLimit}권
             </p>
             <p className="text-sm text-slate-400 mt-2">
               다음 결제일: {subscription.endDate ? new Date(subscription.endDate).toLocaleDateString("ko-KR") : "-"}
@@ -209,20 +209,20 @@ function SubscribeContent() {
         {subscription?.isGrandfathered && (
           <div className="mb-8 p-6 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl">
             <h2 className="text-xl font-bold mb-2">레거시 사용자</h2>
-            <p className="text-slate-300">무제한 이용 가능합니다.</p>
+            <p className="text-slate-300">무제한으로 이용할 수 있어요.</p>
           </div>
         )}
 
         {/* 타이틀 */}
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold mb-4">공책 구독하기</h1>
-          <p className="text-slate-400">공책을 추가하고 마음을 더 자유롭게 표현하세요</p>
+          <h1 className="text-3xl font-bold mb-4">이야기 더 담기</h1>
+          <p className="text-slate-400">이야기를 더 담고 마음을 자유롭게 나눠보세요</p>
         </div>
 
         {/* 준비중 안내 */}
         <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-center">
-          <p className="text-amber-400 font-medium text-lg mb-2">서비스 준비중</p>
-          <p className="text-slate-400 text-sm">결제 시스템을 준비하고 있어요. 조금만 기다려주세요!</p>
+          <p className="text-amber-400 font-medium text-lg mb-2">서비스 준비 중</p>
+          <p className="text-slate-400 text-sm">결제 시스템을 준비하고 있어요. 조금만 기다려 주세요!</p>
         </div>
 
         {/* 요금제 카드 */}
@@ -239,7 +239,7 @@ function SubscribeContent() {
             >
               {plan.tier === "premium" && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs font-bold">
-                  BEST
+                  추천
                 </div>
               )}
 
@@ -256,19 +256,19 @@ function SubscribeContent() {
                   <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  월 {plan.sessionLimit}권 공책 추가
+                  매달 이야기 {plan.sessionLimit}권 추가
                 </li>
                 <li className="flex items-center gap-2 text-slate-300">
                   <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  무제한 대화
+                  무제한 이야기
                 </li>
                 <li className="flex items-center gap-2 text-slate-300">
                   <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  대화 기록 저장
+                  이야기 기록 저장
                 </li>
               </ul>
 
@@ -289,26 +289,26 @@ function SubscribeContent() {
             <div>
               <h4 className="text-slate-300 font-medium mb-1">구독 혜택</h4>
               <ul className="list-disc list-inside space-y-1">
-                <li>3권: 매월 3권의 새 공책이 추가됩니다</li>
-                <li>10권: 매월 10권의 새 공책이 추가됩니다</li>
-                <li>모든 공책에서 무제한 대화가 가능합니다</li>
-                <li>대화 기록은 영구 저장됩니다</li>
+                <li>3권: 매달 이야기 3권이 추가돼요</li>
+                <li>10권: 매달 이야기 10권이 추가돼요</li>
+                <li>모든 이야기에서 무제한으로 나눌 수 있어요</li>
+                <li>이야기 기록은 계속 저장돼요</li>
               </ul>
             </div>
             <div>
               <h4 className="text-slate-300 font-medium mb-1">결제 안내</h4>
               <ul className="list-disc list-inside space-y-1">
-                <li>매월 결제일에 자동 결제됩니다</li>
-                <li>요금제 변경은 다음 결제일부터 적용됩니다</li>
-                <li>미사용 공책은 다음 달로 이월되지 않습니다</li>
+                <li>매달 결제일에 자동으로 결제돼요</li>
+                <li>요금제 변경은 다음 결제일부터 적용돼요</li>
+                <li>쓰지 않은 이야기는 다음 달로 이월되지 않아요</li>
               </ul>
             </div>
             <div>
               <h4 className="text-slate-300 font-medium mb-1">해지 안내</h4>
               <ul className="list-disc list-inside space-y-1">
-                <li>언제든지 구독을 해지할 수 있습니다</li>
-                <li>해지 시 남은 기간까지 서비스 이용이 가능합니다</li>
-                <li>해지 후에도 기존 대화 기록은 보존됩니다</li>
+                <li>언제든지 구독을 해지할 수 있어요</li>
+                <li>해지해도 남은 기간까지는 그대로 이용할 수 있어요</li>
+                <li>해지한 뒤에도 기존 이야기 기록은 그대로 남아요</li>
               </ul>
             </div>
           </div>
@@ -325,7 +325,7 @@ function SubscribeContent() {
 
         {/* 안내 */}
         <div className="text-center text-sm text-slate-500">
-          <p>구독은 언제든 취소할 수 있습니다.</p>
+          <p>구독은 언제든 취소할 수 있어요.</p>
           <p className="mt-1">결제 관련 문의: support@to-high.com</p>
         </div>
       </div>

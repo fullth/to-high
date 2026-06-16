@@ -29,7 +29,7 @@ export default function AuthCallbackPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <p className="text-muted-foreground">로딩 중...</p>
+          <p className="text-muted-foreground">불러오는 중...</p>
         </div>
       }
     >

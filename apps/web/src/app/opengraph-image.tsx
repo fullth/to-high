@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "To high; 위로 - AI 심리 상담";
+export const alt = "위로 - AI 심리 상담";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -92,7 +92,6 @@ export default function OgImage() {
             gap: 12,
           }}
         >
-          <span>To high;</span>
           <span style={{ color: "#34d399" }}>위로</span>
         </div>
 
@@ -105,7 +104,7 @@ export default function OgImage() {
             display: "flex",
           }}
         >
-          선택지를 통해 점진적으로 함께 이야기하는 AI 심리 상담
+          말로 풀기 어려운 날엔, 선택지부터
         </div>
 
         {/* 하단 태그 */}

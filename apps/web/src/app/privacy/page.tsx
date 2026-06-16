@@ -31,7 +31,7 @@ export default function PrivacyPage() {
           {/* 서문 */}
           <section className="space-y-4">
             <p className="text-muted-foreground leading-relaxed">
-              To High; 위로(이하 &quot;서비스&quot;)는 이용자의 개인정보를 중요하게 생각하며,
+              위로(이하 &quot;서비스&quot;)는 이용자의 개인정보를 중요하게 생각하며,
               개인정보보호법 등 관련 법령을 준수합니다. 본 개인정보처리방침을 통해
               이용자의 개인정보가 어떻게 수집, 이용, 보관, 파기되는지 안내드립니다.
             </p>
@@ -168,7 +168,7 @@ export default function PrivacyPage() {
             <div className="bg-card border border-border rounded-xl p-4">
               <ul className="space-y-2 text-muted-foreground">
                 <li>
-                  <span className="font-medium text-foreground">서비스명:</span> To High; 위로
+                  <span className="font-medium text-foreground">서비스명:</span> 위로
                 </li>
                 <li>
                   <span className="font-medium text-foreground">문의:</span>{" "}
