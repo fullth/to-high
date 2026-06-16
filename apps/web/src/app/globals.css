@@ -60,55 +60,55 @@
 :root {
   --radius: 16px;
 
-  /* 토스/채널톡 스타일 - 깔끔한 다크 그린 */
+  /* 라이트 세이지 — 회복 그린 + 새벽 햇살 */
 
-  /* 배경: 깊은 숲 */
-  --background: #0f1f15;
-  --foreground: #ffffff;
+  /* 배경: 따뜻한 크림 */
+  --background: #faf8f3;
+  --foreground: #213128;
 
-  /* 카드: Solid 배경 + 명확한 구분 */
-  --card: #1a2f23;
-  --card-foreground: #ffffff;
+  /* 카드: 흰 면 + 명확한 구분 */
+  --card: #ffffff;
+  --card-foreground: #213128;
 
-  /* 프라이머리: 선명한 민트 (토스 블루처럼 강조) */
-  --primary: #34d399;
-  --primary-foreground: #022c22;
+  /* 프라이머리: 세이지 그린 */
+  --primary: #2e9b6d;
+  --primary-foreground: #ffffff;
 
-  /* 세컨더리: 밝은 그린 배경 */
-  --secondary: #243d2e;
-  --secondary-foreground: #d1fae5;
+  /* 세컨더리: 연한 그린 틴트 */
+  --secondary: #eef3ec;
+  --secondary-foreground: #213128;
 
-  /* 뮤트: 중간 톤 */
-  --muted: #1e3328;
-  --muted-foreground: #9ca3af;
+  /* 뮤트: 차분한 그린 그레이 */
+  --muted: #f1f4ef;
+  --muted-foreground: #6f7d75;
 
-  /* 액센트: 밝은 민트 */
-  --accent: #2d4a3a;
-  --accent-foreground: #6ee7b7;
+  /* 액센트: brand 틴트 */
+  --accent: #e6f3ec;
+  --accent-foreground: #2e9b6d;
 
-  /* 위험: 선명한 레드 */
-  --destructive: #ef4444;
+  /* 위험: 부드러운 로즈 */
+  --destructive: #c0392b;
 
-  /* 테두리: 확실한 구분선 */
-  --border: #2d4a3a;
-  --input: #243d2e;
-  --ring: #34d399;
+  /* 테두리: 부드러운 구분선 */
+  --border: #e5e9e0;
+  --input: #d3ddd3;
+  --ring: #2e9b6d;
 
   /* 사이드바 */
-  --sidebar: #0a1810;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #34d399;
-  --sidebar-primary-foreground: #022c22;
-  --sidebar-accent: #1e3328;
-  --sidebar-accent-foreground: #d1fae5;
-  --sidebar-border: #243d2e;
-  --sidebar-ring: #34d399;
+  --sidebar: #f3f5ee;
+  --sidebar-foreground: #213128;
+  --sidebar-primary: #2e9b6d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e6f3ec;
+  --sidebar-accent-foreground: #2e9b6d;
+  --sidebar-border: #e5e9e0;
+  --sidebar-ring: #2e9b6d;
 }
 
 .dark {
-  --background: #070f0a;
-  --card: #0f1f15;
-  --border: #1e3328;
+  --background: #faf8f3;
+  --card: #ffffff;
+  --border: #e5e9e0;
 }
 
 @layer base {
@@ -330,10 +330,10 @@
   @apply text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary transition-colors;
 }
 
-/* 스크롤바 스타일 - 다크 테마에 맞게 */
+/* 스크롤바 스타일 - 라이트 세이지 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2d4a3a #0f1f15;
+  scrollbar-color: #d3ddd3 transparent;
 }
 
 /* WebKit 기반 브라우저 (Chrome, Safari, Edge) */
@@ -343,14 +343,14 @@
 }
 
 *::-webkit-scrollbar-track {
-  background: #0f1f15;
+  background: transparent;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #2d4a3a;
+  background: #d3ddd3;
   border-radius: 4px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #34d399;
+  background: #2e9b6d;
 }

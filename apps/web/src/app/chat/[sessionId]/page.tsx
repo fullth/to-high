@@ -417,7 +417,7 @@ function ChatContent() {
           <header className="ch-header">
             {token ? (
               <span className="ch-status">
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", animation: "chatPulse 2.2s ease infinite" }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--brand)", animation: "chatPulse 2.2s ease infinite" }} />
                 {phase === "selecting" ? "이야기 시작 중" : phase === "mode" ? "방식 고르는 중" : "이어가는 중"}
               </span>
             ) : (
@@ -450,9 +450,9 @@ function ChatContent() {
             {phase === "mode" && (
               <>
                 {crisisMessage && (
-                  <div className="ch-inline-card" style={{ borderColor: "rgba(239,68,68,0.4)" }}>
-                    <span className="ch-wall-eyebrow" style={{ color: "#ef4444" }}>도움이 필요하신가요?</span>
-                    <p style={{ color: "#fca5a5", whiteSpace: "pre-wrap", margin: 0 }}>{crisisMessage}</p>
+                  <div className="ch-inline-card" style={{ borderColor: "var(--rose)", background: "var(--rose-tint)" }}>
+                    <span className="ch-wall-eyebrow" style={{ color: "#b3433f" }}>도움이 필요하신가요?</span>
+                    <p style={{ color: "#8a4a47", whiteSpace: "pre-wrap", margin: 0 }}>{crisisMessage}</p>
                   </div>
                 )}
                 <div className="ch-row">
@@ -563,7 +563,7 @@ function ChatContent() {
         <div className="ch-inner">
           <header className="ch-header">
             <span className="ch-status">
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34d399", animation: "chatPulse 2.2s ease infinite" }} />
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--brand)", animation: "chatPulse 2.2s ease infinite" }} />
               이야기 중
             </span>
             <button
@@ -641,7 +641,7 @@ function ChatContent() {
           <header className="ch-header">
             {token ? (
               <span className="ch-status muted">
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#94a3a3" }} />
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ink-4)" }} />
                 마무리됨
               </span>
             ) : (

@@ -150,27 +150,31 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
     <div className="wirocare-landing">
       <header className="nav">
         <div className="container nav-inner">
-          <a className="logo" href="/">
-            <span className="logo-mark" aria-hidden="true" />
-            <span>위로</span>
-          </a>
-          <nav className="nav-actions">
-            <a className="nav-crisis" href="tel:1393" aria-label="자살예방상담전화 1393">
-              <span className="nav-crisis-dot" aria-hidden="true" />
-              위기 상담 1393
+          <div className="nav-left">
+            <a className="logo" href="/">
+              <span className="logo-mark" aria-hidden="true" />
+              <span>
+                위로 <span className="logo-sub">To High</span>
+              </span>
             </a>
+            <a className="nav-crisis" href="tel:1393" aria-label="자살예방상담전화 1393">
+              <span className="glyph" aria-hidden="true">!</span>
+              <span className="crisis-txt">위기 상담 </span>1393
+            </a>
+          </div>
+          <nav className="nav-actions">
             {token && (
-              <a className="btn btn-ghost" href="/sessions">
+              <a className="btn btn-ghost btn-sm" href="/sessions">
                 이전 이야기
               </a>
             )}
             {!token && (
-              <button type="button" className="btn btn-ghost" onClick={onLoginClick}>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={onLoginClick}>
                 로그인
               </button>
             )}
-            <button type="button" className="btn btn-soft" onClick={handlePrimaryStart} disabled={!!starting}>
-              이야기 시작하기 <ArrowIcon />
+            <button type="button" className="btn btn-soft btn-sm" onClick={handlePrimaryStart} disabled={!!starting}>
+              상담하기 <ArrowIcon size={12} />
             </button>
           </nav>
         </div>
@@ -190,7 +194,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
               <div className="fade-in">
                 <span className="hero-eyebrow">
                   <span className="pulse" />
-                  조용히 마음 두는 곳
+                  언제나 기다리고 있어요
                 </span>
                 <h1>
                   지치셨다면,
@@ -198,19 +202,18 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   <span className="accent">잘 오셨어요</span>
                 </h1>
                 <p className="hero-meta">
-                  <span className="hero-meta-swatch" aria-hidden="true" />
                   지금은 <b>일상</b> 카테고리부터 만나요. 사랑·커리어는 곧 열어둘게요.
                 </p>
                 <p className="lede">
-                  말로 풀기 어려운 날엔, 선택지부터 따라오셔도 돼요.
+                  말로 풀기 어려운 날엔, 말풍선으로 선택해보세요.
                 </p>
                 <div className="hero-cta">
                   <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
-                    {starting ? "이야기 여는 중..." : "지금 이야기 시작하기"} <ArrowIcon size={18} />
+                    {starting ? "마음 가는 길 열어두는 중..." : "지금 상담하기"} <ArrowIcon size={18} />
                   </button>
                 </div>
                 {error && (
-                  <p style={{ color: "#ef4444", marginTop: 12, fontSize: 14 }}>{error}</p>
+                  <p style={{ color: "var(--rose)", marginTop: 12, fontSize: 14 }}>{error}</p>
                 )}
                 <div className="trust">
                   <span className="trust-mark" aria-hidden="true" />
@@ -242,12 +245,8 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
 
         <section id="verticals" className="section verticals-section">
           <div className="container">
-            <div className="mini-bridge" aria-hidden="true">
-              <span className="mini-bridge-glow" />
-              일상부터 만나보세요. 짧은 이야기여도 괜찮아요.
-            </div>
             <div className="section-head">
-              <span className="eyebrow">먼저 일상부터</span>
+              <span className="eyebrow">무엇이든 나눠요</span>
               <h2 className="section-title">오늘 나눌 이야기 고르기</h2>
               <p className="section-sub">지금은 일상부터 함께 들어요. 사랑·커리어는 곧 열어둘게요.</p>
             </div>
@@ -299,7 +298,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                         {disabled
                           ? "곧 만나요"
                           : starting === v.id
-                            ? "이야기 여는 중..."
+                            ? "곁에 자리 만드는 중..."
                             : "여기부터 들어볼게요"}{" "}
                         <ArrowIcon size={14} />
                       </span>
@@ -308,6 +307,12 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                 );
               })}
             </div>
+            <div className="mini-bridge" role="note">
+              <span className="mini-bridge-glow" aria-hidden="true" />
+              <span className="mini-bridge-text">
+                <b>일상부터 만나보세요.</b> 짧은 이야기여도 괜찮아요.
+              </span>
+            </div>
           </div>
         </section>
 
@@ -315,15 +320,15 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
           <div className="container">
             <div className="section-head">
               <span className="eyebrow">위로의 약속</span>
-              <h2 className="section-title">어떤 날에 찾아오세요</h2>
+              <h2 className="section-title">이런 날, 곁에 있을게요</h2>
               <p className="section-sub">진료가 아니라, 옆자리에 앉아 듣는 마음으로요. 부담 없이 시작하고, 안심하고 마무리해요.</p>
             </div>
             <div className="features">
               <div className="feature">
                 <div className="ficon">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 3v6M12 15v6M3 12h6M15 12h6" stroke="#34d399" strokeWidth="1.6" strokeLinecap="round" />
-                    <circle cx="12" cy="12" r="2.4" fill="#34d399" opacity="0.85" />
+                    <path d="M12 3v6M12 15v6M3 12h6M15 12h6" stroke="var(--brand)" strokeWidth="1.6" strokeLinecap="round" />
+                    <circle cx="12" cy="12" r="2.4" fill="var(--brand)" opacity="0.85" />
                   </svg>
                 </div>
                 <h4>말할 힘도 없는 날</h4>
@@ -332,10 +337,8 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
               <div className="feature">
                 <div className="ficon">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 6h10M5 12h6M5 18h12" stroke="#34d399" strokeWidth="1.6" strokeLinecap="round" />
-                    <circle cx="17" cy="6" r="2.4" fill="#022c22" stroke="#34d399" strokeWidth="1.4" />
-                    <circle cx="13" cy="12" r="2.4" fill="#022c22" stroke="#6ee7b7" strokeWidth="1.4" />
-                    <circle cx="19" cy="18" r="2.4" fill="#022c22" stroke="#34d399" strokeWidth="1.4" />
+                    <path d="M8 9a4 4 0 018 0c0 2-1 2.5-2 4-.8 1.2-1 2.2-1 3a2 2 0 11-4 0" stroke="var(--brand)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="12" cy="9.5" r="1.3" fill="var(--brand)" />
                   </svg>
                 </div>
                 <h4>조언이 부담스러운 날</h4>
@@ -344,12 +347,12 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
               <div className="feature">
                 <div className="ficon">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" fill="#022c22" stroke="#34d399" strokeWidth="1.4" />
-                    <path d="M9 12l2 2 4-4.2" stroke="#34d399" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" fill="var(--brand-tint)" stroke="var(--brand)" strokeWidth="1.4" />
+                    <path d="M9 12l2 2 4-4.2" stroke="var(--brand)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
                 <h4>조용히 풀고 싶은 날</h4>
-                <p>이름 없이도 시작할 수 있어요. 위기 순간엔 자살예방상담전화 1393을 곧바로 알려드려요.</p>
+                <p>이름 없이도 시작할 수 있어요. 위기 순간엔 자살예방상담전화 1393으로 바로 안내해드려요.</p>
               </div>
             </div>
           </div>
@@ -359,7 +362,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
           <div className="container">
             <div className="section-head">
               <span className="eyebrow">이야기 받는 방식</span>
-              <h2 className="section-title">원하는 방식으로 받아요</h2>
+              <h2 className="section-title">원하는 방식으로 응답해드릴게요</h2>
               <p className="section-sub">일상 이야기를 어떻게 받을지, 모드만 바꾸면 응답이 달라져요.</p>
             </div>
             <div className="modes">
@@ -370,16 +373,20 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                 </span>
               ))}
             </div>
-            <p className="modes-hint">탭하시면 그 결로 일상 카테고리에서 시작해드려요.</p>
+            <p className="modes-hint">탭하시면 그 결에 맞춰 일상 이야기부터 시작해드려요.</p>
           </div>
         </section>
 
         <section className="final">
           <div className="container">
-            <h2>오늘은 여기서 잠깐 쉬어가세요</h2>
+            <h2>
+              오늘은 여기서
+              <br />
+              잠깐 쉬어가세요
+            </h2>
             <p>먼저 와주신 마음, 일상부터 천천히 들을게요. 가입은 나중에 하셔도 돼요.</p>
             <button type="button" className="btn btn-primary btn-lg" onClick={handlePrimaryStart} disabled={!!starting}>
-              {starting ? "이야기 여는 중..." : "지금 이야기 시작하기"} <ArrowIcon size={18} />
+              {starting ? "곁에 자리 만드는 중..." : "지금 상담하기"} <ArrowIcon size={18} />
             </button>
           </div>
         </section>
@@ -404,8 +411,8 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
               위기 상황이라면 즉시 전문 상담을 받으세요. <b>자살예방상담전화 1393</b> · 24시간 무료
             </span>
           </div>
-          <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-400)" }}>
-            © 2026 위로. 위로는 의료기기가 아니며, 정신건강 진단·치료를 대체하지 않습니다.
+          <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-4)" }}>
+            © 2026 위로 (To High). 위로는 의료기기가 아니며, 정신건강 진단·치료를 대체하지 않습니다.
           </div>
         </div>
       </footer>
