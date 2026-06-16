@@ -44,6 +44,7 @@ export interface SessionListItem {
   counselorType?: string;
   createdAt: string;
   updatedAt: string;
+  alias?: string;
 }
 
 /**

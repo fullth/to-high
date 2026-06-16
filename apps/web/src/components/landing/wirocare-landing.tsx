@@ -134,7 +134,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
       });
       router.push(`/chat/${res.sessionId}?${params.toString()}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "세션을 시작할 수 없어요";
+      const message = err instanceof Error ? err.message : "지금은 시작할 수 없어요. 잠시 후 다시 시도해 주세요.";
       setError(message);
       setStarting(null);
     }
@@ -219,7 +219,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
                   <span className="trust-mark" aria-hidden="true" />
                   <span className="trust-text">
                     {hasTrustCount ? (
-                      <>이번 주 <b>{publicStatsToday!.toLocaleString()}분</b>이 위로받았어요</>
+                      <>오늘 <b>{publicStatsToday!.toLocaleString()}명</b>이 위로받았어요</>
                     ) : (
                       <>가입 없이도 시작할 수 있어요</>
                     )}
@@ -397,9 +397,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
           <div className="foot-top">
             <a className="logo" href="/">
               <span className="logo-mark" />
-              <span>
-                위로 <span className="logo-sub">To High</span>
-              </span>
+              <span>위로</span>
             </a>
             <div className="foot-links">
               <a href="/privacy">개인정보처리방침</a>
@@ -410,7 +408,7 @@ export function WirocareLanding({ publicStatsToday, onLoginClick }: WirocareLand
           <div className="crisis">
             <span className="crisis-mark" />
             <span>
-              위기 상황이라면 즉시 전문 상담을 받으세요. <b>자살 예방 상담전화 1393</b> · 24시간 무료
+              위기 상황이라면 즉시 전문 상담을 받으세요. <b>자살예방상담전화 1393</b> · 24시간 무료
             </span>
           </div>
           <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-4)" }}>

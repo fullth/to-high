@@ -194,24 +194,20 @@ describe('ChatService', () => {
       expect(result.hasHistory).toBe(true);
       expect(result.previousSessionSummary).toBe('이전 상담 요약');
       expect(sessionRepository.getRecentSummaries).toHaveBeenCalledWith('user-123');
-      expect(userRepository.findById).toHaveBeenCalledWith('user-123');
+      // 무료-우선 런칭(FREE_LAUNCH_MODE) 동안에는 한도 체크용 사용자 조회를 하지 않는다.
     });
 
     /**
-     * 테스트 케이스 3: 무료 사용자 세션 제한
-     * 
+     * 테스트 케이스 3: 무료-우선 런칭 — 무료 사용자 무제한 개방
+     *
      * 검증 포인트:
-     * - 무료 사용자가 3개 세션 한도에 도달하면 ForbiddenException을 던지는가?
-     * - 세션 생성을 시도하지 않는가?
-     * 
-     * 고민: 비즈니스 로직의 핵심 - 어떻게 수익화할 것인가?
-     * → 무료 사용자 제한으로 구독 유도
-     * 
-     * 엣지 케이스:
-     * - 정확히 3개일 때는? (>= 조건이므로 제한됨)
-     * - 레거시 사용자는? (별도 테스트로 분리)
+     * - FREE_LAUNCH_MODE가 켜진 동안 무료 사용자도 세션 한도에 막히지 않는가?
+     * - 기존 한도(3권)를 넘겨도 세션이 정상 생성되는가?
+     *
+     * 배경: 무료-우선 런칭 단계에서는 사용자 유입을 위해 paywall을 적용하지 않는다.
+     *      구독/결제 재개 시 FREE_LAUNCH_MODE를 false로 되돌리면 한도 로직이 복원된다.
      */
-    it('should enforce session limit for free users', async () => {
+    it('should not enforce session limit for free users during free launch', async () => {
       // Arrange
       const mockUser = {
         _id: 'user-123',
@@ -219,16 +215,29 @@ describe('ChatService', () => {
         isSubscribed: false,
       };
 
+      const mockSession = {
+        _id: 'session-free',
+        context: [],
+      };
+
       userRepository.findById.mockResolvedValue(mockUser as any);
-      sessionRepository.countUserSessions.mockResolvedValue(3); // 이미 3개 (한도 도달)
+      sessionRepository.getRecentSummaries.mockResolvedValue([]); // 이전 세션 없음
+      sessionRepository.countUserSessions.mockResolvedValue(99); // 기존 한도를 훨씬 초과
+      sessionService.create.mockResolvedValue(mockSession as any);
+      sessionService.findById.mockResolvedValue(mockSession as any);
+      openaiAgent.generateOptions.mockResolvedValue({
+        question: '무엇을 도와드릴까요?',
+        options: ['고민이 있어요', '그냥 이야기하고 싶어요'],
+        canProceedToResponse: false,
+        canRequestFeedback: true,
+      });
 
-      // Act & Assert: 예외 발생 검증
-      await expect(
-        service.startSession('user-123', 'self')
-      ).rejects.toThrow(ForbiddenException);
+      // Act
+      const result = await service.startSession('user-123', 'self');
 
-      // 세션 생성을 시도하지 않음
-      expect(sessionService.create).not.toHaveBeenCalled();
+      // Assert: 한도에 막히지 않고 세션이 생성됨
+      expect(result.sessionId).toBe('session-free');
+      expect(sessionService.create).toHaveBeenCalled();
     });
 
     /**
