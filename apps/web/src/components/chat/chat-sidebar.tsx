@@ -209,7 +209,7 @@ function SessionGroup({
             className={`ch-sb-card ${active ? "active" : ""}`}
           >
             <div className="ch-sb-card-summary">
-              {s.summary || s.alias || "제목 없는 이야기"}
+              {s.alias || s.summary || "이름이 지어지지 않은 공책"}
             </div>
             <div className="ch-sb-card-meta">
               <span>{formatRelative(s.updatedAt)}</span>
