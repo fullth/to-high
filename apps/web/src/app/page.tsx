@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ContactSidebar } from "@/components/contact-sidebar";
+import { ChannelTalk } from "@/components/channel-talk";
 import { WirocareLanding } from "@/components/landing/wirocare-landing";
 import { useAuth } from "@/contexts/auth-context";
 import { getPublicStats, PublicStats } from "@/lib/api";
@@ -22,7 +22,7 @@ export default function HomePage() {
         publicStatsToday={publicStats?.todayConversations}
         onLoginClick={() => login()}
       />
-      <ContactSidebar />
+      <ChannelTalk />
     </>
   );
 }
