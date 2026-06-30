@@ -360,6 +360,7 @@ export interface SessionListItem {
   category: string;
   status: "active" | "completed";
   summary?: string;
+  preview?: string;
   turnCount: number;
   counselorType?: string;
   createdAt: string;

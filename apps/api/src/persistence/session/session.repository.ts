@@ -123,11 +123,22 @@ export class SessionRepository {
    * 사용자의 활성 + 완료 세션 목록 (이어하기용)
    */
   async getUserSessions(userId: string, limit = 20): Promise<SessionDocument[]> {
+    // 목록 미리보기용으로 fullContext 첫 항목만 $slice 로 가져온다(전체 대화 메모리 적재 방지).
     return this.sessionModel
       .find({
         userId: new Types.ObjectId(userId),
       })
-      .select('summary category status createdAt updatedAt counselorType turnCount alias')
+      .select({
+        summary: 1,
+        category: 1,
+        status: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        counselorType: 1,
+        turnCount: 1,
+        alias: 1,
+        fullContext: { $slice: 1 },
+      })
       .sort({ updatedAt: -1 })
       .limit(limit);
   }

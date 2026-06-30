@@ -4,7 +4,7 @@ import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
 import { UserRepository } from '../../persistence/user/user.repository';
 import { UserProfileRepository } from '../../persistence/user-profile/user-profile.repository';
-import { RESPONSE_MODE_OPTIONS } from '../../types/chat';
+import { RESPONSE_MODE_OPTIONS, buildSessionPreview } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
 import { SessionService } from '../session/session.service';
 import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../../database/payment.schema';
@@ -478,6 +478,11 @@ export class ChatService {
       category: session.category,
       status: session.status as 'active' | 'completed',
       summary: session.summary,
+      preview: buildSessionPreview({
+        status: session.status,
+        summary: session.summary,
+        firstContext: session.fullContext?.[0],
+      }),
       turnCount: (session as any).turnCount || 0,
       counselorType: session.counselorType,
       createdAt: session.createdAt.toISOString(),
