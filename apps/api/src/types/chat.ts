@@ -53,3 +53,39 @@ export const RESPONSE_MODE_OPTIONS: ResponseModeOption[] = [
     emoji: '',
   },
 ];
+
+const SESSION_PREVIEW_MAX_LENGTH = 60;
+
+// context 에 저장된 사용자 발화에서 내부 접두사를 벗겨 사람이 읽을 한 줄로 만든다.
+function stripUtterancePrefix(raw: string): string {
+  return raw
+    .replace(/^\[위기 감지:[^\]]*\]\s*/, '')
+    .replace(/^\[사용자 직접 입력\]\s*/, '')
+    .replace(/^\[말하기 어려움 선택\]\s*/, '')
+    .replace(/^나:\s*/, '')
+    .trim();
+}
+
+function clampPreview(text: string): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  return flat.length > SESSION_PREVIEW_MAX_LENGTH
+    ? `${flat.slice(0, SESSION_PREVIEW_MAX_LENGTH)}…`
+    : flat;
+}
+
+// 세션 목록 카드에 보여줄 미리보기 한 줄.
+// 완료된 이야기는 AI 요약을, 진행 중인 이야기는 첫 사용자 발화를 발췌한다.
+export function buildSessionPreview(input: {
+  status: string;
+  summary?: string;
+  firstContext?: string;
+}): string | undefined {
+  if (input.status === 'completed' && input.summary) {
+    return clampPreview(input.summary);
+  }
+  if (input.firstContext) {
+    const utterance = stripUtterancePrefix(input.firstContext);
+    if (utterance) return clampPreview(utterance);
+  }
+  return undefined;
+}
