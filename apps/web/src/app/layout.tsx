@@ -1,6 +1,7 @@
 import { AuthProvider } from "@/contexts/auth-context";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -9,6 +10,7 @@ const geistSans = Geist({
 });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://to-high.vercel.app";
+const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || "GTM-W3SZTNTK";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s | 위로",
   },
   description:
-    "말로 풀기 어려운 날엔 선택지부터 따라오세요. 일상부터 천천히 들어드리는 AI 심리 상담 서비스",
+    "오롯이 나만을 위한 AI 심리 상담 서비스",
   keywords: ["AI 상담", "심리 상담", "마음 치유", "고민 상담", "위로", "to-high"],
   icons: {
     icon: "/logo.svg",
@@ -30,13 +32,13 @@ export const metadata: Metadata = {
     siteName: "위로",
     title: "위로 | AI 심리 상담",
     description:
-      "말로 풀기 어려운 날엔 선택지부터 따라오세요. 일상부터 천천히 들어드릴게요",
+      "말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요",
   },
   twitter: {
     card: "summary_large_image",
     title: "위로 | AI 심리 상담",
     description:
-      "말로 풀기 어려운 날엔 선택지부터 따라오세요. 일상부터 천천히 들어드릴게요",
+      "말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요",
   },
   robots: {
     index: true,
@@ -68,7 +70,7 @@ export default function RootLayout({
     name: "위로",
     url: SITE_URL,
     description:
-      "말로 풀기 어려운 날엔 선택지부터 따라오세요. 일상부터 천천히 들어드리는 AI 심리 상담 서비스",
+      "말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요. 일상부터 천천히 들어드리는 AI 심리 상담 서비스",
     applicationCategory: "HealthApplication",
     operatingSystem: "Web",
     inLanguage: "ko",
@@ -93,8 +95,23 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <Script id="gtm" strategy="afterInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${GTM_ID}');`}
+        </Script>
       </head>
       <body className={`${geistSans.variable} font-sans antialiased`}>
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
