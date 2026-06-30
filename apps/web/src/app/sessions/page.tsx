@@ -110,11 +110,8 @@ export default function SessionsPage() {
 
         <div style={{ padding: "32px 24px", flex: 1, overflowY: "auto" }}>
           <h2 className="ch-h" style={{ marginBottom: 8 }}>
-            이전 이야기
+            적어둔 이야기를 이어가볼까요?
           </h2>
-          <p className="ch-sub" style={{ marginBottom: 24 }}>
-            지난 이야기를 이어가거나 다시 꺼내볼 수 있어요.
-          </p>
 
           {error && (
             <p style={{ color: "#ef4444", fontSize: 14, marginBottom: 16 }}>{error}</p>
@@ -126,24 +123,26 @@ export default function SessionsPage() {
             </div>
           ) : (
             <ul className="sessions-list">
-              {sessions.map((s) => (
-                <li key={s.sessionId}>
-                  <Link href={`/chat/${s.sessionId}`} className="session-card">
-                    <div className="session-card-top">
-                      <span className="session-card-cat">
-                        {CATEGORY_LABELS[s.category] ?? s.category}
-                      </span>
-                      <span className="session-card-date">{formatDate(s.updatedAt)}</span>
-                    </div>
-                    <div className="session-card-title">
-                      {s.alias ?? s.summary ?? "제목 없는 이야기"}
-                    </div>
-                    <div className="session-card-meta">
-                      {s.status === "completed" ? "완료됨" : "진행 중"} · {s.turnCount}턴
-                    </div>
-                  </Link>
-                </li>
-              ))}
+              {sessions.map((s) => {
+                const title = s.alias ?? s.summary ?? "이름이 지어지지 않은 공책";
+                const showPreview = s.preview && s.preview !== title;
+                return (
+                  <li key={s.sessionId}>
+                    <Link href={`/chat/${s.sessionId}`} className="session-card">
+                      <div className="session-card-top">
+                        <span className="session-card-cat">
+                          {CATEGORY_LABELS[s.category] ?? s.category}
+                        </span>
+                        <span className="session-card-date">{formatDate(s.updatedAt)}</span>
+                      </div>
+                      <div className="session-card-title">{title}</div>
+                      {showPreview && (
+                        <div className="session-card-meta">{s.preview}</div>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
