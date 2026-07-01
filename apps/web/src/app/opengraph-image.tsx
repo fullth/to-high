@@ -104,7 +104,7 @@ export default function OgImage() {
             display: "flex",
           }}
         >
-          말로 풀기 어려운 날엔, 선택지부터
+          말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요
         </div>
 
         {/* 하단 태그 */}

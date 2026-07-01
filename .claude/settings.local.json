@@ -95,7 +95,8 @@
       "Bash(chmod:*)",
       "Bash(./test-streaming.sh)",
       "Bash(git restore:*)",
-      "Bash(npx playwright test:*)"
+      "Bash(npx playwright test:*)",
+      "Bash(ls apps/api/tsconfig*.json)"
     ]
   },
   "enableAllProjectMcpServers": true,

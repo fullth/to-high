@@ -322,7 +322,7 @@ export function WirocareLanding({
               disabled={!!starting}
             >
               {starting
-                ? "곁에 자리 만드는 중..."
+                ? "공책 생성 중..."
                 : "당신의 이야기를 들려주세요"}{" "}
               <ArrowIcon size={18} />
             </button>
