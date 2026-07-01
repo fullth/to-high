@@ -129,7 +129,7 @@ export const INITIAL_OPTIONS: Record<Category, string[]> = {
   other: [
     '뭔가 불편해요',
     '복잡해서 모르겠어요',
-    '그냥 들어줘요',
+    '들어줘요',
     '말로 못 하겠어요',
     '감정을 모르겠어요',
     '여러 가지가 섞여있어요',

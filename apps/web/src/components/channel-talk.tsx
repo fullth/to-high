@@ -47,3 +47,14 @@ export function ChannelTalk() {
 
   return null;
 }
+
+// 상담 화면 등 채널톡 버튼을 감추고 싶은 곳에서 사용.
+export function useHideChannelTalk() {
+  useEffect(() => {
+    const w = window as ChannelWindow;
+    w.ChannelIO?.("hideChannelButton");
+    return () => {
+      w.ChannelIO?.("showChannelButton");
+    };
+  }, []);
+}

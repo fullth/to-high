@@ -3,13 +3,37 @@
 import "@/components/chat/chat.css";
 import { ChatBubble } from "@/components/chat/chat-bubble";
 import { ChatSidebar } from "@/components/chat/chat-sidebar";
+import { ChatInfoSidebar } from "@/components/chat/chat-info-sidebar";
+import { useHideChannelTalk } from "@/components/channel-talk";
 import { useAuth } from "@/contexts/auth-context";
-import { endSession, getSessionDetail, saveSession, selectOptionStream, setResponseModeStream, sendMessageStream } from "@/lib/api";
+import {
+  endSession,
+  getSessionDetail,
+  saveSession,
+  selectOptionStream,
+  setResponseModeStream,
+  sendMessageStream,
+} from "@/lib/api";
 import { ChatMessage, ChatPhase, ResponseModeOption } from "@/types/chat";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ReactNode, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {
+  ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 type SessionHistoryItem = { type: "user" | "assistant"; content: string };
+
+// 대화가 막힐 때 부담 없이 고를 수 있는 빠른 답장.
+const QUICK_REPLIES = [
+  "잘 모르겠어요",
+  "조금 나아졌어요",
+  "네, 맞아요",
+  "더 듣고 싶어요",
+];
 
 // 저장된 세션의 context 배열을 대화 말풍선으로 변환한다.
 // 내부 컨텍스트(카테고리·이전 상담 주입)는 표시하지 않는다.
@@ -23,15 +47,26 @@ function parseSessionHistory(entries: string[]): SessionHistoryItem[] {
     if (entry.startsWith("[이전 상담 불러오기")) continue;
 
     if (entry.startsWith("상담사:")) {
-      history.push({ type: "assistant", content: entry.replace(/^상담사:\s*/, "") });
+      history.push({
+        type: "assistant",
+        content: entry.replace(/^상담사:\s*/, ""),
+      });
     } else if (entry.startsWith("나:")) {
       history.push({ type: "user", content: entry.replace(/^나:\s*/, "") });
     } else if (entry.startsWith("[사용자 직접 입력]")) {
-      history.push({ type: "user", content: entry.replace(/^\[사용자 직접 입력\]\s*/, "") });
+      history.push({
+        type: "user",
+        content: entry.replace(/^\[사용자 직접 입력\]\s*/, ""),
+      });
     } else if (entry.startsWith("[말하기 어려움 선택]")) {
-      history.push({ type: "user", content: entry.replace(/^\[말하기 어려움 선택\]\s*/, "") });
+      history.push({
+        type: "user",
+        content: entry.replace(/^\[말하기 어려움 선택\]\s*/, ""),
+      });
     } else {
-      const crisis = entry.match(/^\[위기 감지:[^\]]*\]\s*(?:나:\s*)?([\s\S]*)$/);
+      const crisis = entry.match(
+        /^\[위기 감지:[^\]]*\]\s*(?:나:\s*)?([\s\S]*)$/,
+      );
       if (crisis) history.push({ type: "user", content: crisis[1].trim() });
     }
   }
@@ -76,7 +111,12 @@ function AuthShell({
         style={{ position: "fixed", top: 14, left: 14, zIndex: 35 }}
       >
         <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-          <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <path
+            d="M2 4h12M2 8h12M2 12h12"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
         </svg>
       </button>
       {children}
@@ -89,6 +129,9 @@ function ChatContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { token, user, login, logout, isLoading: authLoading } = useAuth();
+
+  // 상담 화면에서는 채널톡 문의 버튼을 감춰 대화에 집중하게 한다.
+  useHideChannelTalk();
 
   const sessionId = params.sessionId as string;
 
@@ -103,7 +146,9 @@ function ChatContent() {
   const [crisisMessage, setCrisisMessage] = useState<string | null>(null);
   const [supplementInput, setSupplementInput] = useState("");
   const [streamingContent, setStreamingContent] = useState<string>("");
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveState, setSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   // 새 세션은 랜딩에서 질문/선택지를 쿼리로 받는다. 쿼리가 없으면 기존 세션을 불러온다.
   const [initializing, setInitializing] = useState(
     () => !(searchParams.get("question") && searchParams.get("options")),
@@ -111,12 +156,14 @@ function ChatContent() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // 선택 히스토리를 저장 (대화 형태로 보여주기 위함)
-  const [selectionHistory, setSelectionHistory] = useState<Array<{
-    type: "user" | "assistant";
-    content: string;
-    isQuestion?: boolean;
-    options?: string[];
-  }>>([]);
+  const [selectionHistory, setSelectionHistory] = useState<
+    Array<{
+      type: "user" | "assistant";
+      content: string;
+      isQuestion?: boolean;
+      options?: string[];
+    }>
+  >([]);
 
   // 스크롤 자동 이동을 위한 ref
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -142,12 +189,14 @@ function ChatContent() {
         setQuestion(q);
         setOptions(parsedOptions);
         // 초기 질문을 히스토리에 추가
-        setSelectionHistory([{
-          type: "assistant",
-          content: q,
-          isQuestion: true,
-          options: parsedOptions,
-        }]);
+        setSelectionHistory([
+          {
+            type: "assistant",
+            content: q,
+            isQuestion: true,
+            options: parsedOptions,
+          },
+        ]);
       } catch {
         // 파싱 실패 시 빈 상태로 둠
       }
@@ -163,7 +212,9 @@ function ChatContent() {
     getSessionDetail(sessionId, token ?? "")
       .then((detail) => {
         if (cancelled) return;
-        const entries = detail.fullContext?.length ? detail.fullContext : detail.context;
+        const entries = detail.fullContext?.length
+          ? detail.fullContext
+          : detail.context;
         setSelectionHistory(parseSessionHistory(entries ?? []));
         if (detail.status === "completed") {
           setSummary(detail.summary || "");
@@ -174,7 +225,9 @@ function ChatContent() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : "이야기를 불러올 수 없어요");
+          setLoadError(
+            err instanceof Error ? err.message : "이야기를 불러올 수 없어요",
+          );
         }
       })
       .finally(() => {
@@ -192,10 +245,13 @@ function ChatContent() {
       setSupplementInput("");
 
       // 사용자 선택을 히스토리에 추가
-      setSelectionHistory(prev => [...prev, {
-        type: "user",
-        content: selected,
-      }]);
+      setSelectionHistory((prev) => [
+        ...prev,
+        {
+          type: "user",
+          content: selected,
+        },
+      ]);
 
       try {
         let metadata: any = null;
@@ -215,26 +271,35 @@ function ChatContent() {
               }
             } else if (chunk.type === "contextSummary") {
               contextSummary = chunk.content;
-              setSelectionHistory(prev => [...prev, {
-                type: "assistant",
-                content: contextSummary,
-              }]);
+              setSelectionHistory((prev) => [
+                ...prev,
+                {
+                  type: "assistant",
+                  content: contextSummary,
+                },
+              ]);
             } else if (chunk.type === "question_chunk") {
               streamedQuestion += chunk.content;
               if (!streamedQuestionAdded) {
                 streamedQuestionAdded = true;
-                setSelectionHistory(prev => [...prev, {
-                  type: "assistant",
-                  content: streamedQuestion,
-                  isQuestion: true,
-                  options: [],
-                }]);
+                setSelectionHistory((prev) => [
+                  ...prev,
+                  {
+                    type: "assistant",
+                    content: streamedQuestion,
+                    isQuestion: true,
+                    options: [],
+                  },
+                ]);
               } else {
-                setSelectionHistory(prev => {
+                setSelectionHistory((prev) => {
                   const next = [...prev];
                   const last = next[next.length - 1];
                   if (last && last.isQuestion) {
-                    next[next.length - 1] = { ...last, content: streamedQuestion };
+                    next[next.length - 1] = {
+                      ...last,
+                      content: streamedQuestion,
+                    };
                   }
                   return next;
                 });
@@ -242,7 +307,7 @@ function ChatContent() {
             } else if (chunk.type === "next") {
               setQuestion(chunk.question);
               setOptions(chunk.options);
-              setSelectionHistory(prev => {
+              setSelectionHistory((prev) => {
                 const next = [...prev];
                 const last = next[next.length - 1];
                 if (last && last.isQuestion) {
@@ -263,7 +328,12 @@ function ChatContent() {
           },
         );
 
-        if (metadata?.isCrisis && metadata.canProceedToResponse && metadata.responseModes && !streamedQuestionAdded) {
+        if (
+          metadata?.isCrisis &&
+          metadata.canProceedToResponse &&
+          metadata.responseModes &&
+          !streamedQuestionAdded
+        ) {
           setResponseModes(metadata.responseModes);
           setPhase(token ? "mode" : "loginWall");
         }
@@ -273,7 +343,7 @@ function ChatContent() {
         setIsLoading(false);
       }
     },
-    [sessionId, token]
+    [sessionId, token],
   );
 
   const handleSupplementSubmit = useCallback(async () => {
@@ -296,7 +366,7 @@ function ChatContent() {
           (chunk) => {
             content += chunk;
             setStreamingContent(content);
-          }
+          },
         );
         setMessages([{ role: "assistant", content }]);
       } catch (err) {
@@ -306,37 +376,40 @@ function ChatContent() {
         setStreamingContent("");
       }
     },
-    [sessionId, token]
+    [sessionId, token],
   );
 
-  const handleSendMessage = useCallback(async () => {
-    if (!inputMessage.trim()) return;
+  const handleSendMessage = useCallback(
+    async (preset?: string) => {
+      const userMsg = (preset ?? inputMessage).trim();
+      if (!userMsg || isLoading) return;
 
-    setIsLoading(true);
-    const userMsg = inputMessage;
-    setInputMessage("");
-    setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
-    setStreamingContent("");
-
-    let content = "";
-    try {
-      await sendMessageStream(
-        sessionId,
-        userMsg,
-        token || undefined,
-        (chunk) => {
-          content += chunk;
-          setStreamingContent(content);
-        }
-      );
-      setMessages((prev) => [...prev, { role: "assistant", content }]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+      setIsLoading(true);
+      setInputMessage("");
+      setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
       setStreamingContent("");
-    }
-  }, [sessionId, token, inputMessage]);
+
+      let content = "";
+      try {
+        await sendMessageStream(
+          sessionId,
+          userMsg,
+          token || undefined,
+          (chunk) => {
+            content += chunk;
+            setStreamingContent(content);
+          },
+        );
+        setMessages((prev) => [...prev, { role: "assistant", content }]);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+        setStreamingContent("");
+      }
+    },
+    [sessionId, token, inputMessage, isLoading],
+  );
 
   const handleEndSession = useCallback(async () => {
     setIsLoading(true);
@@ -352,7 +425,12 @@ function ChatContent() {
   }, [sessionId, token]);
 
   const wrap = (el: ReactNode) => (
-    <AuthShell token={token} user={user} sessionId={sessionId} onLogout={logout}>
+    <AuthShell
+      token={token}
+      user={user}
+      sessionId={sessionId}
+      onLogout={logout}
+    >
       {el}
     </AuthShell>
   );
@@ -370,14 +448,16 @@ function ChatContent() {
           <div className="ch-messages anchor-end">
             <div className="ch-row">
               <div className="ch-typing">
-                <i /><i /><i />
+                <i />
+                <i />
+                <i />
                 <span className="ch-typing-text">불러오는 중이에요...</span>
               </div>
             </div>
           </div>
           <div className="ch-dock fade-out" aria-hidden="true" />
         </div>
-      </main>
+      </main>,
     );
   }
 
@@ -390,14 +470,26 @@ function ChatContent() {
               <span className="ch-logo-mark" aria-hidden="true" />
               위로
             </span>
-            <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
+            <button
+              type="button"
+              className="ch-ghostbtn"
+              onClick={() => router.push("/")}
+            >
+              홈으로
+            </button>
           </header>
           <div className="ch-messages anchor-end">
             <div className="ch-inline-card">
-              <span className="ch-wall-eyebrow">이야기를 불러오지 못했어요</span>
+              <span className="ch-wall-eyebrow">
+                이야기를 불러오지 못했어요
+              </span>
               <p className="ch-wall-sub">{loadError}</p>
               <div className="ch-wall-actions">
-                <button type="button" className="ch-primary" onClick={() => router.push("/sessions")}>
+                <button
+                  type="button"
+                  className="ch-primary"
+                  onClick={() => router.push("/sessions")}
+                >
                   이전 이야기로 돌아가기
                 </button>
               </div>
@@ -405,20 +497,33 @@ function ChatContent() {
           </div>
           <div className="ch-dock fade-out" aria-hidden="true" />
         </div>
-      </main>
+      </main>,
     );
   }
 
   if (phase === "selecting" || phase === "mode" || phase === "loginWall") {
     const dockHidden = phase !== "selecting";
     return wrap(
-      <main className="ch-frame" style={{ height: "100vh" }}>
+      <main className="ch-frame ch-frame-split" style={{ height: "100vh" }}>
+        <ChatInfoSidebar activeStep={phase === "selecting" ? "start" : "sharing"} />
         <div className="ch-inner">
           <header className="ch-header">
             {token ? (
               <span className="ch-status">
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--brand)", animation: "chatPulse 2.2s ease infinite" }} />
-                {phase === "selecting" ? "이야기 시작 중" : phase === "mode" ? "방식 고르는 중" : "이어가는 중"}
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "var(--brand)",
+                    animation: "chatPulse 2.2s ease infinite",
+                  }}
+                />
+                {phase === "selecting"
+                  ? "이야기 시작 중"
+                  : phase === "mode"
+                    ? "방식 고르는 중"
+                    : "이어가는 중"}
               </span>
             ) : (
               <span className="ch-logo">
@@ -426,13 +531,24 @@ function ChatContent() {
                 위로
               </span>
             )}
-            <button type="button" className="ch-ghostbtn" onClick={() => router.push("/")}>홈으로</button>
+            <button
+              type="button"
+              className="ch-ghostbtn"
+              onClick={() => router.push("/")}
+            >
+              홈으로
+            </button>
           </header>
 
           <div className="ch-messages anchor-end">
             {selectionHistory.map((item, idx) => (
-              <div key={idx} className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}>
-                <div className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}>
+              <div
+                key={idx}
+                className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}
+              >
+                <div
+                  className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}
+                >
                   {item.content}
                 </div>
               </div>
@@ -441,7 +557,9 @@ function ChatContent() {
             {isLoading && (
               <div className="ch-row">
                 <div className="ch-typing">
-                  <i /><i /><i />
+                  <i />
+                  <i />
+                  <i />
                   <span className="ch-typing-text">귀 기울여 듣는 중...</span>
                 </div>
               </div>
@@ -450,16 +568,37 @@ function ChatContent() {
             {phase === "mode" && (
               <>
                 {crisisMessage && (
-                  <div className="ch-inline-card" style={{ borderColor: "var(--rose)", background: "var(--rose-tint)" }}>
-                    <span className="ch-wall-eyebrow" style={{ color: "#b3433f" }}>도움이 필요하신가요?</span>
-                    <p style={{ color: "#8a4a47", whiteSpace: "pre-wrap", margin: 0 }}>{crisisMessage}</p>
+                  <div
+                    className="ch-inline-card"
+                    style={{
+                      borderColor: "var(--rose)",
+                      background: "var(--rose-tint)",
+                    }}
+                  >
+                    <span
+                      className="ch-wall-eyebrow"
+                      style={{ color: "#b3433f" }}
+                    >
+                      도움이 필요하신가요?
+                    </span>
+                    <p
+                      style={{
+                        color: "#8a4a47",
+                        whiteSpace: "pre-wrap",
+                        margin: 0,
+                      }}
+                    >
+                      {crisisMessage}
+                    </p>
                   </div>
                 )}
                 <div className="ch-row">
-                  <div className="ch-bubble ai">이야기 잘 들었어요. 어떤 방식이 좋을까요?</div>
+                  <div className="ch-bubble ai">
+                    이야기 잘 들었어요. 어떤 방식이 좋을까요?
+                  </div>
                 </div>
                 <div className="ch-inline-card">
-                  <span className="ch-wall-eyebrow">이야기 받는 방식</span>
+                  <span className="ch-wall-eyebrow">어떤 대화 방식을 선호하세요?? 최대한 맞춰 드리고 싶어요</span>
                   <div className="ch-inline-modes">
                     {responseModes.map((rm) => (
                       <button
@@ -487,15 +626,34 @@ function ChatContent() {
                 </div>
                 <div className="ch-inline-card">
                   <span className="ch-wall-eyebrow">이야기 저장하기</span>
-                  <h2 className="ch-wall-h">오늘 이야기, 저장하고 이어갈까요?</h2>
+                  <h2 className="ch-wall-h">
+                    오늘 이야기, 저장하고 이어갈까요?
+                  </h2>
                   <p className="ch-wall-sub">
-                    로그인하면 다음에 와도 이 이야기를 이어갈 수 있어요. 지금은 가입 없이 더 이야기하셔도 괜찮아요.
+                    로그인하면 다음에 와도 이 이야기를 이어갈 수 있어요. 지금은
+                    가입 없이 더 이야기하셔도 괜찮아요.
                   </p>
                   <div className="ch-wall-actions">
-                    <button type="button" className="ch-primary" onClick={() => login()}>
+                    <button
+                      type="button"
+                      className="ch-primary"
+                      onClick={() => login()}
+                    >
                       로그인하고 이어가기
-                      <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M3 8h10M9 4l4 4-4 4"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     </button>
                     <button
@@ -516,7 +674,7 @@ function ChatContent() {
           <div className={`ch-dock${dockHidden ? " fade-out" : ""}`}>
             {options.length > 0 && (
               <>
-                <div className="ch-dock-label">마음에 가까운 쪽으로</div>
+                <div className="ch-dock-label">어떤 쪽에 가까우실까요??</div>
                 <div className="ch-options">
                   {options.map((option, idx) => (
                     <button
@@ -553,17 +711,26 @@ function ChatContent() {
             </div>
           </div>
         </div>
-      </main>
+      </main>,
     );
   }
 
   if (phase === "chatting") {
     return wrap(
-      <main className="ch-frame" style={{ height: "100vh" }}>
+      <main className="ch-frame ch-frame-split" style={{ height: "100vh" }}>
+        <ChatInfoSidebar activeStep="sharing" />
         <div className="ch-inner">
           <header className="ch-header">
             <span className="ch-status">
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--brand)", animation: "chatPulse 2.2s ease infinite" }} />
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "var(--brand)",
+                  animation: "chatPulse 2.2s ease infinite",
+                }}
+              />
               이야기 중
             </span>
             <button
@@ -578,8 +745,13 @@ function ChatContent() {
 
           <div className="ch-messages anchor-end">
             {selectionHistory.map((item, idx) => (
-              <div key={`hist-${idx}`} className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}>
-                <div className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}>
+              <div
+                key={`hist-${idx}`}
+                className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}
+              >
+                <div
+                  className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}
+                >
                   {item.content}
                 </div>
               </div>
@@ -593,14 +765,20 @@ function ChatContent() {
               />
             ))}
             {isLoading && streamingContent && (
-              <ChatBubble role="assistant" content={streamingContent} variant="ai glow">
+              <ChatBubble
+                role="assistant"
+                content={streamingContent}
+                variant="ai glow"
+              >
                 <span className="ch-caret" />
               </ChatBubble>
             )}
             {isLoading && !streamingContent && (
               <div className="ch-row">
                 <div className="ch-typing">
-                  <i /><i /><i />
+                  <i />
+                  <i />
+                  <i />
                   <span className="ch-typing-text">귀 기울여 듣는 중...</span>
                 </div>
               </div>
@@ -609,28 +787,48 @@ function ChatContent() {
           </div>
 
           <div className="ch-dock">
+            {!isLoading && (
+              <div className="ch-quick-replies">
+                {QUICK_REPLIES.map((reply) => (
+                  <button
+                    key={reply}
+                    type="button"
+                    className="ch-quick-chip"
+                    onClick={() => handleSendMessage(reply)}
+                  >
+                    {reply}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="ch-input-row">
               <input
                 type="text"
                 className="ch-input"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && !e.shiftKey && handleSendMessage()
+                }
                 placeholder="마음을 적어보세요..."
                 disabled={isLoading}
               />
               <button
                 type="button"
                 className="ch-send"
-                onClick={handleSendMessage}
+                onClick={() => handleSendMessage()}
                 disabled={isLoading || !inputMessage.trim()}
               >
                 전송
               </button>
             </div>
+            <p className="ch-privacy-note">
+              <span className="ch-privacy-dot" aria-hidden="true" />
+              이 대화는 안전하게 보호되고 있어요
+            </p>
           </div>
         </div>
-      </main>
+      </main>,
     );
   }
 
@@ -641,7 +839,14 @@ function ChatContent() {
           <header className="ch-header">
             {token ? (
               <span className="ch-status muted">
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ink-4)" }} />
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "var(--ink-4)",
+                  }}
+                />
                 마무리됨
               </span>
             ) : (
@@ -654,8 +859,13 @@ function ChatContent() {
 
           <div className="ch-messages anchor-end">
             {selectionHistory.map((item, idx) => (
-              <div key={`hist-${idx}`} className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}>
-                <div className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}>
+              <div
+                key={`hist-${idx}`}
+                className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}
+              >
+                <div
+                  className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}
+                >
                   {item.content}
                 </div>
               </div>
@@ -665,23 +875,37 @@ function ChatContent() {
             ))}
 
             <div className="ch-row">
-              <div className="ch-bubble ai">오늘 이야기는 여기까지. 이야기 나눠주셔서 고마워요.</div>
+              <div className="ch-bubble ai">
+                오늘 이야기는 여기까지. 이야기 나눠주셔서 고마워요.
+              </div>
             </div>
 
             <div className="ch-inline-end">
               {summary && (
                 <>
                   <span className="ch-wall-eyebrow">오늘 나눈 이야기</span>
-                  <div className="ch-summary-title" style={{ whiteSpace: "pre-wrap" }}>{summary}</div>
+                  <div
+                    className="ch-summary-title"
+                    style={{ whiteSpace: "pre-wrap" }}
+                  >
+                    {summary}
+                  </div>
                 </>
               )}
               {!token && (
-                <p className="ch-wall-fineprint" style={{ textAlign: "left", marginTop: 4 }}>
+                <p
+                  className="ch-wall-fineprint"
+                  style={{ textAlign: "left", marginTop: 4 }}
+                >
                   로그인하면 다음에도 이 이야기를 다시 꺼내볼 수 있어요.
                 </p>
               )}
               <div className="ch-wall-actions">
-                <button type="button" className="ch-primary" onClick={() => router.push("/")}>
+                <button
+                  type="button"
+                  className="ch-primary"
+                  onClick={() => router.push("/")}
+                >
                   다시 이야기하기
                 </button>
                 {token ? (
@@ -702,7 +926,9 @@ function ChatContent() {
                   >
                     {saveState === "saved" ? (
                       <>
-                        <span aria-hidden="true" style={{ marginRight: 6 }}>✓</span>
+                        <span aria-hidden="true" style={{ marginRight: 6 }}>
+                          ✓
+                        </span>
                         저장되었어요
                       </>
                     ) : saveState === "saving" ? (
@@ -714,7 +940,11 @@ function ChatContent() {
                     )}
                   </button>
                 ) : (
-                  <button type="button" className="ch-secondary" onClick={() => login()}>
+                  <button
+                    type="button"
+                    className="ch-secondary"
+                    onClick={() => login()}
+                  >
                     로그인하고 저장하기
                   </button>
                 )}
@@ -726,7 +956,7 @@ function ChatContent() {
 
           <div className="ch-dock fade-out" aria-hidden="true" />
         </div>
-      </main>
+      </main>,
     );
   }
 
