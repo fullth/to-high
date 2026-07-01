@@ -6,6 +6,10 @@ export class SessionDocument extends Document {
   @Prop({ type: Types.ObjectId, ref: 'UserDocument', required: true })
   userId: Types.ObjectId;
 
+  // 비로그인(게스트)이 만든 세션 표시. 로그인 시 소유권 이전(claim) 대상 여부 판별에 사용.
+  @Prop({ default: false })
+  isGuest: boolean;
+
   // 최근 대화 (원문 유지, 최대 10턴)
   @Prop({ type: [String], default: [] })
   context: string[];

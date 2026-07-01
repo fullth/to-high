@@ -411,6 +411,16 @@ function ChatContent() {
     [sessionId, token, inputMessage, isLoading],
   );
 
+  // 로그인 후 이 게스트 세션을 이어받을 수 있도록 sessionId 를 기억해 두고 OAuth 로 이동한다.
+  const handleLoginToContinue = useCallback(() => {
+    try {
+      localStorage.setItem("pendingClaimSession", sessionId);
+    } catch {
+      // 저장 실패해도 로그인은 진행
+    }
+    login();
+  }, [sessionId, login]);
+
   const handleEndSession = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -637,7 +647,7 @@ function ChatContent() {
                     <button
                       type="button"
                       className="ch-primary"
-                      onClick={() => login()}
+                      onClick={handleLoginToContinue}
                     >
                       로그인하고 이어가기
                       <svg
@@ -943,7 +953,7 @@ function ChatContent() {
                   <button
                     type="button"
                     className="ch-secondary"
-                    onClick={() => login()}
+                    onClick={handleLoginToContinue}
                   >
                     로그인하고 저장하기
                   </button>
