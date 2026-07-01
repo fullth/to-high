@@ -19,12 +19,23 @@ export class SessionRepository {
     const initialContext = [`카테고리: ${category}`];
     return this.sessionModel.create({
       userId: isValidObjectId ? new Types.ObjectId(userId) : new Types.ObjectId(),
+      isGuest: !isValidObjectId,
       context: initialContext,
       fullContext: initialContext,
       category,
       turnCount: 0,
       ...(counselorType && { counselorType }),
     });
+  }
+
+  // 게스트 세션의 소유권을 로그인 사용자에게 이전한다.
+  // 이미 실계정 소유(비게스트) 세션은 대상이 아니므로 null 을 반환한다.
+  async claimGuestSession(sessionId: string, userId: string): Promise<SessionDocument | null> {
+    return this.sessionModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(sessionId), isGuest: true },
+      { userId: new Types.ObjectId(userId), isGuest: false },
+      { new: true },
+    );
   }
 
   async findById(id: string): Promise<SessionDocument | null> {

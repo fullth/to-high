@@ -415,6 +415,14 @@ export function resumeSession(sessionId: string, token: string) {
   });
 }
 
+// 비로그인으로 시작한 게스트 세션을 로그인 후 현재 사용자에게 연결한다.
+export function claimSession(sessionId: string, token: string) {
+  return fetchApi<{ claimed: boolean }>(`/chat/sessions/${sessionId}/claim`, {
+    method: "POST",
+    token,
+  });
+}
+
 // ============ 세션 저장 관련 API ============
 
 // 저장된 세션 항목
