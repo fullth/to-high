@@ -523,6 +523,30 @@ export class ChatService {
   }
 
   /**
+   * 게스트 세션 소유권 이전 — 비로그인 상태로 시작한 대화를 로그인 후 이어받는다.
+   */
+  async claimGuestSession(sessionId: string, userId: string): Promise<{ claimed: boolean }> {
+    const session = await this.sessionRepository.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundException('이야기를 찾을 수 없어요');
+    }
+
+    // 이미 이 사용자 소유면 그대로 통과(중복 claim 안전).
+    if (session.userId.toString() === userId) {
+      return { claimed: true };
+    }
+
+    // 게스트 세션이 아니면(다른 실계정 소유) 이전 거부 — 타인 세션 탈취 방지.
+    if (!(session as any).isGuest) {
+      throw new ForbiddenException('이어받을 수 없는 이야기예요');
+    }
+
+    const updated = await this.sessionRepository.claimGuestSession(sessionId, userId);
+    return { claimed: !!updated };
+  }
+
+  /**
    * 세션 재개 (이어하기)
    */
   async resumeSession(sessionId: string, userId: string) {

@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
+import { claimSession } from "@/lib/api";
 
 function CallbackContent() {
   const searchParams = useSearchParams();
@@ -9,12 +10,28 @@ function CallbackContent() {
   useEffect(() => {
     const token = searchParams.get("token");
 
-    if (token) {
-      localStorage.setItem("accessToken", token);
-      window.location.href = "/";
-    } else {
+    if (!token) {
       window.location.href = "/?error=auth_failed";
+      return;
     }
+
+    localStorage.setItem("accessToken", token);
+
+    // 로그인 전 진행하던 게스트 대화가 있으면 이어받고 그 화면으로 복귀한다.
+    const pendingSession = localStorage.getItem("pendingClaimSession");
+    if (pendingSession) {
+      localStorage.removeItem("pendingClaimSession");
+      claimSession(pendingSession, token)
+        .catch(() => {
+          // 이어받기 실패해도 로그인은 됐으니 해당 세션으로 이동은 시도
+        })
+        .finally(() => {
+          window.location.href = `/chat/${pendingSession}`;
+        });
+      return;
+    }
+
+    window.location.href = "/";
   }, [searchParams]);
 
   return (

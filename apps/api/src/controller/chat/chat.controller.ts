@@ -8,6 +8,7 @@ import {
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
@@ -430,6 +431,30 @@ export class ChatController {
   ): Promise<ResumeSessionResponse> {
     const userId = req.user?.userId || 'anonymous';
     return this.chatService.resumeSession(sessionId, userId);
+  }
+
+  @Post('sessions/:sessionId/claim')
+  @ApiOperation({
+    summary: '게스트 세션 이어받기',
+    description: '비로그인으로 시작한 대화를 로그인 후 현재 사용자에게 연결합니다. 로그인 필수.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '이어받기 성공',
+    schema: {
+      type: 'object',
+      properties: { claimed: { type: 'boolean' } },
+    },
+  })
+  async claimSession(
+    @Req() req: any,
+    @Param('sessionId') sessionId: string,
+  ): Promise<{ claimed: boolean }> {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('로그인이 필요해요');
+    }
+    return this.chatService.claimGuestSession(sessionId, userId);
   }
 
   @Post('sessions/:sessionId/save')
