@@ -10,6 +10,11 @@ export class SessionDocument extends Document {
   @Prop({ default: false })
   isGuest: boolean;
 
+  // 게스트 세션 만료 시각(생성 +30일). TTL 인덱스로 자동 삭제된다.
+  // 로그인(claim) 시 제거해 영구 보관으로 전환한다. 로그인 세션은 이 필드가 없다.
+  @Prop({ type: Date })
+  expireAt?: Date;
+
   // 최근 대화 (원문 유지, 최대 10턴)
   @Prop({ type: [String], default: [] })
   context: string[];
@@ -64,3 +69,6 @@ export class SessionDocument extends Document {
 }
 
 export const SessionSchema = SchemaFactory.createForClass(SessionDocument);
+
+// TTL: expireAt 이 지난 문서를 자동 삭제. expireAt 이 없는(로그인) 세션은 대상에서 제외된다.
+SessionSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 });
