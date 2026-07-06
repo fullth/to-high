@@ -322,7 +322,7 @@ function ChatContent() {
               const modes = chunk.responseModes || metadata?.responseModes;
               if (chunk.canProceedToResponse && modes) {
                 setResponseModes(modes);
-                setPhase(token ? "mode" : "loginWall");
+                setPhase("mode");
               }
             }
           },
@@ -335,7 +335,7 @@ function ChatContent() {
           !streamedQuestionAdded
         ) {
           setResponseModes(metadata.responseModes);
-          setPhase(token ? "mode" : "loginWall");
+          setPhase("mode");
         }
       } catch (err) {
         console.error(err);
@@ -511,11 +511,15 @@ function ChatContent() {
     );
   }
 
-  if (phase === "selecting" || phase === "mode" || phase === "loginWall") {
+  if (phase === "selecting" || phase === "mode") {
     const dockHidden = phase !== "selecting";
     return wrap(
       <main className="ch-frame ch-frame-split" style={{ height: "100vh" }}>
-        <ChatInfoSidebar activeStep={phase === "selecting" ? "start" : "sharing"} />
+        <ChatInfoSidebar
+          activeStep={phase === "selecting" ? "start" : "sharing"}
+          isGuest={!token}
+          onLogin={handleLoginToContinue}
+        />
         <div className="ch-inner">
           <header className="ch-header">
             {token ? (
@@ -627,57 +631,6 @@ function ChatContent() {
               </>
             )}
 
-            {phase === "loginWall" && (
-              <>
-                <div className="ch-row">
-                  <div className="ch-bubble ai">
-                    여기까지 나눈 이야기, 사라지지 않게 저장해 둘까요?
-                  </div>
-                </div>
-                <div className="ch-inline-card">
-                  <span className="ch-wall-eyebrow">이야기 저장하기</span>
-                  <h2 className="ch-wall-h">
-                    오늘 이야기, 저장하고 이어갈까요?
-                  </h2>
-                  <p className="ch-wall-sub">
-                    로그인하면 다음에 와도 이 이야기를 이어갈 수 있어요. 지금은
-                    가입 없이 더 이야기하셔도 괜찮아요.
-                  </p>
-                  <div className="ch-wall-actions">
-                    <button
-                      type="button"
-                      className="ch-primary"
-                      onClick={handleLoginToContinue}
-                    >
-                      로그인하고 이어가기
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M3 8h10M9 4l4 4-4 4"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      className="ch-secondary"
-                      onClick={() => setPhase("mode")}
-                    >
-                      지금은 그냥 이야기할게요
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
             <div ref={chatEndRef} />
           </div>
 
@@ -728,7 +681,11 @@ function ChatContent() {
   if (phase === "chatting") {
     return wrap(
       <main className="ch-frame ch-frame-split" style={{ height: "100vh" }}>
-        <ChatInfoSidebar activeStep="sharing" />
+        <ChatInfoSidebar
+          activeStep="sharing"
+          isGuest={!token}
+          onLogin={handleLoginToContinue}
+        />
         <div className="ch-inner">
           <header className="ch-header">
             <span className="ch-status">
@@ -834,7 +791,20 @@ function ChatContent() {
             </div>
             <p className="ch-privacy-note">
               <span className="ch-privacy-dot" aria-hidden="true" />
-              이 대화는 안전하게 보호되고 있어요
+              {token ? (
+                "이 대화는 안전하게 보호되고 있어요"
+              ) : (
+                <>
+                  이 대화는 30일간 보관돼요.{" "}
+                  <button
+                    type="button"
+                    className="ch-privacy-login"
+                    onClick={handleLoginToContinue}
+                  >
+                    로그인하고 저장하기
+                  </button>
+                </>
+              )}
             </p>
           </div>
         </div>
