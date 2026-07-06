@@ -7,6 +7,9 @@ import { CounselorType, ResponseMode } from '../../types/session';
 // 롤링 요약 기준 (이 수를 넘으면 요약)
 const ROLLING_SUMMARY_THRESHOLD = 10;
 
+// 게스트(비로그인) 세션 보관 기간 (30일)
+const GUEST_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class SessionRepository {
   constructor(
@@ -16,10 +19,13 @@ export class SessionRepository {
 
   async create(userId: string, category: string, counselorType?: CounselorType): Promise<SessionDocument> {
     const isValidObjectId = Types.ObjectId.isValid(userId) && userId !== 'anonymous';
+    const isGuest = !isValidObjectId;
     const initialContext = [`카테고리: ${category}`];
     return this.sessionModel.create({
       userId: isValidObjectId ? new Types.ObjectId(userId) : new Types.ObjectId(),
-      isGuest: !isValidObjectId,
+      isGuest,
+      // 게스트 세션은 30일 뒤 자동 삭제되도록 만료 시각을 남긴다.
+      ...(isGuest && { expireAt: new Date(Date.now() + GUEST_SESSION_TTL_MS) }),
       context: initialContext,
       fullContext: initialContext,
       category,
@@ -30,10 +36,14 @@ export class SessionRepository {
 
   // 게스트 세션의 소유권을 로그인 사용자에게 이전한다.
   // 이미 실계정 소유(비게스트) 세션은 대상이 아니므로 null 을 반환한다.
+  // 이전과 동시에 만료 시각을 제거해 영구 보관으로 전환한다.
   async claimGuestSession(sessionId: string, userId: string): Promise<SessionDocument | null> {
     return this.sessionModel.findOneAndUpdate(
       { _id: new Types.ObjectId(sessionId), isGuest: true },
-      { userId: new Types.ObjectId(userId), isGuest: false },
+      {
+        $set: { userId: new Types.ObjectId(userId), isGuest: false },
+        $unset: { expireAt: '' },
+      },
       { new: true },
     );
   }
