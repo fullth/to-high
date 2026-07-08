@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChannelTalk } from "@/components/channel-talk";
+import { CoffeeSupport } from "@/components/coffee-support";
 import { WirocareLanding } from "@/components/landing/wirocare-landing";
 import { useAuth } from "@/contexts/auth-context";
 import { getPublicStats, PublicStats } from "@/lib/api";
@@ -23,6 +24,7 @@ export default function HomePage() {
         onLoginClick={() => login()}
       />
       <ChannelTalk />
+      <CoffeeSupport />
     </>
   );
 }
