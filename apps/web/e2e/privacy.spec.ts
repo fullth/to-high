@@ -30,8 +30,9 @@ test.describe("개인정보처리방침 페이지", () => {
 
   test("제3자 제공 업체가 명시되어 있다", async ({ page }) => {
     await expect(page.getByText("업무 위탁 현황")).toBeVisible();
-    await expect(page.getByText("토스페이먼츠: 결제 처리 및 빌링키 관리")).toBeVisible();
     await expect(page.getByText(/OpenAI/).first()).toBeVisible();
+    await expect(page.getByText(/토스페이먼츠/)).toHaveCount(0);
+    await expect(page.getByText(/결제 정보/)).toHaveCount(0);
   });
 
   test("이용자 권리가 명시되어 있다", async ({ page }) => {

@@ -23,19 +23,24 @@ import type { Response } from 'express';
 import { ChatService } from '../../app/chat/chat.service';
 import { OptionalJwtAuthGuard } from '../../common/optional-jwt.guard';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe';
+import {
+  LimitChatGeneration,
+  LimitSessionStart,
+} from '../../common/chat-rate-limit';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
 import {
   EndSessionSchema,
   SelectOptionSchema,
   SendMessageSchema,
+  SaveSessionSchema,
+  SessionIdSchema,
   SetModeSchema,
   StartSessionSchema,
   SummarizeTextSchema,
+  UpdateSessionAliasSchema,
 } from './dto/chat.request';
 import type {
-  ChatResponse,
   EndSessionResponse,
-  SelectOptionResponse,
   StartSessionResponse,
   SessionListResponse,
   SessionDetailResponse,
@@ -50,6 +55,7 @@ export class ChatController {
   constructor(private chatService: ChatService) {}
 
   @Post('start')
+  @LimitSessionStart()
   @ApiOperation({
     summary: '상담 세션 시작',
     description:
@@ -61,20 +67,22 @@ export class ChatController {
       properties: {
         category: {
           type: 'string',
-          enum: ['self', 'future', 'work', 'relationship'],
+          enum: ['self', 'future', 'work', 'relationship', 'love', 'daily'],
           description: '상담 카테고리',
         },
         initialText: {
           type: 'string',
+          maxLength: 500,
           description: '직접 입력 텍스트 (카테고리 대신 사용 가능)',
         },
         counselorType: {
           type: 'string',
-          enum: ['T', 'F', 'deep'],
-          description: '상담가 유형 (T: 냉철한 조언, F: 따스한 공감, deep: 깊은 대화)',
+          enum: ['T', 'F', 'reaction', 'listening'],
+          description: '상담가 유형',
         },
         importSummary: {
           type: 'string',
+          maxLength: 2000,
           description: '이미 요약된 불러오기 텍스트 (요약 확인 후 전달)',
         },
       },
@@ -90,13 +98,22 @@ export class ChatController {
         question: { type: 'string' },
         options: { type: 'array', items: { type: 'string' } },
         canProceedToResponse: { type: 'boolean' },
+        isCrisis: { type: 'boolean' },
+        crisisLevel: { type: 'string', enum: ['low', 'medium', 'high'] },
+        crisisMessage: { type: 'string' },
       },
     },
   })
   @UsePipes(new ZodValidationPipe(StartSessionSchema))
   async startSession(
     @Req() req: any,
-    @Body() dto: { category?: Category; initialText?: string; counselorType?: CounselorType; importSummary?: string },
+    @Body()
+    dto: {
+      category?: Category;
+      initialText?: string;
+      counselorType?: CounselorType;
+      importSummary?: string;
+    },
   ): Promise<StartSessionResponse> {
     const userId = req.user?.userId || 'anonymous';
     const result = await this.chatService.startSession(
@@ -112,13 +129,18 @@ export class ChatController {
       options: result.options,
       canProceedToResponse: result.canProceedToResponse,
       counselorType: dto.counselorType,
+      isCrisis: result.isCrisis,
+      crisisLevel: result.crisisLevel,
+      crisisMessage: result.crisisMessage,
     };
   }
 
   @Post('summarize')
+  @LimitChatGeneration()
   @ApiOperation({
     summary: '텍스트 요약',
-    description: '긴 텍스트를 상담 맥락에 맞게 요약합니다. 세션 생성 전 요약 미리보기용.',
+    description:
+      '긴 텍스트를 상담 맥락에 맞게 요약합니다. 세션 생성 전 요약 미리보기용.',
   })
   @ApiBody({
     schema: {
@@ -127,7 +149,8 @@ export class ChatController {
       properties: {
         text: {
           type: 'string',
-          description: '요약할 텍스트 (최대 10만자)',
+          maxLength: 10000,
+          description: '요약할 텍스트 (최대 1만자)',
         },
       },
     },
@@ -151,15 +174,33 @@ export class ChatController {
   }
 
   @Post('select/stream')
+  @LimitChatGeneration()
   @ApiOperation({
     summary: '선택지 선택 (스트리밍)',
     description: 'SSE 스트리밍 방식으로 선택지 응답을 받습니다.',
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['sessionId', 'selectedOption'],
+      additionalProperties: false,
+      properties: {
+        sessionId: {
+          type: 'string',
+          pattern: '^[a-fA-F0-9]{24}$',
+        },
+        selectedOption: { type: 'string', minLength: 1, maxLength: 500 },
+      },
+    },
+  })
   @UsePipes(new ZodValidationPipe(SelectOptionSchema))
   async selectOptionStream(
+    @Req() req: any,
     @Body() dto: { sessionId: string; selectedOption: string },
     @Res() res: Response,
   ) {
+    const abortController = new AbortController();
+    res.once('close', () => abortController.abort());
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -170,6 +211,8 @@ export class ChatController {
       for await (const chunk of this.chatService.selectOptionStream(
         dto.sessionId,
         dto.selectedOption,
+        abortController.signal,
+        req.user?.userId || 'anonymous',
       )) {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
         if (typeof (res as any).flush === 'function') {
@@ -187,6 +230,7 @@ export class ChatController {
   }
 
   @Post('end')
+  @LimitChatGeneration()
   @ApiOperation({
     summary: '상담 세션 종료',
     description: '상담 세션을 종료하고 요약을 받습니다.',
@@ -196,7 +240,11 @@ export class ChatController {
       type: 'object',
       required: ['sessionId'],
       properties: {
-        sessionId: { type: 'string', description: '세션 ID' },
+        sessionId: {
+          type: 'string',
+          pattern: '^[a-fA-F0-9]{24}$',
+          description: '세션 ID',
+        },
       },
     },
   })
@@ -212,12 +260,17 @@ export class ChatController {
   })
   @UsePipes(new ZodValidationPipe(EndSessionSchema))
   async endSession(
+    @Req() req: any,
     @Body() dto: { sessionId: string },
   ): Promise<EndSessionResponse> {
-    return this.chatService.endSession(dto.sessionId);
+    return this.chatService.endSession(
+      dto.sessionId,
+      req.user?.userId || 'anonymous',
+    );
   }
 
   @Post('mode/stream')
+  @LimitChatGeneration()
   @ApiOperation({
     summary: '응답 모드 설정 (스트리밍)',
     description: 'SSE 스트리밍 방식으로 AI 응답을 받습니다.',
@@ -227,7 +280,11 @@ export class ChatController {
       type: 'object',
       required: ['sessionId', 'mode'],
       properties: {
-        sessionId: { type: 'string', description: '세션 ID' },
+        sessionId: {
+          type: 'string',
+          pattern: '^[a-fA-F0-9]{24}$',
+          description: '세션 ID',
+        },
         mode: {
           type: 'string',
           enum: [
@@ -245,9 +302,12 @@ export class ChatController {
   })
   @UsePipes(new ZodValidationPipe(SetModeSchema))
   async setModeStream(
+    @Req() req: any,
     @Body() dto: { sessionId: string; mode: ResponseMode },
     @Res() res: Response,
   ) {
+    const abortController = new AbortController();
+    res.once('close', () => abortController.abort());
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -258,6 +318,8 @@ export class ChatController {
       for await (const chunk of this.chatService.setModeStream(
         dto.sessionId,
         dto.mode,
+        abortController.signal,
+        req.user?.userId || 'anonymous',
       )) {
         res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
         if (typeof (res as any).flush === 'function') {
@@ -275,6 +337,7 @@ export class ChatController {
   }
 
   @Post('message/stream')
+  @LimitChatGeneration()
   @ApiOperation({
     summary: '메시지 전송 (스트리밍)',
     description: 'SSE 스트리밍 방식으로 AI 응답을 받습니다.',
@@ -282,18 +345,31 @@ export class ChatController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['sessionId'],
+      required: ['sessionId', 'message'],
+      additionalProperties: false,
       properties: {
-        sessionId: { type: 'string', description: '세션 ID' },
-        message: { type: 'string', description: '사용자 메시지' },
+        sessionId: {
+          type: 'string',
+          pattern: '^[a-fA-F0-9]{24}$',
+          description: '세션 ID',
+        },
+        message: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 500,
+          description: '사용자 메시지',
+        },
       },
     },
   })
   @UsePipes(new ZodValidationPipe(SendMessageSchema))
   async sendMessageStream(
-    @Body() dto: { sessionId: string; message?: string },
+    @Req() req: any,
+    @Body() dto: { sessionId: string; message: string },
     @Res() res: Response,
   ) {
+    const abortController = new AbortController();
+    res.once('close', () => abortController.abort());
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -304,6 +380,8 @@ export class ChatController {
       for await (const chunk of this.chatService.generateResponseStream(
         dto.sessionId,
         dto.message,
+        abortController.signal,
+        req.user?.userId || 'anonymous',
       )) {
         res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
         if (typeof (res as any).flush === 'function') {
@@ -400,13 +478,15 @@ export class ChatController {
   })
   async getSessionDetail(
     @Req() req: any,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', new ZodValidationPipe(SessionIdSchema))
+    sessionId: string,
   ): Promise<SessionDetailResponse> {
     const userId = req.user?.userId || 'anonymous';
     return this.chatService.getSessionDetail(sessionId, userId);
   }
 
   @Post('sessions/:sessionId/resume')
+  @LimitChatGeneration()
   @ApiOperation({
     summary: '세션 재개',
     description: '이전 상담 세션을 이어서 진행합니다.',
@@ -427,7 +507,8 @@ export class ChatController {
   })
   async resumeSession(
     @Req() req: any,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', new ZodValidationPipe(SessionIdSchema))
+    sessionId: string,
   ): Promise<ResumeSessionResponse> {
     const userId = req.user?.userId || 'anonymous';
     return this.chatService.resumeSession(sessionId, userId);
@@ -436,7 +517,8 @@ export class ChatController {
   @Post('sessions/:sessionId/claim')
   @ApiOperation({
     summary: '게스트 세션 이어받기',
-    description: '비로그인으로 시작한 대화를 로그인 후 현재 사용자에게 연결합니다. 로그인 필수.',
+    description:
+      '비로그인으로 시작한 대화를 로그인 후 현재 사용자에게 연결합니다. 로그인 필수.',
   })
   @ApiResponse({
     status: 201,
@@ -448,7 +530,8 @@ export class ChatController {
   })
   async claimSession(
     @Req() req: any,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', new ZodValidationPipe(SessionIdSchema))
+    sessionId: string,
   ): Promise<{ claimed: boolean }> {
     const userId = req.user?.userId;
     if (!userId) {
@@ -485,8 +568,10 @@ export class ChatController {
   })
   async saveSession(
     @Req() req: any,
-    @Param('sessionId') sessionId: string,
-    @Body() dto: { savedName?: string },
+    @Param('sessionId', new ZodValidationPipe(SessionIdSchema))
+    sessionId: string,
+    @Body(new ZodValidationPipe(SaveSessionSchema))
+    dto: { savedName?: string },
   ) {
     const userId = req.user?.userId || 'anonymous';
     return this.chatService.saveSession(sessionId, userId, dto.savedName);
@@ -509,7 +594,8 @@ export class ChatController {
   })
   async deleteSession(
     @Req() req: any,
-    @Param('sessionId') sessionId: string,
+    @Param('sessionId', new ZodValidationPipe(SessionIdSchema))
+    sessionId: string,
   ) {
     const userId = req.user?.userId || 'anonymous';
     return this.chatService.deleteSession(sessionId, userId);
@@ -542,8 +628,10 @@ export class ChatController {
   })
   async updateSessionAlias(
     @Req() req: any,
-    @Param('sessionId') sessionId: string,
-    @Body() body: { alias: string },
+    @Param('sessionId', new ZodValidationPipe(SessionIdSchema))
+    sessionId: string,
+    @Body(new ZodValidationPipe(UpdateSessionAliasSchema))
+    body: { alias: string },
   ) {
     const userId = req.user?.userId || 'anonymous';
     const alias = body?.alias || '';
