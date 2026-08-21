@@ -25,7 +25,7 @@ AI 기반 감정 상담 서비스
 - [x] MongoDB + Mongoose 연동
 - [x] Google OAuth 2.0 + JWT 인증
 - [x] 채팅 API 구현 (start, select, mode, message, end)
-- [x] OpenAI 연동 (gpt-4o-mini)
+- [x] OpenAI 연동 (GPT-5.6 Terra, GPT-5.6 Luna)
 - [x] E2E 테스트 8개 작성
 
 #### Frontend (Web) - `apps/web`

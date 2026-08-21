@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type ChatStep = "start" | "sharing" | "closing";
 
 interface ChatInfoSidebarProps {
@@ -26,7 +28,7 @@ export function ChatInfoSidebar({
 
   return (
     <aside className="ch-info-sidebar" aria-label="상담 정보">
-      <a className="ch-info-brand" href="/">
+      <Link className="ch-info-brand" href="/">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="ch-info-logo"
@@ -39,7 +41,7 @@ export function ChatInfoSidebar({
           <b>위로</b>
           <em>TO HIGH</em>
         </span>
-      </a>
+      </Link>
 
       <div className="ch-info-counselor">
         <span className="ch-info-avatar" aria-hidden="true">

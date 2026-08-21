@@ -9,8 +9,10 @@ export class NotificationService {
 
   constructor(private configService: ConfigService) {
     const gmailUser = this.configService.get<string>('GMAIL_USER');
-    const gmailAppPassword = this.configService.get<string>('GMAIL_APP_PASSWORD');
-    this.adminEmail = this.configService.get<string>('ADMIN_EMAIL') || gmailUser || '';
+    const gmailAppPassword =
+      this.configService.get<string>('GMAIL_APP_PASSWORD');
+    this.adminEmail =
+      this.configService.get<string>('ADMIN_EMAIL') || gmailUser || '';
 
     if (gmailUser && gmailAppPassword) {
       this.transporter = nodemailer.createTransport({
@@ -23,11 +25,14 @@ export class NotificationService {
     }
   }
 
-  async notifyNewUser(user: {
-    email: string;
-    name?: string;
-    picture?: string;
-  }, totalUsers: number) {
+  async notifyNewUser(
+    user: {
+      email: string;
+      name?: string;
+      picture?: string;
+    },
+    totalUsers: number,
+  ) {
     if (!this.transporter || !this.adminEmail) {
       console.log('[Notification] 이메일 설정이 없어 알림을 건너뜁니다.');
       return;
@@ -65,9 +70,9 @@ export class NotificationService {
           </div>
         `,
       });
-      console.log(`[Notification] 새 사용자 알림 전송: ${user.email}`);
-    } catch (error) {
-      console.error('[Notification] 이메일 전송 실패:', error);
+      console.log('[Notification] 새 사용자 알림 전송 완료');
+    } catch {
+      console.error('[Notification] 이메일 전송 실패');
     }
   }
 }
