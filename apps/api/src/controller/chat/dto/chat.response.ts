@@ -12,6 +12,9 @@ export interface StartSessionResponse {
   contextCount?: number;
   hasHistory?: boolean; // 이전 상담 기록 있음
   previousSessionSummary?: string; // 이전 상담 요약 (재방문자용)
+  isCrisis?: boolean;
+  crisisLevel?: 'low' | 'medium' | 'high';
+  crisisMessage?: string;
 }
 
 export interface SelectOptionResponse {
@@ -62,8 +65,8 @@ export interface SessionDetailResponse {
   sessionId: string;
   category: string;
   status: 'active' | 'completed';
-  context: string[];  // 최근 대화
-  fullContext: string[];  // 전체 대화
+  context: string[]; // 최근 대화
+  fullContext: string[]; // 전체 대화
   rollingSummary?: string;
   summary?: string;
   counselorType?: string;

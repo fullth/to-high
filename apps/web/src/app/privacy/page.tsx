@@ -49,12 +49,6 @@ export default function PrivacyPage() {
                   <li>서비스 이용 기록: 접속 일시, 이용 기록</li>
                 </ul>
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">선택 수집 항목</h3>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>결제 정보: 구독 결제 시 빌링키 (토스페이먼츠를 통해 안전하게 관리)</li>
-                </ul>
-              </div>
             </div>
           </section>
 
@@ -74,10 +68,6 @@ export default function PrivacyPage() {
                 <span className="font-medium text-foreground">회원 관리:</span>{" "}
                 본인 확인, 서비스 이용 및 상담 기록 관리
               </li>
-              <li>
-                <span className="font-medium text-foreground">결제 처리:</span>{" "}
-                유료 구독 서비스 결제 및 환불 처리
-              </li>
             </ul>
           </section>
 
@@ -93,8 +83,7 @@ export default function PrivacyPage() {
                 <h3 className="font-semibold text-foreground mb-2">보관 기간</h3>
                 <ul className="space-y-1 text-sm">
                   <li>회원 정보: 삭제 요청 시까지</li>
-                  <li>상담 기록: 삭제 요청 시까지 (사용자가 직접 삭제 가능)</li>
-                  <li>결제 기록: 관련 법령에 따라 5년간 보관</li>
+                  <li>상담 기록: 삭제 요청 시까지</li>
                 </ul>
               </div>
             </div>
@@ -111,12 +100,10 @@ export default function PrivacyPage() {
               <ul className="list-disc list-inside space-y-1 ml-2">
                 <li>이용자가 사전에 동의한 경우</li>
                 <li>법령에 의해 요구되는 경우</li>
-                <li>서비스 제공을 위해 필요한 경우 (결제 처리 등)</li>
               </ul>
               <div className="bg-card border border-border rounded-xl p-4 mt-4">
                 <h3 className="font-semibold text-foreground mb-2">업무 위탁 현황</h3>
                 <ul className="space-y-1 text-sm">
-                  <li>토스페이먼츠: 결제 처리 및 빌링키 관리</li>
                   <li>OpenAI: AI 상담 응답 생성 (대화 내용 처리)</li>
                 </ul>
               </div>
@@ -146,8 +133,7 @@ export default function PrivacyPage() {
                 <li>개인정보 처리 정지 요청</li>
               </ul>
               <p className="mt-3">
-                상담 기록은 서비스 내에서 직접 삭제할 수 있습니다.
-                회원 정보 삭제를 원하시면 이메일로 요청해주세요.
+                상담 기록 또는 회원 정보 삭제를 원하시면 이메일로 요청해주세요.
               </p>
             </div>
           </section>

@@ -12,8 +12,16 @@ async function bootstrap() {
     bodyParser: false,
   });
 
-  // JSON body parser - 기본 100kb, 특정 경로는 1mb
-  app.use(json({ limit: '1mb' }));
+  // Railway edge 한 hop만 신뢰해 익명 사용자의 실제 IP를 복원한다.
+  // 임의 길이의 X-Forwarded-For 체인은 신뢰하지 않는다.
+  (
+    app.getHttpAdapter().getInstance() as {
+      set(name: string, value: number): void;
+    }
+  ).set('trust proxy', 1);
+
+  // 개별 DTO 상한보다 먼저 비정상적으로 큰 요청 본문을 차단한다.
+  app.use(json({ limit: '64kb' }));
 
   // 보안 헤더 설정 (Helmet)
   app.use(helmet());
@@ -52,4 +60,4 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
   console.log(`Application running on port ${port}`);
 }
-bootstrap();
+void bootstrap();
