@@ -1,5 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
+import { CHAT_LIMITS } from '../../common/chat-limits';
+import {
+  OffTopicRequestReason,
+  detectOffTopicRequest,
+} from '../../common/chat-scope-guard';
+import {
+  CostGuardReason,
+  detectCostGuardReason,
+} from '../../common/chat-input-guard';
+import { ChatRequestLimitService } from '../../common/chat-request-limit.service';
 import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
 import { UserRepository } from '../../persistence/user/user.repository';
@@ -7,14 +24,19 @@ import { UserProfileRepository } from '../../persistence/user-profile/user-profi
 import { RESPONSE_MODE_OPTIONS, buildSessionPreview } from '../../types/chat';
 import { Category, CounselorType, ResponseMode } from '../../types/session';
 import { SessionService } from '../session/session.service';
-import { SUBSCRIPTION_PLANS, SubscriptionTier } from '../../database/payment.schema';
-import type { SessionListItem, SessionDetailResponse } from '../../controller/chat/dto/chat.response';
-
-// 토큰 낭비 방지 제한
-const MAX_INPUT_LENGTH = 500; // 최대 입력 길이 (일반)
-const MAX_IMPORT_LENGTH = 100000; // 불러오기 최대 길이 (10만자)
-const MAX_CONTEXT_COUNT = 200; // 세션당 최대 대화 턴 수 (롤링 요약으로 토큰 절약)
-const MAX_CHAT_MESSAGES = 100; // 채팅 모드 최대 메시지 수
+import {
+  SUBSCRIPTION_PLANS,
+  SubscriptionTier,
+} from '../../database/payment.schema';
+import type {
+  SessionListItem,
+  SessionDetailResponse,
+} from '../../controller/chat/dto/chat.response';
+import {
+  INITIAL_OPTIONS,
+  INITIAL_QUESTIONS,
+  PROMPT_CONFIG,
+} from '../../prompts';
 
 // 무료 사용자 세션 제한
 const FREE_USER_SESSION_LIMIT = 3;
@@ -25,6 +47,11 @@ const FREE_USER_SESSION_LIMIT = 3;
 // 그대로 복원된다. (구독 시스템 자체는 subscribe 페이지에 '준비중'으로 유지)
 const FREE_LAUNCH_MODE: boolean = true;
 
+const OFF_TOPIC_REPLY =
+  '위로는 마음과 감정에 관한 이야기만 함께할 수 있어요. 이 요청 때문에 든 마음을 이야기해 주세요.';
+const MEDICAL_ADVICE_REPLY =
+  '진단이나 약물 복용, 중단, 용량 변경은 도와드릴 수 없어요. 자격 있는 의료 전문가와 상의해 주세요.';
+
 @Injectable()
 export class ChatService {
   constructor(
@@ -33,12 +60,31 @@ export class ChatService {
     private userRepository: UserRepository,
     private userProfileRepository: UserProfileRepository,
     private openaiAgent: OpenAIAgent,
+    private chatRequestLimitService: ChatRequestLimitService,
   ) {}
+
+  private assertSessionAccess(
+    session: { userId: { toString(): string }; isGuest?: boolean },
+    userId: string,
+  ): void {
+    const canAccess =
+      userId === 'anonymous'
+        ? session.isGuest === true
+        : session.userId.toString() === userId;
+    if (!canAccess) {
+      throw new NotFoundException('이야기를 찾을 수 없어요');
+    }
+  }
 
   // 입력 길이 검증
   private validateInput(input: string): void {
-    if (input.length > MAX_INPUT_LENGTH) {
-      throw new BadRequestException(`입력이 너무 길어요. ${MAX_INPUT_LENGTH}자 이내로 작성해 주세요.`);
+    if (!input.trim()) {
+      throw new BadRequestException('내용을 입력해 주세요.');
+    }
+    if (input.length > CHAT_LIMITS.inputLength) {
+      throw new BadRequestException(
+        `입력이 너무 길어요. ${CHAT_LIMITS.inputLength}자 이내로 작성해 주세요.`,
+      );
     }
   }
 
@@ -46,17 +92,91 @@ export class ChatService {
    * 텍스트 요약 (세션 생성 전 미리보기용)
    */
   async summarizeText(text: string): Promise<string> {
-    if (text.length > MAX_IMPORT_LENGTH) {
-      throw new BadRequestException(`입력이 너무 길어요. ${MAX_IMPORT_LENGTH}자 이내로 작성해 주세요.`);
+    if (!text.trim() || text.length > CHAT_LIMITS.importTextLength) {
+      throw new BadRequestException(
+        `입력은 ${CHAT_LIMITS.importTextLength}자 이내로 작성해 주세요.`,
+      );
+    }
+
+    // 위기 표현은 상담 범위 판정보다 항상 먼저 처리한다.
+    const crisisResult = detectCrisis(text);
+    if (crisisResult.isCrisis) {
+      throw new BadRequestException({
+        code: 'CRISIS_DETECTED',
+        message: crisisResult.recommendedAction,
+      });
+    }
+    const offTopicReason = detectOffTopicRequest(text);
+    if (offTopicReason) {
+      throw new BadRequestException(
+        this.getScopeReply(offTopicReason).question,
+      );
     }
     return this.openaiAgent.summarizeImportedText(text);
   }
 
   // 세션 대화 수 검증
-  private validateContextCount(contextCount: number): void {
-    if (contextCount >= MAX_CONTEXT_COUNT) {
-      throw new BadRequestException('이야기 한도에 도달했어요. 새 이야기를 시작해 주세요.');
+  private validateContextCount(turnCount: number): void {
+    if (turnCount >= CHAT_LIMITS.sessionTurns) {
+      throw new BadRequestException(
+        '이야기 한도에 도달했어요. 새 이야기를 시작해 주세요.',
+      );
     }
+  }
+
+  private getCostGuardReply(reason: CostGuardReason): {
+    question: string;
+    options: string[];
+  } {
+    if (reason === 'repeated') {
+      return {
+        question:
+          '같은 이야기가 이어지고 있어요. 지금 마음에서 달라진 점을 조금만 더 알려주세요.',
+        options: [
+          '조금 달라졌어요',
+          '그대로 힘들어요',
+          '더 심해졌어요',
+          '조금 나아졌어요',
+          '다른 감정이에요',
+          '다른 이야기예요',
+          '여기까지 할게요',
+          '정리해주세요',
+        ],
+      };
+    }
+    return {
+      question: '괜찮아요. 짧게라도 지금 마음에 가장 가까운 말을 골라주세요.',
+      options: [
+        '힘들어요',
+        '답답해요',
+        '불안해요',
+        '슬퍼요',
+        '화가 나요',
+        '잘 모르겠어요',
+        '다른 이야기예요',
+        '정리해주세요',
+      ],
+    };
+  }
+
+  private getScopeReply(reason: OffTopicRequestReason): {
+    question: string;
+    options: string[];
+  } {
+    return {
+      question:
+        reason === 'medical-advice' ? MEDICAL_ADVICE_REPLY : OFF_TOPIC_REPLY,
+      options: [
+        '이 일로 불안해요',
+        '마음이 답답해요',
+        '자신감이 떨어져요',
+        '화가 나요',
+        '속상해요',
+        '부담스러워요',
+        '다른 고민이 있어요',
+        '정리해주세요',
+      ],
+    };
   }
 
   async startSession(
@@ -66,19 +186,37 @@ export class ChatService {
     counselorType?: CounselorType,
     importSummary?: string,
   ) {
-    // 입력 검증 - 불러오기(긴 텍스트)와 일반 입력 구분
-    const isImport = initialText && initialText.length > MAX_INPUT_LENGTH;
-    const hasImportSummary = !!importSummary;
-    if (initialText && !hasImportSummary) {
-      if (isImport) {
-        // 불러오기: 최대 10,000자
-        if (initialText.length > MAX_IMPORT_LENGTH) {
-          throw new BadRequestException(`입력이 너무 길어요. ${MAX_IMPORT_LENGTH}자 이내로 작성해 주세요.`);
-        }
-      } else {
-        // 일반 입력: 최대 500자
-        this.validateInput(initialText);
-      }
+    if (initialText) {
+      this.validateInput(initialText);
+    }
+    if (
+      importSummary &&
+      (!importSummary.trim() ||
+        importSummary.length > CHAT_LIMITS.importSummaryLength)
+    ) {
+      throw new BadRequestException(
+        `불러오기 요약은 ${CHAT_LIMITS.importSummaryLength}자 이내로 작성해 주세요.`,
+      );
+    }
+
+    const suppliedInputs = [initialText, importSummary].filter(
+      (input): input is string => !!input,
+    );
+    // 위기 판정은 범위 판정과 세션 생성보다 항상 먼저 수행한다.
+    const initialCrisisEntry = suppliedInputs
+      .map((input) => ({ input, result: detectCrisis(input) }))
+      .find(({ result }) => result.isCrisis);
+    const initialCrisis = initialCrisisEntry?.result ?? null;
+    const offTopicReason = initialCrisis
+      ? null
+      : suppliedInputs
+          .map(detectOffTopicRequest)
+          .find((reason) => reason !== null);
+    if (offTopicReason) {
+      // 세션 생성과 원문 저장 전에 거부해 DB 및 후속 프롬프트 비용을 막는다.
+      throw new BadRequestException(
+        this.getScopeReply(offTopicReason).question,
+      );
     }
 
     // 세션 제한 체크 (무료-우선 런칭 동안 FREE_LAUNCH_MODE로 비활성화)
@@ -89,11 +227,13 @@ export class ChatService {
       if (user?.isGrandfathered) {
         // 무제한 이용 가능
       } else {
-        const sessionCount = await this.sessionRepository.countUserSessions(userId);
+        const sessionCount =
+          await this.sessionRepository.countUserSessions(userId);
 
         // 구독자인 경우 구독 티어에 따른 제한
         if (user?.isSubscribed && user?.subscriptionTier) {
-          const plan = SUBSCRIPTION_PLANS[user.subscriptionTier as SubscriptionTier];
+          const plan =
+            SUBSCRIPTION_PLANS[user.subscriptionTier as SubscriptionTier];
           const limit = FREE_USER_SESSION_LIMIT + (plan?.sessionLimit || 0);
 
           if (sessionCount >= limit) {
@@ -109,7 +249,8 @@ export class ChatService {
           if (sessionCount >= FREE_USER_SESSION_LIMIT) {
             throw new ForbiddenException({
               code: 'SESSION_LIMIT_EXCEEDED',
-              message: '이번 달 무료 이야기를 모두 사용했어요. 더 담고 싶다면 구독해 주세요.',
+              message:
+                '이번 달 무료 이야기를 모두 사용했어요. 더 담고 싶다면 구독해 주세요.',
               sessionCount,
               limit: FREE_USER_SESSION_LIMIT,
             });
@@ -121,82 +262,110 @@ export class ChatService {
     let previousContext: string | undefined;
     let previousSessionSummary: string | undefined;
 
-    try {
-      if (userId !== 'anonymous') {
-        const recentSummaries =
-          await this.sessionRepository.getRecentSummaries(userId);
-        if (recentSummaries.length > 0) {
-          previousContext = recentSummaries
-            .map((s) => `[이전 상담: ${s.category}] ${s.summary}`)
-            .join('\n');
+    if (userId !== 'anonymous') {
+      const recentSummaries =
+        await this.sessionRepository.getRecentSummaries(userId);
+      if (recentSummaries.length > 0) {
+        previousContext = recentSummaries
+          .map((s) => `[이전 상담: ${s.category}] ${s.summary}`)
+          .join('\n');
 
-          // 사용자에게 보여줄 친근한 요약 생성
-          const lastSession = recentSummaries[0];
-          previousSessionSummary = lastSession.summary;
-        }
+        // 사용자에게 보여줄 친근한 요약 생성
+        const lastSession = recentSummaries[0];
+        previousSessionSummary = lastSession.summary;
       }
+    }
 
-      // 직접 입력인 경우 'direct' 카테고리 사용
-      const sessionCategory = category || 'direct';
-      const session = await this.sessionService.create(
-        userId,
-        sessionCategory as Category,
-        counselorType,
+    // 직접 입력인 경우 'direct' 카테고리 사용
+    const sessionCategory = category || 'direct';
+    const session = await this.sessionService.create(
+      userId,
+      sessionCategory,
+      counselorType,
+    );
+
+    if (previousContext) {
+      await this.sessionService.addContext(
+        session._id.toString(),
+        `[이전 상담 기록]\n${previousContext}`,
       );
+    }
 
-      if (previousContext) {
-        await this.sessionService.addContext(
-          session._id.toString(),
-          `[이전 상담 기록]\n${previousContext}`,
-        );
-      }
+    // 직접 입력 텍스트 또는 불러오기 요약이 있으면 컨텍스트에 추가
+    if (initialCrisisEntry) {
+      await this.sessionService.addContext(
+        session._id.toString(),
+        `[위기 감지: ${initialCrisisEntry.result.level}] ${initialCrisisEntry.input}`,
+      );
+    } else if (importSummary) {
+      // 이미 요약된 불러오기 텍스트 (사용자가 확인/수정한 요약)
+      await this.sessionService.addContext(
+        session._id.toString(),
+        `[이전 상담 불러오기 - 요약]\n${importSummary}`,
+      );
+    } else if (initialText) {
+      await this.sessionService.addContext(
+        session._id.toString(),
+        `[사용자 직접 입력] ${initialText}`,
+      );
+    }
 
-      // 직접 입력 텍스트 또는 불러오기 요약이 있으면 컨텍스트에 추가
-      if (importSummary) {
-        // 이미 요약된 불러오기 텍스트 (사용자가 확인/수정한 요약)
-        await this.sessionService.addContext(
-          session._id.toString(),
-          `[이전 상담 불러오기 - 요약]\n${importSummary}`,
-        );
-      } else if (initialText) {
-        let textToStore: string;
-
-        if (isImport) {
-          // 긴 텍스트(불러오기)인 경우 AI로 요약
-          const summary = await this.openaiAgent.summarizeImportedText(initialText);
-          textToStore = `[이전 상담 불러오기 - 요약]\n${summary}`;
-        } else {
-          textToStore = `[사용자 직접 입력] ${initialText}`;
-        }
-
-        await this.sessionService.addContext(
-          session._id.toString(),
-          textToStore,
-        );
-      }
-
-      const updatedSession = (initialText || importSummary)
+    const updatedSession =
+      initialText || importSummary
         ? await this.sessionService.findById(session._id.toString())
         : session;
 
-      const options = await this.openaiAgent.generateOptions(
-        updatedSession!.context,
-        initialText ? 'collecting' : 'initial',
-        sessionCategory as Category,
-        counselorType,
-      );
-
-      return {
-        sessionId: session._id,
-        hasHistory: !!previousContext,
-        previousSessionSummary,
-        contextCount: updatedSession!.context.length,
-        ...options,
+    let options;
+    if (!initialText && !importSummary && category) {
+      options = {
+        question: INITIAL_QUESTIONS[category],
+        options: INITIAL_OPTIONS[category],
+        canProceedToResponse: false,
+        canRequestFeedback: true,
       };
-    } catch (error) {
-      console.error('startSession error:', error);
-      throw error;
+    } else if (initialCrisis?.isCrisis) {
+      options = {
+        question: initialCrisis.recommendedAction!,
+        options: ['가까운 사람에게 연락할게요', '전문기관에 연락할게요'],
+        canProceedToResponse: true,
+        canRequestFeedback: true,
+        isCrisis: true,
+        crisisLevel: initialCrisis.level,
+        crisisMessage: initialCrisis.recommendedAction,
+      };
+    } else {
+      const costGuardReason = initialText
+        ? detectCostGuardReason(initialText, [])
+        : null;
+      options = costGuardReason
+        ? {
+            ...this.getCostGuardReply(costGuardReason),
+            canProceedToResponse: false,
+            canRequestFeedback: true,
+          }
+        : await this.openaiAgent.generateOptions(
+            updatedSession!.context,
+            'collecting',
+            sessionCategory,
+            counselorType,
+          );
     }
+
+    return {
+      sessionId: session._id,
+      hasHistory: !!previousContext,
+      previousSessionSummary,
+      contextCount: updatedSession!.context.length,
+      ...options,
+      isCrisis: initialCrisis?.isCrisis || undefined,
+      crisisLevel:
+        initialCrisis?.level === 'medium' || initialCrisis?.level === 'high'
+          ? initialCrisis.level
+          : undefined,
+      crisisMessage: initialCrisis?.isCrisis
+        ? initialCrisis.recommendedAction
+        : undefined,
+    };
   }
 
   /**
@@ -225,16 +394,37 @@ export class ChatService {
     return t.includes('조언') || t.includes('정리');
   }
 
+  async *selectOptionStream(
+    sessionId: string,
+    selectedOption: string,
+    signal?: AbortSignal,
+    userId = 'anonymous',
+  ) {
+    const release = this.chatRequestLimitService.acquire(sessionId);
+    try {
+      yield* this.selectOptionStreamInternal(
+        sessionId,
+        selectedOption,
+        signal,
+        userId,
+      );
+    } finally {
+      release();
+    }
+  }
 
-  async *selectOptionStream(sessionId: string, selectedOption: string) {
+  private async *selectOptionStreamInternal(
+    sessionId: string,
+    selectedOption: string,
+    signal?: AbortSignal,
+    userId = 'anonymous',
+  ) {
     // 입력 검증
     this.validateInput(selectedOption);
 
     const session = await this.sessionService.findById(sessionId);
     if (!session) throw new NotFoundException('이야기를 찾을 수 없어요');
-
-    // 대화 수 검증
-    this.validateContextCount(session.context.length);
+    this.assertSessionAccess(session, userId);
 
     const crisisResult = detectCrisis(selectedOption);
     if (crisisResult.isCrisis) {
@@ -253,6 +443,41 @@ export class ChatService {
         canRequestFeedback: true,
         responseModes: RESPONSE_MODE_OPTIONS,
         contextCount: session.context.length + 1,
+      };
+      return;
+    }
+
+    const offTopicReason = detectOffTopicRequest(selectedOption);
+    if (offTopicReason) {
+      const fallback = this.getScopeReply(offTopicReason);
+      yield {
+        type: 'next',
+        sessionId,
+        ...fallback,
+        canProceedToResponse: false,
+        canRequestFeedback: true,
+        contextCount: session.turnCount ?? session.context.length,
+      };
+      return;
+    }
+
+    // 위기 표현은 턴 한도나 저정보 입력 방어보다 항상 먼저 처리한다.
+    this.validateContextCount(session.turnCount ?? session.context.length);
+
+    const costGuardReason = detectCostGuardReason(
+      selectedOption,
+      session.fullContext ?? session.context,
+    );
+    if (costGuardReason) {
+      await this.sessionService.addContext(sessionId, `나: ${selectedOption}`);
+      const fallback = this.getCostGuardReply(costGuardReason);
+      yield {
+        type: 'next',
+        sessionId,
+        ...fallback,
+        canProceedToResponse: false,
+        canRequestFeedback: true,
+        contextCount: (session.turnCount ?? session.context.length) + 1,
       };
       return;
     }
@@ -283,6 +508,7 @@ export class ChatService {
         updatedSession!.category as Category,
         (updatedSession as any).counselorType as CounselorType,
       )) {
+        if (signal?.aborted) return;
         if (chunk.type === 'question_chunk') {
           fullQuestion += chunk.content;
           yield { type: 'question_chunk', content: chunk.content };
@@ -298,7 +524,9 @@ export class ChatService {
         options: optionsResult.options,
         canProceedToResponse: optionsResult.canProceedToResponse,
         canRequestFeedback: optionsResult.canRequestFeedback,
-        responseModes: optionsResult.canProceedToResponse ? RESPONSE_MODE_OPTIONS : undefined,
+        responseModes: optionsResult.canProceedToResponse
+          ? RESPONSE_MODE_OPTIONS
+          : undefined,
         contextCount: updatedSession!.context.length,
       };
       return;
@@ -342,6 +570,7 @@ export class ChatService {
       updatedSession!.category as Category,
       (updatedSession as any).counselorType as CounselorType,
     )) {
+      if (signal?.aborted) return;
       if (chunk.type === 'question_chunk') {
         fullQuestion += chunk.content;
         yield { type: 'question_chunk', content: chunk.content };
@@ -367,27 +596,65 @@ export class ChatService {
       options: optionsResult.options,
       canProceedToResponse: optionsResult.canProceedToResponse,
       canRequestFeedback: optionsResult.canRequestFeedback,
-      responseModes: optionsResult.canProceedToResponse ? RESPONSE_MODE_OPTIONS : undefined,
+      responseModes: optionsResult.canProceedToResponse
+        ? RESPONSE_MODE_OPTIONS
+        : undefined,
       contextCount: updatedSession!.context.length + 1,
     };
   }
 
-
-  async endSession(sessionId: string) {
-    const session = await this.sessionService.complete(sessionId);
-    return { summary: session?.summary };
+  async endSession(sessionId: string, userId = 'anonymous') {
+    const release = this.chatRequestLimitService.acquire(sessionId);
+    try {
+      const existingSession = await this.sessionService.findById(sessionId);
+      if (!existingSession) {
+        throw new NotFoundException('이야기를 찾을 수 없어요');
+      }
+      this.assertSessionAccess(existingSession, userId);
+      if (existingSession.status === 'completed' && existingSession.summary) {
+        return { summary: existingSession.summary };
+      }
+      const session = await this.sessionService.complete(sessionId);
+      return { summary: session?.summary };
+    } finally {
+      release();
+    }
   }
 
   /**
    * 스트리밍 방식으로 응답 모드 설정 및 응답 생성
    */
-  async *setModeStream(sessionId: string, mode: ResponseMode) {
-    await this.sessionService.setResponseMode(sessionId, mode);
+  async *setModeStream(
+    sessionId: string,
+    mode: ResponseMode,
+    signal?: AbortSignal,
+    userId = 'anonymous',
+  ) {
+    const release = this.chatRequestLimitService.acquire(sessionId);
+    try {
+      const session = await this.sessionService.findById(sessionId);
+      if (!session) throw new NotFoundException('이야기를 찾을 수 없어요');
+      this.assertSessionAccess(session, userId);
+      if (session.context.length < PROMPT_CONFIG.MIN_CONTEXT_FOR_RESPONSE) {
+        throw new BadRequestException(
+          '마음을 조금 더 나눈 뒤 응답 방식을 선택해 주세요.',
+        );
+      }
 
-    // 세션 이름 자동 생성 (alias가 없을 경우)
-    await this.tryGenerateSessionName(sessionId);
+      await this.sessionService.setResponseMode(sessionId, mode);
 
-    yield* this.generateResponseStream(sessionId);
+      // 세션 이름 자동 생성 (alias가 없을 경우)
+      await this.tryGenerateSessionName(sessionId);
+
+      yield* this.generateResponseStreamInternal(
+        sessionId,
+        undefined,
+        signal,
+        userId,
+      );
+    } finally {
+      release();
+    }
   }
 
   /**
@@ -401,7 +668,31 @@ export class ChatService {
   /**
    * 스트리밍 방식으로 응답 생성
    */
-  async *generateResponseStream(sessionId: string, userMessage?: string) {
+  async *generateResponseStream(
+    sessionId: string,
+    userMessage?: string,
+    signal?: AbortSignal,
+    userId = 'anonymous',
+  ) {
+    const release = this.chatRequestLimitService.acquire(sessionId);
+    try {
+      yield* this.generateResponseStreamInternal(
+        sessionId,
+        userMessage,
+        signal,
+        userId,
+      );
+    } finally {
+      release();
+    }
+  }
+
+  private async *generateResponseStreamInternal(
+    sessionId: string,
+    userMessage?: string,
+    signal?: AbortSignal,
+    userId = 'anonymous',
+  ) {
     // 입력 검증
     if (userMessage) {
       this.validateInput(userMessage);
@@ -409,12 +700,7 @@ export class ChatService {
 
     const session = await this.sessionService.findById(sessionId);
     if (!session) throw new NotFoundException('이야기를 찾을 수 없어요');
-
-    // 채팅 모드에서 메시지 수 제한
-    const chatMessageCount = session.context.filter((c: string) => c.startsWith('나:')).length;
-    if (chatMessageCount >= MAX_CHAT_MESSAGES) {
-      throw new BadRequestException('이야기 한도에 도달했어요. 이제 마무리해 주세요.');
-    }
+    this.assertSessionAccess(session, userId);
 
     if (userMessage) {
       const crisisResult = detectCrisis(userMessage);
@@ -438,6 +724,35 @@ export class ChatService {
         return;
       }
 
+      const offTopicReason = detectOffTopicRequest(userMessage);
+      if (offTopicReason) {
+        yield this.getScopeReply(offTopicReason).question;
+        return;
+      }
+
+      this.validateContextCount(session.turnCount ?? session.context.length);
+
+      const chatMessageCount = (session.fullContext ?? session.context).filter(
+        (context: string) => context.startsWith('나:'),
+      ).length;
+      if (chatMessageCount >= CHAT_LIMITS.chatMessages) {
+        throw new BadRequestException(
+          '이야기 한도에 도달했어요. 이제 마무리해 주세요.',
+        );
+      }
+
+      const costGuardReason = detectCostGuardReason(
+        userMessage,
+        session.fullContext ?? session.context,
+      );
+      if (costGuardReason) {
+        const fallback = this.getCostGuardReply(costGuardReason).question;
+        await this.sessionService.addContext(sessionId, `나: ${userMessage}`);
+        await this.sessionService.addContext(sessionId, `상담사: ${fallback}`);
+        yield fallback;
+        return;
+      }
+
       await this.sessionService.addContext(sessionId, `나: ${userMessage}`);
     }
 
@@ -448,6 +763,7 @@ export class ChatService {
       userMessage,
       (session as any).counselorType as CounselorType,
     )) {
+      if (signal?.aborted) return;
       fullResponse += chunk;
       yield chunk;
     }
@@ -494,17 +810,17 @@ export class ChatService {
   /**
    * 세션 상세 조회
    */
-  async getSessionDetail(sessionId: string, userId: string): Promise<SessionDetailResponse> {
+  async getSessionDetail(
+    sessionId: string,
+    userId: string,
+  ): Promise<SessionDetailResponse> {
     const session = await this.sessionRepository.getSessionDetail(sessionId);
 
     if (!session) {
       throw new NotFoundException('이야기를 찾을 수 없어요');
     }
 
-    // 소유자 확인
-    if (userId !== 'anonymous' && session.userId.toString() !== userId) {
-      throw new ForbiddenException('접근 권한이 없어요');
-    }
+    this.assertSessionAccess(session, userId);
 
     return {
       sessionId: session._id.toString(),
@@ -525,7 +841,10 @@ export class ChatService {
   /**
    * 게스트 세션 소유권 이전 — 비로그인 상태로 시작한 대화를 로그인 후 이어받는다.
    */
-  async claimGuestSession(sessionId: string, userId: string): Promise<{ claimed: boolean }> {
+  async claimGuestSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<{ claimed: boolean }> {
     const session = await this.sessionRepository.findById(sessionId);
 
     if (!session) {
@@ -542,7 +861,10 @@ export class ChatService {
       throw new ForbiddenException('이어받을 수 없는 이야기예요');
     }
 
-    const updated = await this.sessionRepository.claimGuestSession(sessionId, userId);
+    const updated = await this.sessionRepository.claimGuestSession(
+      sessionId,
+      userId,
+    );
     return { claimed: !!updated };
   }
 
@@ -550,16 +872,22 @@ export class ChatService {
    * 세션 재개 (이어하기)
    */
   async resumeSession(sessionId: string, userId: string) {
+    const release = this.chatRequestLimitService.acquire(sessionId);
+    try {
+      return await this.resumeSessionInternal(sessionId, userId);
+    } finally {
+      release();
+    }
+  }
+
+  private async resumeSessionInternal(sessionId: string, userId: string) {
     const session = await this.sessionRepository.findById(sessionId);
 
     if (!session) {
       throw new NotFoundException('이야기를 찾을 수 없어요');
     }
 
-    // 소유자 확인
-    if (userId !== 'anonymous' && session.userId.toString() !== userId) {
-      throw new ForbiddenException('접근 권한이 없어요');
-    }
+    this.assertSessionAccess(session, userId);
 
     // 완료된 세션이면 재활성화
     if (session.status === 'completed') {
@@ -570,7 +898,8 @@ export class ChatService {
     // 사용자 프로필 요약 가져오기
     let profileContext = '';
     if (userId !== 'anonymous') {
-      const profileSummary = await this.userProfileRepository.getProfileSummary(userId);
+      const profileSummary =
+        await this.userProfileRepository.getProfileSummary(userId);
       if (profileSummary) {
         profileContext = `[사용자 프로필]\n${profileSummary}\n\n`;
       }
@@ -589,12 +918,6 @@ export class ChatService {
         session.category as Category,
         session.counselorType as CounselorType,
       );
-
-      console.log('[resumeSession] generateOptions result:', {
-        question: options.question,
-        optionsLength: options.options?.length,
-        options: options.options,
-      });
 
       return {
         sessionId: session._id.toString(),
@@ -653,7 +976,10 @@ export class ChatService {
       throw new ForbiddenException('접근 권한이 없어요');
     }
 
-    const savedSession = await this.sessionRepository.saveSession(sessionId, savedName);
+    const savedSession = await this.sessionRepository.saveSession(
+      sessionId,
+      savedName,
+    );
 
     return {
       sessionId: savedSession!._id.toString(),
@@ -693,9 +1019,14 @@ export class ChatService {
       throw new ForbiddenException('로그인이 필요해요.');
     }
 
-    const deleted = await this.sessionRepository.deleteSession(sessionId, userId);
+    const deleted = await this.sessionRepository.deleteSession(
+      sessionId,
+      userId,
+    );
     if (!deleted) {
-      throw new NotFoundException('이야기를 찾을 수 없거나 삭제 권한이 없어요.');
+      throw new NotFoundException(
+        '이야기를 찾을 수 없거나 삭제 권한이 없어요.',
+      );
     }
 
     return { success: true };
@@ -714,9 +1045,15 @@ export class ChatService {
       throw new BadRequestException('이름은 50자 이내로 입력해 주세요.');
     }
 
-    const session = await this.sessionRepository.updateAlias(sessionId, userId, alias);
+    const session = await this.sessionRepository.updateAlias(
+      sessionId,
+      userId,
+      alias,
+    );
     if (!session) {
-      throw new NotFoundException('이야기를 찾을 수 없거나 수정 권한이 없어요.');
+      throw new NotFoundException(
+        '이야기를 찾을 수 없거나 수정 권한이 없어요.',
+      );
     }
 
     return {
@@ -752,8 +1089,8 @@ export class ChatService {
         newSummary,
         recentContext,
       );
-    } catch (error) {
-      console.error('Rolling summary failed:', error);
+    } catch {
+      console.error('Rolling summary failed.');
       // 실패해도 대화는 계속 진행
     }
   }

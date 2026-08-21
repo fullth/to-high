@@ -4,6 +4,59 @@ interface FetchOptions extends RequestInit {
   token?: string;
 }
 
+type SseJsonEvent = Record<string, unknown>;
+
+function parseSseFrame(frame: string): SseJsonEvent | undefined {
+  const payload = frame
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+
+  if (!payload) return undefined;
+
+  try {
+    const parsed: unknown = JSON.parse(payload);
+    return parsed !== null && typeof parsed === "object"
+      ? (parsed as SseJsonEvent)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function* readSseJson(response: Response): AsyncGenerator<SseJsonEvent> {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("스트리밍을 지원하지 않습니다");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+
+    const frames = buffer.split(/\r?\n\r?\n/);
+    buffer = frames.pop() ?? "";
+
+    for (const frame of frames) {
+      const event = parseSseFrame(frame);
+      if (event) yield event;
+    }
+
+    if (done) break;
+  }
+
+  const finalEvent = parseSseFrame(buffer);
+  if (finalEvent) yield finalEvent;
+}
+
+function getSseError(event: SseJsonEvent): string | undefined {
+  return typeof event.error === "string" && event.error
+    ? event.error
+    : undefined;
+}
+
 async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { token, headers, ...rest } = options;
 
@@ -43,6 +96,9 @@ export interface StartSessionResponse {
   canProceedToResponse: boolean;
   canRequestFeedback?: boolean;
   counselorType?: CounselorType;
+  isCrisis?: boolean;
+  crisisLevel?: "low" | "medium" | "high";
+  crisisMessage?: string;
   // 대화 기억 관련
   contextCount?: number;
   hasHistory?: boolean;
@@ -99,11 +155,32 @@ export function startSessionWithImportSummary(
 }
 
 // 선택지 선택 스트리밍
+interface SelectOptionStreamMetadata {
+  type: "metadata";
+  isCrisis?: boolean;
+  crisisLevel?: "low" | "medium" | "high";
+  crisisMessage?: string;
+  canProceedToResponse?: boolean;
+  responseModes?: ResponseModeOption[];
+}
+
+type SelectOptionStreamEvent =
+  | SelectOptionStreamMetadata
+  | { type: "contextSummary"; content: string }
+  | { type: "question_chunk"; content: string }
+  | {
+      type: "next";
+      question: string;
+      options: string[];
+      canProceedToResponse?: boolean;
+      responseModes?: ResponseModeOption[];
+    };
+
 export async function selectOptionStream(
   sessionId: string,
   selectedOption: string,
   token: string | undefined,
-  onChunk: (chunk: any) => void,
+  onChunk: (chunk: SelectOptionStreamEvent) => void,
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/chat/select/stream`, {
     method: "POST",
@@ -119,33 +196,13 @@ export async function selectOptionStream(
     throw new Error(error.message || `HTTP ${response.status}`);
   }
 
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("스트리밍을 지원하지 않습니다");
-
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value);
-    const lines = chunk.split("\n");
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const data = line.slice(6);
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.error) {
-            throw new Error(parsed.error);
-          }
-          if (!parsed.done) {
-            onChunk(parsed);
-          }
-        } catch (e) {
-          // JSON 파싱 실패는 무시 (불완전한 청크)
-        }
-      }
+  for await (const event of readSseJson(response)) {
+    const error = getSseError(event);
+    if (error) {
+      throw new Error(error);
+    }
+    if (!event.done) {
+      onChunk(event as SelectOptionStreamEvent);
     }
   }
 }
@@ -254,39 +311,19 @@ export async function setResponseModeStream(
     throw new Error(`HTTP ${response.status}`);
   }
 
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
   let fullContent = "";
 
-  if (!reader) {
-    throw new Error("Response body is not readable");
-  }
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const text = decoder.decode(value, { stream: true });
-    const lines = text.split("\n");
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          if (data.content) {
-            fullContent += data.content;
-            onChunk?.(data.content);
-          }
-          if (data.done) {
-            return fullContent;
-          }
-          if (data.error) {
-            throw new Error(data.error);
-          }
-        } catch {
-          // JSON parse error, skip
-        }
-      }
+  for await (const event of readSseJson(response)) {
+    const error = getSseError(event);
+    if (error) {
+      throw new Error(error);
+    }
+    if (typeof event.content === "string") {
+      fullContent += event.content;
+      onChunk?.(event.content);
+    }
+    if (event.done) {
+      return fullContent;
     }
   }
 
@@ -313,39 +350,19 @@ export async function sendMessageStream(
     throw new Error(`HTTP ${response.status}`);
   }
 
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
   let fullContent = "";
 
-  if (!reader) {
-    throw new Error("Response body is not readable");
-  }
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const text = decoder.decode(value, { stream: true });
-    const lines = text.split("\n");
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(line.slice(6));
-          if (data.content) {
-            fullContent += data.content;
-            onChunk?.(data.content);
-          }
-          if (data.done) {
-            return fullContent;
-          }
-          if (data.error) {
-            throw new Error(data.error);
-          }
-        } catch {
-          // JSON parse error, skip
-        }
-      }
+  for await (const event of readSseJson(response)) {
+    const error = getSseError(event);
+    if (error) {
+      throw new Error(error);
+    }
+    if (typeof event.content === "string") {
+      fullContent += event.content;
+      onChunk?.(event.content);
+    }
+    if (event.done) {
+      return fullContent;
     }
   }
 

@@ -10,9 +10,25 @@ import { HealthController } from './health/health.controller';
 import { AdminController } from './admin/admin.controller';
 import { PaymentController } from './payment/payment.controller';
 import { InquiryController } from './inquiry/inquiry.controller';
+import { isServiceEnabled } from '../common/service-visibility';
+
+const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
 
 @Module({
-  imports: [AuthModule, ChatModule, AdminModule, PaymentModule, InquiryModule],
-  controllers: [AuthController, ChatController, HealthController, AdminController, PaymentController, InquiryController],
+  imports: [
+    AuthModule,
+    ChatModule,
+    AdminModule,
+    InquiryModule,
+    ...(paymentServiceEnabled ? [PaymentModule] : []),
+  ],
+  controllers: [
+    AuthController,
+    ChatController,
+    HealthController,
+    AdminController,
+    InquiryController,
+    ...(paymentServiceEnabled ? [PaymentController] : []),
+  ],
 })
 export class ControllerModule {}

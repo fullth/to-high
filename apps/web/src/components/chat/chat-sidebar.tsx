@@ -9,7 +9,6 @@ interface ChatSidebarProps {
   token: string;
   userName?: string;
   userEmail?: string;
-  membership?: "free" | "pro";
   activeSessionId?: string;
   onLogout?: () => void;
   onClose?: () => void;
@@ -57,7 +56,6 @@ export function ChatSidebar({
   token,
   userName,
   userEmail,
-  membership = "free",
   activeSessionId,
   onLogout,
   onClose,
@@ -139,10 +137,7 @@ export function ChatSidebar({
           <span className="ch-sb-avatar" aria-hidden="true">{initial}</span>
           <span className="ch-sb-userinfo">
             <span className="ch-sb-username">{display} 님</span>
-            <span className="ch-sb-membership">
-              <span className={`ch-sb-dot ${membership}`} aria-hidden="true" />
-              {membership === "pro" ? "Pro" : "Free"} · 오늘 1/3
-            </span>
+            {userEmail && <span className="ch-sb-membership">{userEmail}</span>}
           </span>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M5 3l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -158,18 +153,6 @@ export function ChatSidebar({
                 {userEmail && <span className="ch-pop-email">{userEmail}</span>}
               </span>
             </div>
-            <Link href="/me" className="ch-pop-item" role="menuitem" onClick={() => setPopoverOpen(false)}>
-              내 정보
-            </Link>
-            <Link href="/membership" className="ch-pop-item" role="menuitem" onClick={() => setPopoverOpen(false)}>
-              멤버십 관리
-              {membership === "free" && <span className="ch-pop-badge">업그레이드</span>}
-              {membership === "pro" && <span className="ch-pop-badge pro">PRO</span>}
-            </Link>
-            <Link href="/settings" className="ch-pop-item" role="menuitem" onClick={() => setPopoverOpen(false)}>
-              설정
-            </Link>
-            <div className="ch-pop-divider" />
             <button
               type="button"
               className="ch-pop-item danger"

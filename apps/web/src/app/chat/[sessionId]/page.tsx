@@ -236,6 +236,7 @@ function ChatContent() {
 
     return () => {
       cancelled = true;
+      didInit.current = false;
     };
   }, [searchParams, sessionId, token, authLoading]);
 
@@ -612,7 +613,9 @@ function ChatContent() {
                   </div>
                 </div>
                 <div className="ch-inline-card">
-                  <span className="ch-wall-eyebrow">어떤 대화 방식을 선호하세요?? 최대한 맞춰 드리고 싶어요</span>
+                  <span className="ch-wall-eyebrow">
+                    어떤 대화 방식을 선호하세요?? 최대한 맞춰 드리고 싶어요
+                  </span>
                   <div className="ch-inline-modes">
                     {responseModes.map((rm) => (
                       <button

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { startSession } from "@/lib/api";
 import "./landing.css";
@@ -83,18 +84,18 @@ export function WirocareLanding({
       <header className="nav">
         <div className="container nav-inner">
           <div className="nav-left">
-            <a className="logo" href="/">
+            <Link className="logo" href="/">
               <span className="logo-mark" aria-hidden="true" />
               <span>
                 위로 <span className="logo-sub">To High</span>
               </span>
-            </a>
+            </Link>
           </div>
           <nav className="nav-actions">
             {token && (
-              <a className="btn btn-ghost btn-sm" href="/sessions">
+              <Link className="btn btn-ghost btn-sm" href="/sessions">
                 이전 이야기
-              </a>
+              </Link>
             )}
             {!token && (
               <button
@@ -284,7 +285,7 @@ export function WirocareLanding({
         <section className="section modes-section">
           <div className="container">
             <div className="section-head">
-              <span className="eyebrow">어떤 대화 방식을 선호하세요??</span>
+              <span className="eyebrow">어떤 대화 방식을 선호하세요?</span>
               <h2 className="section-title">최대한 맞춰 드리고 싶어요</h2>
               <p className="section-sub">
                 일상 이야기를 어떻게 받을지, 모드만 바꾸면 응답이 달라져요.
@@ -299,7 +300,7 @@ export function WirocareLanding({
               ))}
             </div>
             <p className="modes-hint">
-              탭하시면 그 결에 맞춰 일상 이야기부터 시작해드려요.
+              대화를 시작하면 마음에 맞는 방식을 고를 수 있어요.
             </p>
           </div>
         </section>
@@ -333,14 +334,12 @@ export function WirocareLanding({
       <footer>
         <div className="container">
           <div className="foot-top">
-            <a className="logo" href="/">
+            <Link className="logo" href="/">
               <span className="logo-mark" />
               <span>위로</span>
-            </a>
+            </Link>
             <div className="foot-links">
-              <a href="/privacy">개인정보처리방침</a>
-              <a href="/privacy">이용약관</a>
-              <a href="#contact">문의</a>
+              <Link href="/privacy">개인정보처리방침</Link>
             </div>
           </div>
           <div className="crisis">

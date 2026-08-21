@@ -21,6 +21,9 @@ import {
   COUNSELOR_MODE_PROMPTS,
   COUNSELOR_MODE_OPTIONS_PROMPTS,
   IMPORT_TEXT_SUMMARY_PROMPT,
+  ABUSE_PREVENTION_PROMPT,
+  COUNSELOR_STYLE_COMPOSITION_PROMPT,
+  wrapUntrustedPromptData,
   getCategoryExpertise,
 } from '../../prompts';
 import { GenerateOptionsResult } from '../../types/chat';
@@ -148,19 +151,24 @@ ${questionHint ? `상황: ${questionHint}` : ''}`;
       contextCount === 0
         ? `사용자가 "${category}" 카테고리를 선택했습니다. 첫 질문을 생성해주세요.`
         : `현재까지 대화 흐름:
-${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+${wrapUntrustedPromptData(
+  'counseling_context',
+  context.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+)}
 
 현재 단계: ${currentStep}
 사용자의 마지막 선택/입력에 공감하면서 다음 질문과 선택지를 생성해주세요.`;
 
     const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.UTILITY,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       response_format: { type: 'json_object' },
-      temperature: PROMPT_CONFIG.TEMPERATURE_OPTIONS,
+      max_completion_tokens:
+        PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS_WITH_RESPONSE,
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
@@ -299,7 +307,10 @@ ${QUESTION_DEPTH_GUIDE}
 **중요: question 텍스트만 생성하세요. JSON, 객체, 배열을 사용하지 마세요.**`;
 
     const userPrompt = `현재까지 대화 흐름:
-${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+${wrapUntrustedPromptData(
+  'counseling_context',
+  context.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+)}
 
 현재 단계: ${currentStep}
 사용자의 마지막 선택/입력에 공감하면서 다음 질문을 생성해주세요.
@@ -309,12 +320,13 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
     // question 스트리밍 생성
     let fullQuestion = '';
     const stream = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.UTILITY,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: PROMPT_CONFIG.TEMPERATURE_OPTIONS,
+      max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.QUESTION,
       stream: true, // 실시간 스트리밍!
     });
 
@@ -362,16 +374,19 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 [나쁜 예시 - 절대 금지]
 - "화났어", "슬펐어", "회사에서", "잘 모르겠어", "조언해줘"`;
 
-    const optionsSystemPrompt = `${modePrompt}
+    const optionsSystemPrompt = `${ABUSE_PREVENTION_PROMPT}
+
+${modePrompt}
 
 ${modeOptionsPrompt}
 
-질문: "${question}"
+${wrapUntrustedPromptData('generated_question', question)}
 
 위 질문에 답할 수 있는 8개의 선택지를 **모두 부드러운 존댓말(~요체)로** 생성하세요.`;
 
     const optionsResponse = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.UTILITY,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: optionsSystemPrompt },
         {
@@ -381,7 +396,7 @@ ${modeOptionsPrompt}
         },
       ],
       response_format: { type: 'json_object' },
-      temperature: PROMPT_CONFIG.TEMPERATURE_OPTIONS,
+      max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS,
     });
 
     const optionsResult = JSON.parse(
@@ -411,27 +426,35 @@ ${modeOptionsPrompt}
       return this.getFallbackResponse(mode, counselorType);
     }
 
-    // 상담가 유형이 선택된 경우 해당 프롬프트 사용, 아니면 기존 mode 프롬프트 사용
-    const stylePrompt = counselorType
-      ? COUNSELOR_TYPE_PROMPTS[counselorType]
-      : RESPONSE_MODE_PROMPTS[mode];
+    const stylePrompt = `${RESPONSE_MODE_PROMPTS[mode]}
+
+${
+  counselorType
+    ? `${COUNSELOR_STYLE_COMPOSITION_PROMPT}\n\n${COUNSELOR_TYPE_PROMPTS[counselorType]}`
+    : ''
+}`;
 
     const systemPrompt = `${GENERATE_RESPONSE_SYSTEM_PROMPT}
 
 ${stylePrompt}`;
 
     const userPrompt = `내담자 상담 기록:
-${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+${wrapUntrustedPromptData(
+  'counseling_context',
+  context.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+)}
 
-${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답을 해주세요.'}`;
+${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응답을 해주세요.'}`;
 
     const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.COUNSELING,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.COUNSELING,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: PROMPT_CONFIG.TEMPERATURE_RESPONSE,
+      max_completion_tokens:
+        PROMPT_CONFIG.MAX_OUTPUT_TOKENS.COUNSELING_RESPONSE,
     });
 
     return response.choices[0].message.content || '';
@@ -462,11 +485,19 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     }
 
     const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.UTILITY,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: SESSION_SUMMARY_PROMPT },
-        { role: 'user', content: JSON.stringify(context) },
+        {
+          role: 'user',
+          content: wrapUntrustedPromptData(
+            'counseling_context',
+            JSON.stringify(context),
+          ),
+        },
       ],
+      max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.SESSION_SUMMARY,
     });
 
     return response.choices[0].message.content || '';
@@ -500,13 +531,16 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     }
 
     const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.UTILITY,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: EMPATHY_COMMENT_PROMPT },
-        { role: 'user', content: `사용자 선택: "${selectedOption}"` },
+        {
+          role: 'user',
+          content: wrapUntrustedPromptData('selected_option', selectedOption),
+        },
       ],
-      temperature: PROMPT_CONFIG.TEMPERATURE_EMPATHY,
-      max_tokens: 50,
+      max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.EMPATHY_COMMENT,
     });
 
     return response.choices[0].message.content || '네, 알겠어요.';
@@ -548,11 +582,14 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
     const counselorPrompt = COUNSELOR_TYPE_PROMPTS[counselorType];
 
     const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.UTILITY,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         {
           role: 'system',
-          content: `${counselorPrompt}
+          content: `${ABUSE_PREVENTION_PROMPT}
+
+${counselorPrompt}
 
 사용자가 이야기한 내용에 대해 상담가로서 간단한 의견이나 생각을 제시해주세요.
 - 2~3문장으로 짧게
@@ -562,15 +599,17 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
         {
           role: 'user',
           content: `현재까지 대화:
-${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+${wrapUntrustedPromptData(
+  'counseling_context',
+  context.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+)}
 
-마지막 사용자 선택: "${selectedOption}"
+${wrapUntrustedPromptData('selected_option', selectedOption)}
 
 상담가로서 짧게 의견을 제시해주세요.`,
         },
       ],
-      temperature: PROMPT_CONFIG.TEMPERATURE_RESPONSE,
-      max_tokens: 150,
+      max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.COUNSELOR_FEEDBACK,
     });
 
     return response.choices[0].message.content || '';
@@ -596,15 +635,19 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
     }
 
     const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.UTILITY,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: CONTEXT_SUMMARY_PROMPT },
         {
           role: 'user',
-          content: `현재까지 대화 내용:\n${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}`,
+          content: wrapUntrustedPromptData(
+            'counseling_context',
+            context.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+          ),
         },
       ],
-      temperature: PROMPT_CONFIG.TEMPERATURE_EMPATHY,
+      max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.CONTEXT_SUMMARY,
     });
 
     return (
@@ -628,27 +671,35 @@ ${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
       return;
     }
 
-    // 상담가 유형이 선택된 경우 해당 프롬프트 사용, 아니면 기존 mode 프롬프트 사용
-    const stylePrompt = counselorType
-      ? COUNSELOR_TYPE_PROMPTS[counselorType]
-      : RESPONSE_MODE_PROMPTS[mode];
+    const stylePrompt = `${RESPONSE_MODE_PROMPTS[mode]}
+
+${
+  counselorType
+    ? `${COUNSELOR_STYLE_COMPOSITION_PROMPT}\n\n${COUNSELOR_TYPE_PROMPTS[counselorType]}`
+    : ''
+}`;
 
     const systemPrompt = `${GENERATE_RESPONSE_SYSTEM_PROMPT}
 
 ${stylePrompt}`;
 
     const userPrompt = `내담자 상담 기록:
-${context.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+${wrapUntrustedPromptData(
+  'counseling_context',
+  context.map((c, i) => `${i + 1}. ${c}`).join('\n'),
+)}
 
-${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답을 해주세요.'}`;
+${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응답을 해주세요.'}`;
 
     const stream = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.COUNSELING,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.COUNSELING,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: PROMPT_CONFIG.TEMPERATURE_RESPONSE,
+      max_completion_tokens:
+        PROMPT_CONFIG.MAX_OUTPUT_TOKENS.COUNSELING_RESPONSE,
       stream: true,
     });
 
@@ -672,17 +723,22 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
       return contextToSummarize.slice(-5).join(' / ');
     }
 
+    const counselingContext = wrapUntrustedPromptData(
+      'counseling_context',
+      contextToSummarize.join('\n'),
+    );
     const userPrompt = existingSummary
-      ? `기존 요약:\n${existingSummary}\n\n추가된 대화:\n${contextToSummarize.join('\n')}\n\n기존 요약에 추가된 대화 내용을 통합하여 새로운 요약을 작성하세요.`
-      : `대화 내용:\n${contextToSummarize.join('\n')}`;
+      ? `${wrapUntrustedPromptData('existing_summary', existingSummary)}\n\n추가된 대화:\n${counselingContext}\n\n기존 요약에 추가된 대화 내용을 통합하여 새로운 요약을 작성하세요.`
+      : `대화 내용:\n${counselingContext}`;
 
     const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODEL,
+      model: PROMPT_CONFIG.MODELS.UTILITY,
+      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: ROLLING_SUMMARY_PROMPT },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.5,
+      max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.ROLLING_SUMMARY,
     });
 
     return response.choices[0].message.content || existingSummary;
@@ -691,9 +747,7 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
   /**
    * 사용자 프로필 정보 추출
    */
-  async extractUserProfile(
-    context: string[],
-  ): Promise<{
+  async extractUserProfile(context: string[]): Promise<{
     emotions: string[];
     topics: string[];
     importantContext: string[];
@@ -704,13 +758,20 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: PROMPT_CONFIG.MODEL,
+        model: PROMPT_CONFIG.MODELS.UTILITY,
+        reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
         messages: [
           { role: 'system', content: EXTRACT_USER_PROFILE_PROMPT },
-          { role: 'user', content: `대화 내용:\n${context.join('\n')}` },
+          {
+            role: 'user',
+            content: wrapUntrustedPromptData(
+              'counseling_context',
+              context.join('\n'),
+            ),
+          },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.3,
+        max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.USER_PROFILE,
       });
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
@@ -736,18 +797,21 @@ ${userMessage ? `내담자의 추가 메시지: "${userMessage}"` : '첫 응답�
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: PROMPT_CONFIG.MODEL,
+        model: PROMPT_CONFIG.MODELS.UTILITY,
+        reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
         messages: [
           { role: 'system', content: IMPORT_TEXT_SUMMARY_PROMPT },
-          { role: 'user', content: `이전 상담 내용:\n${text}` },
+          {
+            role: 'user',
+            content: wrapUntrustedPromptData('imported_counseling_text', text),
+          },
         ],
-        temperature: 0.3,
-        max_tokens: 500,
+        max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.IMPORT_SUMMARY,
       });
 
       return response.choices[0].message.content || text.slice(0, 500);
-    } catch (error) {
-      console.error('summarizeImportedText error:', error);
+    } catch {
+      console.error('summarizeImportedText failed.');
       // 오류 시 처음 500자만 반환
       return text.slice(0, 500);
     }
