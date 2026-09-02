@@ -1,0 +1,32 @@
+{
+  "pkg": "@to-high/web",
+  "projectId": "f78f00cf-0056-486d-8e87-bd4c1d34ba67",
+  "globalName": "ToHighDS",
+  "shape": "package",
+  "buildCmd": "sh .design-sync/prebuild.sh",
+  "srcDir": "src/components",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": ".ds-sync-assets/compiled.css",
+  "componentSrcMap": {
+    "Button": "src/components/ui/button.tsx",
+    "Card": "src/components/ui/card.tsx",
+    "Logo": "src/components/logo-ds.tsx",
+    "CategoryButtonVariant": "src/components/category-button-variants.tsx",
+    "TopicButton": null,
+    "MindfulnessCard": null,
+    "ChatSidebar": null,
+    "ChatInfoSidebar": null,
+    "ChatBubble": null,
+    "ChannelTalk": null,
+    "CoffeeSupport": null,
+    "WirocareLanding": null
+  },
+  "dtsPropsFor": {
+    "Button": "variant?: \"default\" | \"destructive\" | \"outline\" | \"secondary\" | \"ghost\" | \"link\"; size?: \"default\" | \"sm\" | \"lg\" | \"xl\" | \"icon\" | \"icon-sm\" | \"icon-lg\"; asChild?: boolean; className?: string; children?: React.ReactNode; disabled?: boolean; type?: \"button\" | \"submit\" | \"reset\"; onClick?: React.MouseEventHandler<HTMLButtonElement>",
+    "CategoryButtonVariant": "label: string; description: string; color: string; onClick: () => void; disabled?: boolean; variant: \"gradient-glow\" | \"glassmorphism\" | \"neon-cyber\" | \"minimal-interactive\" | \"card-3d\"",
+    "Logo": "size?: \"sm\" | \"md\" | \"lg\"; showText?: boolean; href?: string; onClick?: () => void",
+    "Card": "className?: string; children?: React.ReactNode"
+  },
+  "readmeHeader": ".design-sync/conventions.md",
+  "runtimeFontPrefixes": ["Geist", "Pretendard", "Cambria"]
+}
