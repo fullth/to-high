@@ -48,3 +48,11 @@ _workspace_prev/
 # Playwright
 apps/web/playwright-report/
 apps/web/test-results/
+
+# design-sync
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+apps/web/.ds-sync-assets/
