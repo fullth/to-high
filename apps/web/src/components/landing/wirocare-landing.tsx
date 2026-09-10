@@ -132,15 +132,16 @@ export function WirocareLanding({
               <div className="fade-in">
                 <span className="hero-eyebrow">
                   <span className="pulse" />
-                  언제나 기다리고 있어요
+                  AI 심리상담: 위로
                 </span>
                 <h1>
-                  지치셨다면,
+                  항상 여기 있겠습니다.
                   <br />
-                  <span className="accent">잘 오셨어요</span>
+                  <span className="accent">필요하실 때 찾아주세요.</span>
                 </h1>
                 <p className="lede">
-                  말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요
+                  힘든 일을 일일이 설명해 주시지 않아도 돼요. 클릭으로 상담을
+                  시작해요.
                 </p>
                 <div className="hero-cta">
                   <button
@@ -273,10 +274,7 @@ export function WirocareLanding({
                   </svg>
                 </div>
                 <h4>조용히 풀고 싶은 날</h4>
-                <p>
-                  이름 없이도 시작할 수 있어요. 위기 순간엔 자살예방상담전화
-                  1393으로 바로 안내해드려요.
-                </p>
+                <p>이름 없이도 시작할 수 있어요.</p>
               </div>
             </div>
           </div>
@@ -345,7 +343,6 @@ export function WirocareLanding({
           <div className="crisis">
             <span className="crisis-mark" />
             <span>
-              위기 상황이라면 즉시 전문 상담을 받으세요.{" "}
               <b>자살예방상담전화 1393</b> · 24시간 무료
             </span>
           </div>
