@@ -732,7 +732,7 @@ test("Levi original image loads on landing and guest counseling", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "위로; to-high",
+      name: "위로: AI심리상담 서비스",
       exact: true,
     }),
   ).toBeVisible();
@@ -740,7 +740,10 @@ test("Levi original image loads on landing and guest counseling", async ({
     page.getByRole("link", { name: "위로", exact: true }).first(),
   ).toBeVisible();
   await expect(
-    page.getByText("위로는 AI 심리 상담 서비스예요.", { exact: true }),
+    page.getByText(
+      "위로는 AI 상담사 레비와 함께하는 AI 심리 상담 서비스예요.",
+      { exact: true },
+    ),
   ).toBeVisible();
   await expect(
     page.getByText(
