@@ -70,13 +70,24 @@ export function WirocareLanding() {
             <div className="blob b3" />
             <div className="blob b4" />
           </div>
+          <div className="hero-levi-backdrop" aria-hidden="true">
+            <Image
+              src="/characters/levi.png"
+              alt=""
+              width={500}
+              height={500}
+              sizes="(max-width: 1399px) 280px, 500px"
+              className="hero-levi-image"
+            />
+          </div>
           <div className="container">
             <div className="hero-grid">
-              <div className="fade-in">
-                <h1>
-                  위로; <span className="accent">to-high</span>
-                </h1>
-                <p className="lede">위로는 AI 심리 상담 서비스예요.</p>
+              <div className="hero-copy fade-in">
+                <h1>위로: AI심리상담 서비스</h1>
+                <p className="lede">
+                  위로는 AI 상담사 <strong className="hero-levi-name">레비</strong>와
+                  함께하는 AI 심리 상담 서비스예요.
+                </p>
                 <p className="lede">
                   어디서부터 말해야 할지 몰라도 괜찮아요, 클릭만 해주셔도 레비가
                   도와드릴게요.
@@ -93,7 +104,7 @@ export function WirocareLanding() {
               </div>
               <div className="hero-preview" aria-hidden="true">
                 <Image
-                  src="/characters/levi.png"
+                  src="/characters/levi-listening-pose.png"
                   alt=""
                   width={64}
                   height={64}
@@ -134,7 +145,7 @@ export function WirocareLanding() {
             <div className="features">
               <div className="feature">
                 <Image
-                  src="/characters/levi.png"
+                  src="/characters/levi-waving-pose.png"
                   alt="레비 AI 캐릭터"
                   width={120}
                   height={120}
@@ -148,18 +159,13 @@ export function WirocareLanding() {
                 </p>
               </div>
               <div className="feature">
-                <div className="ficon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M8 9a4 4 0 018 0c0 2-1 2.5-2 4-.8 1.2-1 2.2-1 3a2 2 0 11-4 0"
-                      stroke="var(--brand)"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="12" cy="9.5" r="1.3" fill="var(--brand)" />
-                  </svg>
-                </div>
+                <Image
+                  src="/characters/levi-listening-pose.png"
+                  alt="편안히 이야기를 듣는 레비"
+                  width={120}
+                  height={120}
+                  className="levi-intro-image"
+                />
                 <h4>대화는 저장하지 않아요</h4>
                 <p>
                   대화는 이 화면에만 남아요. 새로고침하거나 화면을 떠나면
@@ -167,23 +173,13 @@ export function WirocareLanding() {
                 </p>
               </div>
               <div className="feature">
-                <div className="ficon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"
-                      fill="var(--brand-tint)"
-                      stroke="var(--brand)"
-                      strokeWidth="1.4"
-                    />
-                    <path
-                      d="M9 12l2 2 4-4.2"
-                      stroke="var(--brand)"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
+                <Image
+                  src="/characters/levi-memory-pose.png"
+                  alt="소중한 마음을 두 손으로 받는 레비"
+                  width={120}
+                  height={120}
+                  className="levi-intro-image"
+                />
                 <h4>기억은 내가 정해요</h4>
                 <p>
                   다음에도 레비가 알아줬으면 하는 내용만 직접 적어 남겨요.

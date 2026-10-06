@@ -128,11 +128,17 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
-이 프로젝트는 **CC BY-NC-ND 4.0** 라이선스를 따릅니다.
+이 저장소의 자체 저작물은 **CC BY-NC-ND 4.0** 라이선스를 따릅니다.
 
-- 저작자표시 필수
-- 비영리 목적만 허용
-- 변경 금지
+- 비상업적 목적으로 원본의 전부 또는 일부를 복제하고 공유할 수 있습니다.
+- 비상업적 목적으로 수정본을 작성하고 복제할 수 있지만, 수정본 공유는 허용하지 않습니다.
+- 공유 시 저작자·저작권 표시, 라이선스·면책 고지와 원본 링크 등을 유지해야 합니다.
+- 이 허가에 포함되지 않는 상업적 이용이나 수정본 공유에는 해당 권리자의 별도 서면 허가가 필요합니다.
+- 제3자 코드·로고·이미지와 의존성에는 각각의 별도 라이선스 및 권리 표시가 적용됩니다.
+
+위 내용은 한국어 이용 안내입니다. 법률상 예외·제한을 포함한 정확한 조건은
+[공식 라이선스 전문](https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode.en)을 따르며,
+적용 범위와 안내는 [LICENSE](./LICENSE)를 확인하세요.
 
 ---
 

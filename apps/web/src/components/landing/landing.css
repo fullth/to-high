@@ -216,6 +216,54 @@
   z-index: -1;
   pointer-events: none;
 }
+.wirocare-landing .hero-levi-backdrop {
+  position: absolute;
+  left: calc(50% - 940px);
+  top: 40px;
+  width: 500px;
+  height: 500px;
+  overflow: visible;
+  opacity: 0.52;
+  pointer-events: none;
+  z-index: -1;
+  mask-image: linear-gradient(to right, #000 70%, rgb(0 0 0 / 0.45) 87%, transparent 100%);
+}
+.wirocare-landing .hero-levi-image {
+  position: absolute;
+  left: 0;
+  width: 500px;
+  max-width: none;
+  height: 500px;
+  object-fit: contain;
+  transform-origin: 50% 55%;
+  transform: rotate(-24deg);
+}
+.hero-copy { position: relative; z-index: 1; max-width: calc(100% - 350px); }
+.hero .hero-copy .lede { color: #000; }
+.hero .hero-levi-name {
+  color: color-mix(in srgb, var(--brand) 25%, var(--ink));
+  font-weight: 750;
+}
+@media (max-width: 1399px) {
+  .wirocare-landing .hero-levi-backdrop {
+    top: 80px;
+    bottom: auto;
+    left: -120px;
+    right: auto;
+    width: 280px;
+    height: 280px;
+    opacity: 0.48;
+    mask-image: linear-gradient(to right, #000 70%, rgb(0 0 0 / 0.3) 88%, transparent 100%);
+  }
+  .wirocare-landing .hero-levi-image {
+    left: 0;
+    width: 280px;
+    height: 280px;
+  }
+}
+@media (max-width: 600px) {
+  .wirocare-landing .hero-levi-backdrop { top: 20px; }
+}
 .blob {
   position: absolute;
   border-radius: 50%;
@@ -395,6 +443,7 @@
 @media (max-width: 1024px) {
   .hero-preview { display: none; }
   .hero { padding: 64px 0 72px; }
+  .hero-copy { max-width: none; }
 }
 @media (max-width: 640px) {
   .hero { padding: 48px 0 56px; }
@@ -732,6 +781,9 @@
 
 /* Levi integration keeps the existing landing layout and palette. */
 .wirocare-landing .levi-intro-image {
+  display: block;
+  width: 120px;
+  height: 120px;
   object-fit: contain;
   margin-bottom: 20px;
 }
