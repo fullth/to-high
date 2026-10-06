@@ -1,3 +1,8 @@
+import { PersistenceModule } from '../persistence/persistence.module';
+import { EphemeralModule } from '../app/ephemeral/ephemeral.module';
+import { CharacterModule } from '../app/character/character.module';
+import { EphemeralController } from './ephemeral/ephemeral.controller';
+import { CharacterController } from './character/character.controller';
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../app/auth/auth.module';
 import { ChatModule } from '../app/chat/chat.module';
@@ -17,6 +22,9 @@ const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
 @Module({
   imports: [
     AuthModule,
+    PersistenceModule,
+    EphemeralModule,
+    CharacterModule,
     ChatModule,
     AdminModule,
     InquiryModule,
@@ -24,6 +32,8 @@ const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
   ],
   controllers: [
     AuthController,
+    EphemeralController,
+    CharacterController,
     ChatController,
     HealthController,
     AdminController,

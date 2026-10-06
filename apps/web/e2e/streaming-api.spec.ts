@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import {
   selectOptionStream,
   sendMessageStream,
@@ -7,7 +7,7 @@ import {
 
 const originalFetch = globalThis.fetch;
 
-afterEach(() => {
+test.afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 

@@ -7,7 +7,12 @@ interface LogoProps {
   onClick?: () => void;
 }
 
-export function Logo({ size = "md", showText = true, href = "/", onClick }: LogoProps) {
+export function Logo({
+  size = "md",
+  showText = true,
+  href = "/",
+  onClick,
+}: LogoProps) {
   const sizes = {
     sm: { icon: 24, text: "text-lg" },
     md: { icon: 32, text: "text-xl" },
@@ -17,18 +22,17 @@ export function Logo({ size = "md", showText = true, href = "/", onClick }: Logo
   const { icon, text } = sizes[size];
 
   return (
-    <Link href={href} onClick={onClick} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+    <Link
+      href={href}
+      onClick={onClick}
+      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+    >
       {/* 아이콘 */}
       <div
         className="flex items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80"
         style={{ width: icon + 8, height: icon + 8 }}
       >
-        <svg
-          width={icon}
-          height={icon}
-          viewBox="0 0 24 24"
-          fill="none"
-        >
+        <svg width={icon} height={icon} viewBox="0 0 24 24" fill="none">
           {/* 두 손이 감싸는 하트 - 위로와 돌봄을 상징 */}
           {/* 왼쪽 손 */}
           <path
@@ -54,7 +58,9 @@ export function Logo({ size = "md", showText = true, href = "/", onClick }: Logo
 
       {/* 텍스트 */}
       {showText && (
-        <span className={`font-bold text-foreground/90 ${text} whitespace-nowrap`}>
+        <span
+          className={`font-bold text-foreground/90 ${text} whitespace-nowrap`}
+        >
           <span className="text-primary">
             <span className="sm:hidden">위로: AI 심리 상담</span>
             <span className="hidden sm:inline">위로: AI 기반 심리 상담</span>

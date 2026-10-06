@@ -727,3 +727,29 @@
   gap: 4px;
   max-width: 720px;
 }
+
+.wirocare-landing a.btn-primary { color: var(--brand-ink); }
+
+/* Levi integration keeps the existing landing layout and palette. */
+.wirocare-landing .levi-intro-image {
+  object-fit: contain;
+  margin-bottom: 20px;
+}
+.wirocare-landing .levi-preview-avatar {
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+.wirocare-landing .feature .btn { margin-top: 16px; }
+.wirocare-landing .privacy-note {
+  margin: 0 0 20px;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.6;
+}
+/* Decorative movement is optional; content remains visible without motion. */
+@media (prefers-reduced-motion: reduce) {
+  .wirocare-landing .fade-in,
+  .wirocare-landing .hero-preview,
+  .wirocare-landing .hero-eyebrow .pulse,
+  .wirocare-landing .typing i { animation: none !important; }
+}

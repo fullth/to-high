@@ -1,3 +1,4 @@
+import { randomBytes, createHash } from 'node:crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -7,6 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
+import { buildCounselingContext } from '../../common/counseling-context';
 import { CHAT_LIMITS } from '../../common/chat-limits';
 import {
   OffTopicRequestReason,
@@ -74,6 +76,15 @@ export class ChatService {
     if (!canAccess) {
       throw new NotFoundException('이야기를 찾을 수 없어요');
     }
+  }
+
+  private async assertCurrentSessionAccess(
+    sessionId: string,
+    userId: string,
+  ): Promise<void> {
+    const current = await this.sessionService.findById(sessionId);
+    if (!current) throw new NotFoundException('이야기를 찾을 수 없어요');
+    this.assertSessionAccess(current, userId);
   }
 
   // 입력 길이 검증
@@ -277,11 +288,17 @@ export class ChatService {
     }
 
     // 직접 입력인 경우 'direct' 카테고리 사용
+    const guestAccessToken =
+      userId === 'anonymous' ? randomBytes(32).toString('hex') : undefined;
+    const guestAccessHash = guestAccessToken
+      ? createHash('sha256').update(guestAccessToken).digest('hex')
+      : undefined;
     const sessionCategory = category || 'direct';
     const session = await this.sessionService.create(
       userId,
       sessionCategory,
       counselorType,
+      guestAccessHash,
     );
 
     if (previousContext) {
@@ -344,7 +361,7 @@ export class ChatService {
             canRequestFeedback: true,
           }
         : await this.openaiAgent.generateOptions(
-            updatedSession!.context,
+            buildCounselingContext(updatedSession!),
             'collecting',
             sessionCategory,
             counselorType,
@@ -353,6 +370,7 @@ export class ChatService {
 
     return {
       sessionId: session._id,
+      guestAccessToken,
       hasHistory: !!previousContext,
       previousSessionSummary,
       contextCount: updatedSession!.context.length,
@@ -486,7 +504,7 @@ export class ChatService {
     if (this.isDifficultToTalkOption(selectedOption)) {
       const contextSummary =
         await this.openaiAgent.summarizeContextForDifficultToTalk(
-          session.context,
+          buildCounselingContext(session),
         );
 
       await this.sessionService.addContext(
@@ -494,6 +512,7 @@ export class ChatService {
         `[말하기 어려움 선택] ${selectedOption}`,
       );
 
+      await this.assertCurrentSessionAccess(sessionId, userId);
       yield { type: 'contextSummary', content: contextSummary };
 
       const updatedSession = await this.sessionService.findById(sessionId);
@@ -503,12 +522,13 @@ export class ChatService {
       let optionsResult: any = null;
 
       for await (const chunk of this.openaiAgent.generateOptionsStream(
-        updatedSession!.context,
+        buildCounselingContext(updatedSession!),
         'collecting',
         updatedSession!.category as Category,
         (updatedSession as any).counselorType as CounselorType,
       )) {
         if (signal?.aborted) return;
+        await this.assertCurrentSessionAccess(sessionId, userId);
         if (chunk.type === 'question_chunk') {
           fullQuestion += chunk.content;
           yield { type: 'question_chunk', content: chunk.content };
@@ -516,6 +536,11 @@ export class ChatService {
           optionsResult = chunk;
         }
       }
+
+      await this.sessionService.addContext(
+        sessionId,
+        `상담사: ${fullQuestion}`,
+      );
 
       yield {
         type: 'next',
@@ -554,11 +579,7 @@ export class ChatService {
 
     const updatedSession = await this.sessionService.findById(sessionId);
 
-    // 롤링 요약이 있으면 context 앞에 추가
-    const rollingSummary = (updatedSession as any).rollingSummary || '';
-    const contextForAI = rollingSummary
-      ? [`[이전 대화 요약] ${rollingSummary}`, ...updatedSession!.context]
-      : updatedSession!.context;
+    const contextForAI = buildCounselingContext(updatedSession!);
 
     // 실시간 스트리밍으로 질문 생성
     let fullQuestion = '';
@@ -571,6 +592,7 @@ export class ChatService {
       (updatedSession as any).counselorType as CounselorType,
     )) {
       if (signal?.aborted) return;
+      await this.assertCurrentSessionAccess(sessionId, userId);
       if (chunk.type === 'question_chunk') {
         fullQuestion += chunk.content;
         yield { type: 'question_chunk', content: chunk.content };
@@ -588,6 +610,7 @@ export class ChatService {
       await this.performRollingSummary(sessionId, finalSession);
     }
 
+    await this.assertCurrentSessionAccess(sessionId, userId);
     // 항상 question과 options를 보냄 (canProceedToResponse와 관계없이)
     yield {
       type: 'next',
@@ -758,12 +781,13 @@ export class ChatService {
 
     let fullResponse = '';
     for await (const chunk of this.openaiAgent.generateResponseStream(
-      session.context,
+      buildCounselingContext(session),
       session.responseMode as ResponseMode,
       userMessage,
       (session as any).counselorType as CounselorType,
     )) {
       if (signal?.aborted) return;
+      await this.assertCurrentSessionAccess(sessionId, userId);
       fullResponse += chunk;
       yield chunk;
     }
@@ -845,27 +869,32 @@ export class ChatService {
     sessionId: string,
     userId: string,
   ): Promise<{ claimed: boolean }> {
-    const session = await this.sessionRepository.findById(sessionId);
+    const release = this.chatRequestLimitService.acquire(sessionId);
+    try {
+      const session = await this.sessionRepository.findById(sessionId);
 
-    if (!session) {
-      throw new NotFoundException('이야기를 찾을 수 없어요');
+      if (!session) {
+        throw new NotFoundException('이야기를 찾을 수 없어요');
+      }
+
+      // 이미 이 사용자 소유면 그대로 통과(중복 claim 안전).
+      if (session.userId.toString() === userId) {
+        return { claimed: true };
+      }
+
+      // 게스트 세션이 아니면(다른 실계정 소유) 이전 거부 — 타인 세션 탈취 방지.
+      if (!(session as any).isGuest) {
+        throw new ForbiddenException('이어받을 수 없는 이야기예요');
+      }
+
+      const updated = await this.sessionRepository.claimGuestSession(
+        sessionId,
+        userId,
+      );
+      return { claimed: !!updated };
+    } finally {
+      release();
     }
-
-    // 이미 이 사용자 소유면 그대로 통과(중복 claim 안전).
-    if (session.userId.toString() === userId) {
-      return { claimed: true };
-    }
-
-    // 게스트 세션이 아니면(다른 실계정 소유) 이전 거부 — 타인 세션 탈취 방지.
-    if (!(session as any).isGuest) {
-      throw new ForbiddenException('이어받을 수 없는 이야기예요');
-    }
-
-    const updated = await this.sessionRepository.claimGuestSession(
-      sessionId,
-      userId,
-    );
-    return { claimed: !!updated };
   }
 
   /**
@@ -891,8 +920,8 @@ export class ChatService {
 
     // 완료된 세션이면 재활성화
     if (session.status === 'completed') {
+      await this.sessionRepository.reactivate(sessionId);
       session.status = 'active';
-      await session.save();
     }
 
     // 사용자 프로필 요약 가져오기
@@ -905,11 +934,8 @@ export class ChatService {
       }
     }
 
-    // 롤링 요약 + 최근 컨텍스트로 새 질문 생성
-    const rollingSummary = (session as any).rollingSummary || '';
-    const contextForAI = rollingSummary
-      ? [`[이전 대화 요약] ${rollingSummary}`, ...session.context.slice(-5)]
-      : session.context;
+    const rollingSummary = session.rollingSummary || '';
+    const contextForAI = buildCounselingContext(session);
 
     try {
       const options = await this.openaiAgent.generateOptions(
@@ -919,6 +945,7 @@ export class ChatService {
         session.counselorType as CounselorType,
       );
 
+      await this.assertCurrentSessionAccess(sessionId, userId);
       return {
         sessionId: session._id.toString(),
         question: options.question,

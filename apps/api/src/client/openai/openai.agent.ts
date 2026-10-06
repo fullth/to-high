@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import { z } from 'zod';
 import {
   CATEGORY_CONTEXTS,
   INITIAL_QUESTION_HINTS,
@@ -8,6 +9,7 @@ import {
   INITIAL_OPTIONS,
   COUNSELOR_TYPE_PROMPTS,
   RESPONSE_MODE_PROMPTS,
+  RESPONSE_MODE_OPTIONS_BOUNDARY_PROMPT,
   RESPONSE_MODE_FALLBACKS,
   PROMPT_CONFIG,
   QUESTION_DEPTH_GUIDE,
@@ -39,6 +41,8 @@ export class OpenAIAgent {
     this.hasApiKey = !!apiKey && apiKey.length > 0;
     this.openai = new OpenAI({
       apiKey: apiKey || 'dummy-key',
+      timeout: 30_000,
+      maxRetries: 0,
     });
   }
 
@@ -57,6 +61,8 @@ export class OpenAIAgent {
     currentStep: string,
     category?: Category,
     counselorType?: CounselorType,
+    signal?: AbortSignal,
+    responseMode?: ResponseMode,
   ): Promise<GenerateOptionsResult> {
     const contextCount = context.length;
     const categoryContext = category ? CATEGORY_CONTEXTS[category] : '';
@@ -145,7 +151,9 @@ ${categoryExpertise}
 ${QUESTION_DEPTH_GUIDE}
 
 현재 수집된 컨텍스트 수: ${contextCount}개
-${questionHint ? `상황: ${questionHint}` : ''}`;
+${questionHint ? `상황: ${questionHint}` : ''}
+
+${responseMode ? `${RESPONSE_MODE_PROMPTS[responseMode]}\n\n${RESPONSE_MODE_OPTIONS_BOUNDARY_PROMPT}` : ''}`;
 
     const userPrompt =
       contextCount === 0
@@ -159,49 +167,43 @@ ${wrapUntrustedPromptData(
 현재 단계: ${currentStep}
 사용자의 마지막 선택/입력에 공감하면서 다음 질문과 선택지를 생성해주세요.`;
 
-    const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODELS.UTILITY,
-      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      response_format: { type: 'json_object' },
-      max_completion_tokens:
-        PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS_WITH_RESPONSE,
-    });
+    const response = await this.openai.chat.completions.create(
+      {
+        store: false,
+        model: PROMPT_CONFIG.MODELS.UTILITY,
+        reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+        max_completion_tokens:
+          PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS_WITH_RESPONSE,
+      },
+      { signal },
+    );
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
-
-    // 5회 이상 연속 질문 방지: context에서 최근 AI 응답들이 모두 질문인지 확인
-    let question = result.question || '';
-    const recentAiResponses = context
-      .filter((c) => c.startsWith('상담사:') || c.startsWith('상담사: '))
-      .slice(-4); // 최근 4개 AI 응답
-
-    const allQuestionsRecently =
-      recentAiResponses.length >= 4 &&
-      recentAiResponses.every((r) => r.includes('?'));
-
-    // 이번 응답도 질문으로 끝나고, 최근 4개가 모두 질문이면 → 질문 제거
-    if (allQuestionsRecently && question.trim().endsWith('?')) {
-      // 물음표 문장 제거하고 공감 부분만 남기기
-      const sentences = question.split(/(?<=[.!?])\s*/);
-      const nonQuestionSentences = sentences.filter(
-        (s: string) => !s.trim().endsWith('?'),
+    let result: Record<string, unknown> = {};
+    try {
+      const output: unknown = JSON.parse(
+        response.choices[0].message.content || '{}',
       );
-
-      if (nonQuestionSentences.length > 0) {
-        question = nonQuestionSentences.join(' ').trim();
-      } else {
-        // 전부 질문이면 기본 공감 멘트로 대체
-        question = '네, 잘 들었어요. 천천히 이야기해주세요.';
-      }
+      if (output && typeof output === 'object')
+        result = output as Record<string, unknown>;
+    } catch {
+      // Malformed model output uses the same safe defaults as invalid fields.
     }
 
     return {
-      ...result,
-      question,
+      question:
+        responseMode &&
+        typeof result.question === 'string' &&
+        !result.question.trim()
+          ? ''
+          : OpenAIAgent.validateQuestion(result.question, context),
+      options: OpenAIAgent.validateOptions(result.options, context),
+      canProceedToResponse:
+        contextCount >= PROMPT_CONFIG.MIN_CONTEXT_FOR_RESPONSE,
       canRequestFeedback,
     };
   }
@@ -320,6 +322,7 @@ ${wrapUntrustedPromptData(
     // question 스트리밍 생성
     let fullQuestion = '';
     const stream = await this.openai.chat.completions.create({
+      store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
@@ -334,30 +337,11 @@ ${wrapUntrustedPromptData(
       const content = chunk.choices[0]?.delta?.content;
       if (content) {
         fullQuestion += content;
-        yield { type: 'question_chunk', content }; // 실시간으로 yield!
+        // Buffer until the final question has passed validation.
       }
     }
 
-    // question 필터링
-    let question = fullQuestion.replace(/\n+/g, ' ').trim();
-    const recentAiResponses = context
-      .filter((c) => c.startsWith('상담사:') || c.startsWith('상담사: '))
-      .slice(-4);
-
-    const allQuestionsRecently =
-      recentAiResponses.length >= 4 &&
-      recentAiResponses.every((r) => r.includes('?'));
-
-    if (allQuestionsRecently && question.endsWith('?')) {
-      const sentences = question.split(/(?<=[.!?])\s*/);
-      const nonQuestionSentences = sentences.filter(
-        (s: string) => !s.trim().endsWith('?'),
-      );
-      question =
-        nonQuestionSentences.length > 0
-          ? nonQuestionSentences.join(' ').trim()
-          : '네, 잘 들었어요. 천천히 이야기해주세요.';
-    }
+    const question = OpenAIAgent.validateQuestion(fullQuestion, context);
 
     // options 별도 생성 (JSON 모드)
     const modeOptionsPrompt = counselorType
@@ -385,27 +369,37 @@ ${wrapUntrustedPromptData('generated_question', question)}
 위 질문에 답할 수 있는 8개의 선택지를 **모두 부드러운 존댓말(~요체)로** 생성하세요.`;
 
     const optionsResponse = await this.openai.chat.completions.create({
+      store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: optionsSystemPrompt },
         {
           role: 'user',
-          content:
-            'JSON 형식으로 응답: {"options": ["옵션1", "옵션2", ...]}. 모든 옵션은 반드시 존댓말 ~요체로.',
+          content: `${wrapUntrustedPromptData('counseling_context', context.join('\n'))}\n\n이미 답한 내용이나 같은 질문을 반복하지 말고, 새로운 구체적 정보 또는 정리로 이어지는 선택지를 작성하세요.\nJSON 형식으로 응답: {"options": ["옵션1", "옵션2", ...]}. 모든 옵션은 반드시 존댓말 ~요체로.`,
         },
       ],
       response_format: { type: 'json_object' },
       max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS,
     });
 
-    const optionsResult = JSON.parse(
-      optionsResponse.choices[0].message.content || '{"options": []}',
+    let optionsResult: unknown = {};
+    try {
+      optionsResult = JSON.parse(
+        optionsResponse.choices[0].message.content || '{}',
+      );
+    } catch {
+      // A parse failure must not break an otherwise valid counseling turn.
+    }
+    const options = OpenAIAgent.validateOptions(
+      optionsResult && typeof optionsResult === 'object'
+        ? (optionsResult as Record<string, unknown>).options
+        : undefined,
+      context,
     );
-    let options: string[] = optionsResult.options || [];
 
-    // 톤 후처리: 반말 종결어미 → 존댓말 변환 + "조언해주세요" 보정
-    options = OpenAIAgent.normalizeOptionsTone(options);
+    // UI text and the options prompt use exactly the same validated question.
+    yield { type: 'question_chunk', content: question };
 
     yield {
       type: 'options',
@@ -421,6 +415,7 @@ ${wrapUntrustedPromptData('generated_question', question)}
     mode: ResponseMode,
     userMessage?: string,
     counselorType?: CounselorType,
+    signal?: AbortSignal,
   ): Promise<string> {
     if (!this.hasApiKey) {
       return this.getFallbackResponse(mode, counselorType);
@@ -446,16 +441,20 @@ ${wrapUntrustedPromptData(
 
 ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응답을 해주세요.'}`;
 
-    const response = await this.openai.chat.completions.create({
-      model: PROMPT_CONFIG.MODELS.COUNSELING,
-      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.COUNSELING,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      max_completion_tokens:
-        PROMPT_CONFIG.MAX_OUTPUT_TOKENS.COUNSELING_RESPONSE,
-    });
+    const response = await this.openai.chat.completions.create(
+      {
+        store: false,
+        model: PROMPT_CONFIG.MODELS.COUNSELING,
+        reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.COUNSELING,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_completion_tokens:
+          PROMPT_CONFIG.MAX_OUTPUT_TOKENS.COUNSELING_RESPONSE,
+      },
+      { signal },
+    );
 
     return response.choices[0].message.content || '';
   }
@@ -464,17 +463,8 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     mode: ResponseMode,
     counselorType?: CounselorType,
   ): string {
-    // 상담가 유형별 기본 응답
-    if (counselorType) {
-      const counselorFallbacks: Record<CounselorType, string> = {
-        T: '상황을 정리해보면, 지금 겪고 계신 일이 복잡하게 느껴지실 수 있어요. 하나씩 객관적으로 살펴보면서 해결책을 찾아가면 어떨까요?',
-        F: '말씀해주셔서 감사해요. 그런 상황에서 그렇게 느끼시는 건 정말 자연스러운 거예요. 혼자 감당하느라 많이 힘드셨을 거예요. 제가 함께할게요.',
-        reaction: '아... 그러셨군요. 많이 놀라셨겠어요.',
-        listening: '네... 그러셨군요.',
-      };
-      return counselorFallbacks[counselorType];
-    }
-
+    // The selected response mode defines the boundary, including offline fallbacks.
+    void counselorType;
     return RESPONSE_MODE_FALLBACKS[mode];
   }
 
@@ -485,6 +475,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     }
 
     const response = await this.openai.chat.completions.create({
+      store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
@@ -531,13 +522,14 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     }
 
     const response = await this.openai.chat.completions.create({
+      store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
         { role: 'system', content: EMPATHY_COMMENT_PROMPT },
         {
           role: 'user',
-          content: wrapUntrustedPromptData('selected_option', selectedOption),
+          content: `${wrapUntrustedPromptData('counseling_context', context.join('\n'))}\n\n${wrapUntrustedPromptData('selected_option', selectedOption)}`,
         },
       ],
       max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.EMPATHY_COMMENT,
@@ -582,6 +574,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     const counselorPrompt = COUNSELOR_TYPE_PROMPTS[counselorType];
 
     const response = await this.openai.chat.completions.create({
+      store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
@@ -635,6 +628,7 @@ ${wrapUntrustedPromptData('selected_option', selectedOption)}
     }
 
     const response = await this.openai.chat.completions.create({
+      store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
@@ -692,6 +686,7 @@ ${wrapUntrustedPromptData(
 ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응답을 해주세요.'}`;
 
     const stream = await this.openai.chat.completions.create({
+      store: false,
       model: PROMPT_CONFIG.MODELS.COUNSELING,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.COUNSELING,
       messages: [
@@ -732,6 +727,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       : `대화 내용:\n${counselingContext}`;
 
     const response = await this.openai.chat.completions.create({
+      store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
       messages: [
@@ -758,6 +754,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
 
     try {
       const response = await this.openai.chat.completions.create({
+        store: false,
         model: PROMPT_CONFIG.MODELS.UTILITY,
         reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
         messages: [
@@ -797,6 +794,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
 
     try {
       const response = await this.openai.chat.completions.create({
+        store: false,
         model: PROMPT_CONFIG.MODELS.UTILITY,
         reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
         messages: [
@@ -815,6 +813,84 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       // 오류 시 처음 500자만 반환
       return text.slice(0, 500);
     }
+  }
+
+  private static validateQuestion(value: unknown, context: string[]): string {
+    const parsed = z.string().trim().min(1).max(2000).safeParse(value);
+    let question = parsed.success
+      ? parsed.data.replace(/\n+/g, ' ')
+      : '지금까지 나눈 이야기를 정리하거나, 더 전하고 싶은 내용을 직접 적어주세요.';
+    const recent = context
+      .filter((entry) => entry.startsWith('상담사:'))
+      .slice(-4);
+    if (
+      recent.length === 4 &&
+      recent.every((entry) => entry.includes('?')) &&
+      question.endsWith('?')
+    ) {
+      const statements = question
+        .split(/(?<=[.!?])\s*/)
+        .filter((sentence) => !sentence.trim().endsWith('?'));
+      question =
+        statements.join(' ').trim() ||
+        '지금까지 나눈 이야기를 정리하거나, 더 전하고 싶은 내용을 직접 적어주세요.';
+    }
+    const questionKey = (text: string) =>
+      text.normalize('NFKC').replace(/[\s\p{P}]/gu, '');
+    if (
+      recent.some(
+        (entry) =>
+          questionKey(entry.replace(/^상담사:\s*/, '')) ===
+            questionKey(question) ||
+          (questionKey(question).length >= 5 &&
+            questionKey(entry.replace(/^상담사:\s*/, '')).endsWith(
+              questionKey(question),
+            )),
+      )
+    ) {
+      question =
+        '지금까지 나눈 이야기를 정리하거나, 더 전하고 싶은 내용을 직접 적어주세요.';
+    }
+    return question;
+  }
+
+  private static validateOptions(value: unknown, context: string[]): string[] {
+    const parsed = z
+      .array(z.string().trim().min(1).max(100))
+      .min(2)
+      .max(8)
+      .safeParse(value);
+    if (!parsed.success)
+      return ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
+    const key = (text: string) =>
+      text
+        .normalize('NFKC')
+        .replace(/[\s\p{P}]/gu, '')
+        .toLowerCase();
+    const recentAnswers = new Set(
+      context
+        .slice(-12)
+        .filter((entry) => entry.startsWith('나:'))
+        .map((entry) => key(entry.slice(2))),
+    );
+    const seen = new Set<string>();
+    const options = OpenAIAgent.normalizeOptionsTone(parsed.data).filter(
+      (option) => {
+        const normalized = key(option);
+        const isAction = /(조언|정리)\s*해주세요/.test(option);
+        if (
+          option.length > 15 ||
+          seen.has(normalized) ||
+          (!isAction && recentAnswers.has(normalized))
+        )
+          return false;
+        seen.add(normalized);
+        return true;
+      },
+    );
+    if (options.length < 2)
+      return ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
+    return options;
   }
 
   /**
