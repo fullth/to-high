@@ -1,55 +1,34 @@
 "use client";
-
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
-import { claimSession } from "@/lib/api";
-
+import { Suspense, useEffect, useRef } from "react";
 function CallbackContent() {
-  const searchParams = useSearchParams();
-
+  const params = useSearchParams();
+  const initialized = useRef(false);
   useEffect(() => {
-    const token = searchParams.get("token");
-
+    if (initialized.current) return;
+    initialized.current = true;
+    const token = params.get("token");
+    window.history.replaceState(null, "", "/auth/callback");
+    // Legacy guest sessions and drafts are never carried into the new product.
+    localStorage.removeItem("pendingClaimSession");
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith("guestSession:")) localStorage.removeItem(key);
     if (!token) {
-      window.location.href = "/?error=auth_failed";
+      window.location.replace("/characters?error=auth_failed");
       return;
     }
-
     localStorage.setItem("accessToken", token);
-
-    // 로그인 전 진행하던 게스트 대화가 있으면 이어받고 그 화면으로 복귀한다.
-    const pendingSession = localStorage.getItem("pendingClaimSession");
-    if (pendingSession) {
-      localStorage.removeItem("pendingClaimSession");
-      claimSession(pendingSession, token)
-        .catch(() => {
-          // 이어받기 실패해도 로그인은 됐으니 해당 세션으로 이동은 시도
-        })
-        .finally(() => {
-          window.location.href = `/chat/${pendingSession}`;
-        });
-      return;
-    }
-
-    window.location.href = "/";
-  }, [searchParams]);
-
+    window.location.replace("/characters");
+  }, [params]);
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-muted-foreground">로그인 처리 중...</p>
-    </div>
+    <main className="p-8">
+      <p>로그인 처리 중...</p>
+    </main>
   );
 }
-
 export default function AuthCallbackPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <p className="text-muted-foreground">불러오는 중...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<p>불러오는 중...</p>}>
       <CallbackContent />
     </Suspense>
   );

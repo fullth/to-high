@@ -10,6 +10,10 @@ export class SessionDocument extends Document {
   @Prop({ default: false })
   isGuest: boolean;
 
+  // 원문 capability는 저장하지 않는다. 기존 게스트는 이 값이 없어 접근을 거부한다.
+  @Prop({ select: false })
+  guestAccessHash?: string;
+
   // 게스트 세션 만료 시각(생성 +30일). TTL 인덱스로 자동 삭제된다.
   // 로그인(claim) 시 제거해 영구 보관으로 전환한다. 로그인 세션은 이 필드가 없다.
   @Prop({ type: Date })

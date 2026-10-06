@@ -9,7 +9,7 @@ import {
   Body,
   Req,
   UseGuards,
-  ForbiddenException,
+  GoneException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -42,10 +42,10 @@ export class AdminController {
       : ['xoghksdla@gmail.com']; // 기본값
   }
 
-  private checkAdmin(email: string) {
-    if (!this.adminEmails.includes(email)) {
-      throw new ForbiddenException('관리자 권한이 필요합니다.');
-    }
+  private checkAdmin(_email: string) {
+    void _email;
+    // Retained legacy data is neither exposed nor deleted by this MVP.
+    throw new GoneException('이전 관리자 기능은 제공하지 않습니다.');
   }
 
   @Get('dashboard')
@@ -57,7 +57,7 @@ export class AdminController {
     status: 200,
     description: '대시보드 통계',
   })
-  async getDashboard(@Req() req: any) {
+  async getDashboard(@Req() req: { user: { email: string } }) {
     this.checkAdmin(req.user.email);
     return this.adminService.getDashboardStats();
   }
@@ -71,7 +71,7 @@ export class AdminController {
     status: 200,
     description: '사용자 목록',
   })
-  async getUsers(@Req() req: any) {
+  async getUsers(@Req() req: { user: { email: string } }) {
     this.checkAdmin(req.user.email);
     return this.adminService.getUsersWithSessionCount();
   }
@@ -81,22 +81,38 @@ export class AdminController {
     summary: '세션 목록',
     description: '모든 세션 목록을 조회합니다. 비로그인 사용자 세션 포함.',
   })
-  @ApiQuery({ name: 'anonymous', required: false, type: Boolean, description: '비로그인 세션만 필터링' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: '조회 개수 (기본 50)' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: '시작 위치' })
+  @ApiQuery({
+    name: 'anonymous',
+    required: false,
+    type: Boolean,
+    description: '비로그인 세션만 필터링',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: '조회 개수 (기본 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: '시작 위치',
+  })
   @ApiResponse({
     status: 200,
     description: '세션 목록',
   })
   async getSessions(
-    @Req() req: any,
+    @Req() req: { user: { email: string } },
     @Query('anonymous') anonymous?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
     this.checkAdmin(req.user.email);
     return this.adminService.getAllSessions({
-      anonymous: anonymous === 'true' ? true : anonymous === 'false' ? false : undefined,
+      anonymous:
+        anonymous === 'true' ? true : anonymous === 'false' ? false : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
     });
@@ -112,17 +128,12 @@ export class AdminController {
     status: 200,
     description: '삭제 완료',
   })
-  async deleteSessions(@Req() req: any, @Body() body: { sessionIds: string[] }) {
+  async deleteSessions(
+    @Req() req: { user: { email: string } },
+    @Body() body: { sessionIds: string[] },
+  ) {
     this.checkAdmin(req.user.email);
-    console.log('Delete batch request:', body);
-    try {
-      const result = await this.adminService.deleteSessions(body.sessionIds);
-      console.log('Delete batch result:', result);
-      return result;
-    } catch (error) {
-      console.error('Delete batch error:', error);
-      throw error;
-    }
+    return this.adminService.deleteSessions(body.sessionIds);
   }
 
   @Get('sessions/:sessionId')
@@ -134,7 +145,10 @@ export class AdminController {
     status: 200,
     description: '세션 상세 정보',
   })
-  async getSessionDetail(@Req() req: any, @Param('sessionId') sessionId: string) {
+  async getSessionDetail(
+    @Req() req: { user: { email: string } },
+    @Param('sessionId') sessionId: string,
+  ) {
     this.checkAdmin(req.user.email);
     return this.adminService.getSessionDetail(sessionId);
   }
@@ -148,7 +162,10 @@ export class AdminController {
     status: 200,
     description: '삭제 완료',
   })
-  async deleteSession(@Req() req: any, @Param('sessionId') sessionId: string) {
+  async deleteSession(
+    @Req() req: { user: { email: string } },
+    @Param('sessionId') sessionId: string,
+  ) {
     this.checkAdmin(req.user.email);
     return this.adminService.deleteSession(sessionId);
   }
@@ -158,7 +175,7 @@ export class AdminController {
     summary: '알림 테스트',
     description: '이메일 알림 테스트를 발송합니다.',
   })
-  async testNotification(@Req() req: any) {
+  async testNotification(@Req() req: { user: { email: string } }) {
     this.checkAdmin(req.user.email);
     // NotificationService를 직접 호출하기 위해 AdminService에 메서드 추가 필요
     return this.adminService.sendTestNotification();
@@ -169,14 +186,24 @@ export class AdminController {
     summary: '방문자 목록',
     description: '비로그인 방문자 목록을 조회합니다.',
   })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: '조회 개수 (기본 50)' })
-  @ApiQuery({ name: 'offset', required: false, type: Number, description: '시작 위치' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: '조회 개수 (기본 50)',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    type: Number,
+    description: '시작 위치',
+  })
   @ApiResponse({
     status: 200,
     description: '방문자 목록',
   })
   async getVisitors(
-    @Req() req: any,
+    @Req() req: { user: { email: string } },
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
@@ -188,16 +215,22 @@ export class AdminController {
   }
 
   @Get('inquiries')
-  @ApiOperation({ summary: '문의 목록', description: '모든 문의를 조회합니다.' })
-  async getInquiries(@Req() req: any) {
+  @ApiOperation({
+    summary: '문의 목록',
+    description: '모든 문의를 조회합니다.',
+  })
+  async getInquiries(@Req() req: { user: { email: string } }) {
     this.checkAdmin(req.user.email);
     return this.inquiryService.getAllInquiries();
   }
 
   @Post('inquiries/:id/reply')
-  @ApiOperation({ summary: '문의 답변', description: '문의에 관리자 답변을 작성합니다.' })
+  @ApiOperation({
+    summary: '문의 답변',
+    description: '문의에 관리자 답변을 작성합니다.',
+  })
   async replyInquiry(
-    @Req() req: any,
+    @Req() req: { user: { email: string } },
     @Param('id') id: string,
     @Body() body: { message: string },
   ) {
@@ -207,7 +240,10 @@ export class AdminController {
 
   @Patch('inquiries/:id/close')
   @ApiOperation({ summary: '문의 종료', description: '문의를 종료합니다.' })
-  async closeInquiry(@Req() req: any, @Param('id') id: string) {
+  async closeInquiry(
+    @Req() req: { user: { email: string } },
+    @Param('id') id: string,
+  ) {
     this.checkAdmin(req.user.email);
     return this.inquiryService.closeInquiry(id);
   }

@@ -7,11 +7,13 @@ import {
   COUNSELOR_TYPE_PROMPTS,
   INSTRUCTION_BOUNDARY_PROMPT,
   RESPONSE_MODE_PROMPTS,
+  RESPONSE_MODE_OPTIONS_BOUNDARY_PROMPT,
   PROMPT_CONFIG,
 } from '../../prompts';
 
 type CompletionRequest = {
   model: string;
+  store?: boolean;
   reasoning_effort?: string;
   messages: Array<{ role: string; content: string }>;
   max_completion_tokens?: number;
@@ -39,6 +41,46 @@ describe('OpenAIAgent 프롬프트 경계', () => {
     };
   });
 
+  afterEach(() => {
+    for (const [request] of createCompletion.mock.calls as Array<
+      [CompletionRequest]
+    >) {
+      expect(request.store).toBe(false);
+    }
+  });
+
+  it('SDK 요청 시간과 자동 재시도를 제한한다', () => {
+    const configuredAgent = new OpenAIAgent({
+      get: jest.fn().mockReturnValue('test-api-key'),
+    } as unknown as ConfigService);
+    const client = (
+      configuredAgent as unknown as {
+        openai: { timeout: number; maxRetries: number };
+      }
+    ).openai;
+    expect(client.timeout).toBe(30_000);
+    expect(client.maxRetries).toBe(0);
+  });
+
+  it('미보관 응답의 중단 신호를 SDK에 전달한다', async () => {
+    createCompletion.mockResolvedValue({
+      choices: [{ message: { content: '응답' } }],
+    });
+    const controller = new AbortController();
+    await agent.generateResponse(
+      ['나: 힘들어요'],
+      'comfort',
+      undefined,
+      'F',
+      controller.signal,
+    );
+    expect(createCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({ store: false }),
+      { signal: controller.signal },
+    );
+    expect(getMessage(getRequest(0), 'system')).toContain('독점적인 관계');
+  });
+
   const getRequest = (callIndex: number): CompletionRequest =>
     (createCompletion.mock.calls as unknown as Array<[CompletionRequest]>)[
       callIndex
@@ -46,6 +88,82 @@ describe('OpenAIAgent 프롬프트 경계', () => {
 
   const getMessage = (request: CompletionRequest, role: string): string =>
     request.messages.find((message) => message.role === role)?.content ?? '';
+
+  it('선택지 생성도 같은 요청 중단 신호를 SDK에 전달한다', async () => {
+    createCompletion.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              question: '어떤 마음인가요?',
+              options: ['더 말할게요', '정리해주세요'],
+            }),
+          },
+        },
+      ],
+    });
+    const controller = new AbortController();
+    await agent.generateResponse(
+      ['나: 힘들어요'],
+      'comfort',
+      undefined,
+      'F',
+      controller.signal,
+    );
+    await agent.generateOptions(
+      ['나: 힘들어요', '상담사: 응답'],
+      'collecting',
+      'daily',
+      'F',
+      controller.signal,
+    );
+    expect(createCompletion).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ store: false }),
+      { signal: controller.signal },
+    );
+    expect(createCompletion).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ store: false }),
+      { signal: controller.signal },
+    );
+  });
+
+  it.each([
+    'comfort',
+    'listen',
+    'organize',
+    'validate',
+    'direction',
+    'similar',
+  ] as const)(
+    '%s 모드의 질문·선택지도 신뢰된 동일 경계를 포함한다',
+    async (mode) => {
+      createCompletion.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                question: '',
+                options: ['직접 이야기할게요', '여기서 마칠게요'],
+              }),
+            },
+          },
+        ],
+      });
+      await agent.generateOptions(
+        ['나: 힘들어요'],
+        'collecting',
+        'daily',
+        'T',
+        undefined,
+        mode,
+      );
+      const system = getMessage(getRequest(0), 'system');
+      expect(system).toContain(RESPONSE_MODE_PROMPTS[mode]);
+      expect(system).toContain(RESPONSE_MODE_OPTIONS_BOUNDARY_PROMPT);
+    },
+  );
 
   it('응답 모드 규칙을 항상 포함하고 상담사 타입은 보조 스타일로 합성한다', async () => {
     createCompletion.mockResolvedValue({
@@ -279,4 +397,101 @@ describe('OpenAIAgent 프롬프트 경계', () => {
       ),
     ).toEqual(expectedOutputLimits);
   });
+  it('검증한 질문만 전송하고 선택지에도 동일한 질문과 대화 이력을 전달한다', async () => {
+    const context = [
+      '[이전 대화 요약] 직장에서 갈등을 겪었어요',
+      ...Array.from({ length: 4 }, (_, i) => `상담사: 질문 ${i}?`),
+      '나: 화가 났어요',
+    ];
+    createCompletion
+      .mockResolvedValueOnce({
+        async *[Symbol.asyncIterator]() {
+          await Promise.resolve();
+          yield { choices: [{ delta: { content: '힘드셨겠어요. ' } }] };
+          yield { choices: [{ delta: { content: '왜 그러셨나요?' } }] };
+        },
+      })
+      .mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                options: ['화가 났어요', '화가 났어요', '  ', 5],
+              }),
+            },
+          },
+        ],
+      });
+    const events = [];
+    for await (const event of agent.generateOptionsStream(
+      context,
+      'collecting',
+      'self',
+      'T',
+    ))
+      events.push(event);
+    expect(events.filter((event) => event.type === 'question_chunk')).toEqual([
+      { type: 'question_chunk', content: '힘드셨겠어요.' },
+    ]);
+    expect(getMessage(getRequest(1), 'system')).toContain('힘드셨겠어요.');
+    expect(getMessage(getRequest(1), 'system')).not.toContain('왜 그러셨나요?');
+    expect(getMessage(getRequest(1), 'user')).toContain(
+      '직장에서 갈등을 겪었어요',
+    );
+    expect(getMessage(getRequest(1), 'user')).toContain('나: 화가 났어요');
+    expect(events.at(-1)?.options).toEqual([
+      '직접 이야기할게요',
+      '다른 이야기예요',
+      '정리해주세요',
+    ]);
+  });
+
+  it('선택지의 중복, 방금 답한 내용, 긴 항목을 제거하고 정리 경로를 유지한다', async () => {
+    createCompletion.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              question: '지금 무엇이 도움이 될까요?',
+              options: [
+                '슬펐어요',
+                '슬펐어요',
+                '  쉬고 싶어요  ',
+                '쉬고 싶어요',
+                '너무 길어서 화면에 표시하기 적절하지 않은 선택지예요',
+                '정리해주세요',
+              ],
+            }),
+          },
+        },
+      ],
+    });
+    const result = await agent.generateOptions(
+      ['나: 슬펐어요'],
+      'collecting',
+      'self',
+      'T',
+    );
+    expect(result.options).toEqual(['쉬고 싶어요', '정리해주세요']);
+  });
+
+  it.each(['broken json', 'null', '{"question": 7, "options": "wrong"}'])(
+    '비정상 모델 출력 %s도 안전한 선택지를 반환한다',
+    async (content) => {
+      createCompletion.mockResolvedValue({
+        choices: [{ message: { content } }],
+      });
+      const result = await agent.generateOptions(
+        ['나: 힘들어요'],
+        'collecting',
+        'self',
+      );
+      expect(result.question.length).toBeGreaterThan(0);
+      expect(result.options).toEqual([
+        '직접 이야기할게요',
+        '다른 이야기예요',
+        '정리해주세요',
+      ]);
+    },
+  );
 });

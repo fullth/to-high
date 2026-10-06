@@ -1,3 +1,4 @@
+import { PrivacyExceptionFilter } from './common/privacy-exception.filter';
 import './instrument';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -26,6 +27,8 @@ async function bootstrap() {
   // 보안 헤더 설정 (Helmet)
   app.use(helmet());
 
+  app.useGlobalFilters(new PrivacyExceptionFilter());
+
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   // CORS 설정 - 프로덕션과 개발 환경 분리
@@ -38,7 +41,12 @@ async function bootstrap() {
     origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-Guest-Token',
+    ],
   });
 
   // Swagger 설정 - 개발 환경에서만 활성화
