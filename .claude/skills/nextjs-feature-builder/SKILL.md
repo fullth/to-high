@@ -26,12 +26,12 @@ apps/web/src/
 │   ├── chat/                        ← 채팅 전용 (chat-bubble, chat-sidebar, chat.css)
 │   ├── landing/                     ← 랜딩 전용 (wirocare-landing, landing.css)
 │   ├── category-button-variants.tsx ← 카테고리 버튼 5가지 변형 (gradient-glow, glassmorphism, neon-cyber, minimal-interactive, card-3d)
-│   ├── topic-button.tsx, mindfulness-card.tsx, contact-sidebar.tsx, logo.tsx
+│   ├── topic-button.tsx, logo.tsx
 │   └── {feature}.tsx                ← 기타 기능 컴포넌트
 ├── contexts/auth-context.tsx
 └── lib/
     ├── api.ts                ← API 클라이언트 (중앙화, *Stream 함수 포함)
-    ├── emotional-messages.ts ← 감정 텍스트 카탈로그
+    ├── site-content.ts       ← 홈·검색·공유 이미지 공통 소개 문구
     └── utils.ts
 ```
 
@@ -123,7 +123,7 @@ selecting ─→ mode ────→ chatting ──→ ended
 **원천 문서:** 프로젝트 루트 `DESIGN.md` (Google Stitch 9섹션 포맷). UI·디자인 작업 시 **반드시 먼저 읽는다.**
 
 - 색상 토큰·타이포·그림자·Radius·반응형 규약 → `DESIGN.md` §2~§6
-- 컴포넌트 패턴(Button/Card/TopicButton/MindfulnessCard) → `DESIGN.md` §4
+- 컴포넌트 패턴(Button/Card/TopicButton/ChatBubble)과 서비스 소개 문구 → `DESIGN.md` §4
 - 크라이시스 UI·접근성 필수 규약 → `DESIGN.md` §7 Do/Don't
 - 에이전트 빠른 참조 체크리스트 → `DESIGN.md` §9 Agent Prompt Guide
 

@@ -9,15 +9,22 @@ interface ChatBubbleProps {
   role: Role;
   content: string;
   variant?: "ai" | "ai glow";
+  animate?: boolean;
   children?: React.ReactNode;
 }
 
-export function ChatBubble({ role, content, variant, children }: ChatBubbleProps) {
+export function ChatBubble({
+  role,
+  content,
+  variant,
+  animate = true,
+  children,
+}: ChatBubbleProps) {
   const isUser = role === "user";
   const cls = isUser ? "user" : variant || "ai";
 
   return (
-    <div className={`ch-row ${isUser ? "user" : ""}`}>
+    <div className={`ch-row ${isUser ? "user" : ""}${animate ? "" : " no-anim"}`}>
       <div className={`ch-bubble ${cls}`}>
         {isUser ? (
           content
@@ -32,6 +39,7 @@ export function ChatBubble({ role, content, variant, children }: ChatBubbleProps
               ol: ({ children }) => <ol className="ch-md-ol">{children}</ol>,
               li: ({ children }) => <li>{children}</li>,
               code: ({ children }) => <code className="ch-md-code">{children}</code>,
+              img: ({ alt }) => <>{alt}</>,
               a: ({ children, href }) => (
                 <a href={href} className="ch-md-a" target="_blank" rel="noreferrer">
                   {children}

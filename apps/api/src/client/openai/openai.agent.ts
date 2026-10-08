@@ -423,7 +423,7 @@ ${wrapUntrustedPromptData('generated_question', question)}
     counselorType?: CounselorType,
   ): Promise<string> {
     if (!this.hasApiKey) {
-      return this.getFallbackResponse(mode, counselorType);
+      return RESPONSE_MODE_FALLBACKS[mode];
     }
 
     const stylePrompt = `${RESPONSE_MODE_PROMPTS[mode]}
@@ -460,28 +460,50 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     return response.choices[0].message.content || '';
   }
 
-  private getFallbackResponse(
-    mode: ResponseMode,
-    counselorType?: CounselorType,
-  ): string {
-    // 상담가 유형별 기본 응답
-    if (counselorType) {
-      const counselorFallbacks: Record<CounselorType, string> = {
-        T: '상황을 정리해보면, 지금 겪고 계신 일이 복잡하게 느껴지실 수 있어요. 하나씩 객관적으로 살펴보면서 해결책을 찾아가면 어떨까요?',
-        F: '말씀해주셔서 감사해요. 그런 상황에서 그렇게 느끼시는 건 정말 자연스러운 거예요. 혼자 감당하느라 많이 힘드셨을 거예요. 제가 함께할게요.',
-        reaction: '아... 그러셨군요. 많이 놀라셨겠어요.',
-        listening: '네... 그러셨군요.',
-      };
-      return counselorFallbacks[counselorType];
-    }
+  private getReadableContext(context: string[]): string[] {
+    const category =
+      '(?:self|future|work|relationship|love|daily|other|direct)';
+    const categoryEntry = new RegExp(`^카테고리: ${category}$`);
+    const historyEntry = new RegExp(`^\\[이전 상담: ${category}\\] `, 'gm');
 
-    return RESPONSE_MODE_FALLBACKS[mode];
+    return context
+      .map((entry) => {
+        if (categoryEntry.test(entry)) return '';
+
+        // Strip only the stored entry's known prefix, never brackets in its body.
+        if (/^(?:나|상담사):\s/.test(entry)) {
+          return entry.replace(/^(?:나|상담사):\s/, '').trim();
+        }
+        if (/^\[(?:사용자 직접 입력|말하기 어려움 선택)\]\s/.test(entry)) {
+          return entry
+            .replace(/^\[(?:사용자 직접 입력|말하기 어려움 선택)\]\s/, '')
+            .trim();
+        }
+        if (/^\[위기 감지: (?:high|medium|low)\]\s/.test(entry)) {
+          return entry
+            .replace(/^\[위기 감지: (?:high|medium|low)\]\s(?:나: )?/, '')
+            .trim();
+        }
+        if (entry.startsWith('[이전 상담 기록]\n')) {
+          return entry
+            .slice('[이전 상담 기록]\n'.length)
+            .replace(historyEntry, '')
+            .trim();
+        }
+        return entry
+          .replace(
+            /^\[(?:이전 상담 불러오기 - 요약|이전 대화 요약|사용자 프로필)\]\s/,
+            '',
+          )
+          .trim();
+      })
+      .filter(Boolean);
   }
 
   async summarizeSession(context: string[]): Promise<string> {
     if (!this.hasApiKey) {
-      const keywords = context.slice(0, 3).join(', ');
-      return `상담 주제: ${keywords}`;
+      const keywords = this.getReadableContext(context).slice(0, 3).join(', ');
+      return keywords || '오늘 이야기를 마쳤어요.';
     }
 
     const response = await this.openai.chat.completions.create({
@@ -570,7 +592,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       Exclude<CounselorType, 'listening'>,
       string
     > = {
-      T: '상황을 정리해보면, 지금 겪고 계신 상황이 조금 복잡해 보여요. 핵심을 하나씩 풀어가면 좋을 것 같아요.',
+      T: '여러 일이 겹쳐 복잡하게 느껴지실 수 있어요. 가장 마음에 걸리는 일부터 함께 살펴볼게요.',
       F: '많이 힘드셨겠어요. 그런 마음이 드는 건 충분히 자연스러운 거예요. 혼자 감당하지 않으셔도 돼요.',
       reaction: '아... 그런 일이 있으셨군요.',
     };
@@ -625,8 +647,13 @@ ${wrapUntrustedPromptData('selected_option', selectedOption)}
 
     if (!this.hasApiKey) {
       // API 키 없을 때 기본 요약
-      const filtered = context.filter(
-        (c) => !c.startsWith('[이전 상담') && !c.startsWith('상담사:'),
+      const filtered = this.getReadableContext(
+        context.filter(
+          (c) =>
+            !c.startsWith('[이전 상담 기록]\n') &&
+            !c.startsWith('[이전 상담 불러오기 - 요약]\n') &&
+            !c.startsWith('상담사: '),
+        ),
       );
       if (filtered.length === 0) {
         return '천천히 마음을 열어주셔서 감사해요.';
@@ -666,8 +693,7 @@ ${wrapUntrustedPromptData('selected_option', selectedOption)}
     counselorType?: CounselorType,
   ): AsyncGenerator<string, void, unknown> {
     if (!this.hasApiKey) {
-      const fallback = this.getFallbackResponse(mode, counselorType);
-      yield fallback;
+      yield RESPONSE_MODE_FALLBACKS[mode];
       return;
     }
 
@@ -720,7 +746,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
   ): Promise<string> {
     if (!this.hasApiKey) {
       // API 키 없을 때 간단한 요약
-      return contextToSummarize.slice(-5).join(' / ');
+      return this.getReadableContext(contextToSummarize).slice(-5).join(' / ');
     }
 
     const counselingContext = wrapUntrustedPromptData(

@@ -675,25 +675,6 @@
 }
 .foot-links { display: flex; gap: 22px; flex-wrap: wrap; }
 .foot-links a:hover { color: var(--ink); }
-.crisis {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  border-radius: 14px;
-  background: var(--card);
-  border: 1px solid var(--line-2);
-  font-size: 13.5px;
-  color: var(--ink-2);
-  box-shadow: var(--shadow-sm);
-}
-.crisis b { color: var(--ink); }
-.crisis-mark {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--rose);
-  flex-shrink: 0;
-}
-
 /* ---------- utilities ---------- */
 .hero-grid {
   display: grid;

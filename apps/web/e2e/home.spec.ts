@@ -11,9 +11,13 @@ test.describe("홈페이지", () => {
 
   test("히어로 섹션이 표시된다", async ({ page }) => {
     await expect(
-      page.getByRole("heading", { name: /지치셨다면, 잘 오셨어요/ }),
+      page.getByRole("heading", {
+        name: "항상 여기 있겠습니다. 필요하실 때 찾아주세요.",
+      }),
     ).toBeVisible();
-    await expect(page.getByText(/말할 힘도 없을 때는/)).toBeVisible();
+    await expect(
+      page.getByText("말로 설명하기 어렵다면, 선택지를 누르며 이야기를 시작해 보세요."),
+    ).toBeVisible();
   });
 
   test("서비스 약속이 표시된다", async ({ page }) => {

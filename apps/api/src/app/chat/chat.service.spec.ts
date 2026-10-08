@@ -9,6 +9,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { CHAT_LIMITS } from '../../common/chat-limits';
 import { ChatRequestLimitService } from '../../common/chat-request-limit.service';
+import { detectCrisis } from '../../common/crisis-detector';
 import { SessionRepository } from '../../persistence/session/session.repository';
 import { UserProfileRepository } from '../../persistence/user-profile/user-profile.repository';
 import { UserRepository } from '../../persistence/user/user.repository';
@@ -389,6 +390,33 @@ describe('ChatService cost and safety guards', () => {
     expect(chunks.join('')).toContain('1577-0199');
     expect(openaiAgent.generateResponseStream).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['살기 싫어요', '많이 힘든 상황이시네요.', '1577-0199'],
+    ['죽고 싶어요', '지금 많이 힘드시군요.', '1393'],
+  ])(
+    '위기 응답은 안내 문구를 중복 도입 없이 한 번만 전달한다: %s',
+    async (message, intro, phone) => {
+      sessionService.findById.mockResolvedValue(createSession());
+      const chunks: string[] = [];
+      for await (const chunk of service.generateResponseStream(
+        '507f1f77bcf86cd799439011',
+        message,
+      )) {
+        chunks.push(chunk);
+      }
+
+      const response = chunks.join('');
+      expect(response).toBe(detectCrisis(message).recommendedAction);
+      expect(response.split(intro)).toHaveLength(2);
+      expect(response).toContain(phone);
+      expect(sessionService.addContext).toHaveBeenCalledWith(
+        '507f1f77bcf86cd799439011',
+        `상담사: ${response}`,
+      );
+      expect(openaiAgent.generateResponseStream).not.toHaveBeenCalled();
+    },
+  );
 
   it('저정보 자유 대화 입력은 LLM 호출 없이 정적 응답한다', async () => {
     sessionService.findById.mockResolvedValue(createSession());

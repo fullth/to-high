@@ -557,16 +557,12 @@ function ChatContent() {
 
           <div className="ch-messages anchor-end">
             {selectionHistory.map((item, idx) => (
-              <div
+              <ChatBubble
                 key={idx}
-                className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}
-              >
-                <div
-                  className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}
-                >
-                  {item.content}
-                </div>
-              </div>
+                role={item.type}
+                content={item.content}
+                animate={false}
+              />
             ))}
 
             {isLoading && (
@@ -614,7 +610,7 @@ function ChatContent() {
                 </div>
                 <div className="ch-inline-card">
                   <span className="ch-wall-eyebrow">
-                    어떤 대화 방식을 선호하세요?? 최대한 맞춰 드리고 싶어요
+                    지금 필요한 대화 방식을 골라 주세요.
                   </span>
                   <div className="ch-inline-modes">
                     {responseModes.map((rm) => (
@@ -715,16 +711,12 @@ function ChatContent() {
 
           <div className="ch-messages anchor-end">
             {selectionHistory.map((item, idx) => (
-              <div
+              <ChatBubble
                 key={`hist-${idx}`}
-                className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}
-              >
-                <div
-                  className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}
-                >
-                  {item.content}
-                </div>
-              </div>
+                role={item.type}
+                content={item.content}
+                animate={false}
+              />
             ))}
             {messages.map((msg, idx) => (
               <ChatBubble
@@ -842,16 +834,12 @@ function ChatContent() {
 
           <div className="ch-messages anchor-end">
             {selectionHistory.map((item, idx) => (
-              <div
+              <ChatBubble
                 key={`hist-${idx}`}
-                className={`ch-row ${item.type === "user" ? "user" : ""} no-anim`}
-              >
-                <div
-                  className={`ch-bubble ${item.type === "user" ? "user" : "ai"}`}
-                >
-                  {item.content}
-                </div>
-              </div>
+                role={item.type}
+                content={item.content}
+                animate={false}
+              />
             ))}
             {messages.map((msg, idx) => (
               <ChatBubble key={idx} role={msg.role} content={msg.content} />
