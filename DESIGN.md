@@ -149,11 +149,11 @@
 
 **선택 기준:** 랜딩에서는 `gradient-glow` 또는 `glassmorphism` 일관 사용. 한 화면에 variant 혼재 금지(시각적 통일성).
 
-### 4.4 MindfulnessCard (`components/mindfulness-card.tsx`)
+### 4.4 서비스 소개 문구 (`lib/site-content.ts`)
 
-"마음 한 스푼" 일일 돌봄 카드. `quote`·`tip` 두 타입. 랜덤 순환. 자극 없는 문구만.
+홈 소개, 검색·공유 메타데이터, Open Graph 이미지는 `SERVICE_DESCRIPTION`을 함께 사용한다. 소개 문구를 바꿀 때 이 상수를 수정한다.
 
-추가로 `lib/emotional-messages.ts`(2026-05 신규)에 감성 카피 중앙화 — 새 카피 추가 시 이 파일에만 수정.
+사용하지 않던 마음 돌봄 카드와 계절별 감성 메시지는 제거했다. 화면 문구는 사용자가 할 수 있는 행동을 짧고 구체적으로 설명한다.
 
 ### 4.5 Chat Components (`components/chat/`) — 분리 완료
 

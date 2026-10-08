@@ -21,6 +21,8 @@ import { OpenAIAgent } from '../src/client/openai/openai.agent';
 import { JwtStrategy } from '../src/app/auth/strategy/jwt.strategy';
 import { ChatController } from '../src/controller/chat/chat.controller';
 import { NotificationService } from '../src/common/notification.service';
+import { ChatRequestLimitService } from '../src/common/chat-request-limit.service';
+import { INITIAL_OPTIONS, INITIAL_QUESTIONS } from '../src/prompts';
 
 describe('ChatController (e2e)', () => {
   let app: INestApplication<App>;
@@ -90,6 +92,7 @@ describe('ChatController (e2e)', () => {
       providers: [
         AuthService,
         ChatService,
+        ChatRequestLimitService,
         SessionService,
         UserRepository,
         SessionRepository,
@@ -128,15 +131,26 @@ describe('ChatController (e2e)', () => {
   });
 
   describe('POST /chat/start', () => {
-    it('인증 없이 접근 시 401 반환', async () => {
+    it('로그인 없이 게스트 세션을 시작하고 고정 질문을 반환한다', async () => {
       // given
       // when
       const response = await request(app.getHttpServer())
         .post('/chat/start')
-        .send({ category: '직장' });
+        .send({ category: 'work' });
+      const body = response.body as {
+        sessionId: string;
+        question: string;
+        options: string[];
+      };
 
       // then
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(201);
+      expect(body.question).toBe(INITIAL_QUESTIONS.work);
+      expect(body.options).toEqual(INITIAL_OPTIONS.work);
+      expect(body.options).toHaveLength(8);
+      const session = await sessionModel.findById(body.sessionId);
+      expect(session?.isGuest).toBe(true);
+      expect(mockOpenAIAgent.generateOptions).not.toHaveBeenCalled();
     });
 
     it('세션 시작 성공', async () => {
@@ -145,16 +159,26 @@ describe('ChatController (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/chat/start')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ category: '직장' });
+        .send({ category: 'work' });
+      const body = response.body as {
+        sessionId: string;
+        question: string;
+        options: string[];
+      };
 
       // then
       expect(response.status).toBe(201);
-      expect(response.body.sessionId).toBeDefined();
-      expect(response.body.question).toBe('오늘 어떤 일이 있었나요?');
-      expect(response.body.options).toHaveLength(3);
+      expect(body.sessionId).toBeDefined();
+      expect(body.question).toBe(INITIAL_QUESTIONS.work);
+      expect(body.options).toEqual(INITIAL_OPTIONS.work);
+      expect(body.options).toHaveLength(8);
+      const session = await sessionModel.findById(body.sessionId);
+      expect(session?.userId.toString()).toBe(testUser._id.toString());
+      expect(session?.isGuest).toBe(false);
+      expect(mockOpenAIAgent.generateOptions).not.toHaveBeenCalled();
     });
 
-    it('category 없이 요청 시 400 반환', async () => {
+    it('카테고리와 직접 입력이 모두 없으면 400 반환', async () => {
       // given
       // when
       const response = await request(app.getHttpServer())
@@ -165,6 +189,15 @@ describe('ChatController (e2e)', () => {
       // then
       expect(response.status).toBe(400);
     });
+
+    it('지원하지 않는 category는 400을 반환한다', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/chat/start')
+        .send({ category: '직장' });
+
+      expect(response.status).toBe(400);
+      expect(await sessionModel.countDocuments()).toBe(0);
+    });
   });
 
   describe('POST /chat/select/stream', () => {
@@ -172,8 +205,8 @@ describe('ChatController (e2e)', () => {
       // given
       const session = await sessionModel.create({
         userId: testUser._id,
-        context: ['카테고리: 직장'],
-        category: '직장',
+        context: ['카테고리: work'],
+        category: 'work',
         status: 'active',
       });
 
@@ -181,10 +214,13 @@ describe('ChatController (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/chat/select/stream')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ sessionId: session._id.toString(), selectedOption: '직장 문제' });
+        .send({
+          sessionId: session._id.toString(),
+          selectedOption: '직장 문제',
+        });
 
       // then
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.headers['content-type']).toBe('text/event-stream');
 
       const text = response.text;
@@ -196,8 +232,8 @@ describe('ChatController (e2e)', () => {
       // given
       const session = await sessionModel.create({
         userId: testUser._id,
-        context: ['카테고리: 직장'],
-        category: '직장',
+        context: ['카테고리: work'],
+        category: 'work',
         status: 'active',
       });
 
@@ -205,25 +241,48 @@ describe('ChatController (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/chat/select/stream')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({ sessionId: session._id.toString(), selectedOption: '직장 문제' });
+        .send({
+          sessionId: session._id.toString(),
+          selectedOption: '직장 문제',
+        });
 
       // then
-      const lines = response.text.split('\n').filter(line => line.startsWith('data: '));
-      const chunks = lines.map(line => {
-        try {
-          return JSON.parse(line.replace('data: ', ''));
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
+      const lines = response.text
+        .split('\n')
+        .filter((line) => line.startsWith('data: '));
+      type StreamEvent = {
+        type?: string;
+        content?: string;
+        question?: string;
+        options?: string[];
+      };
+      const chunks = lines
+        .map((line): StreamEvent | null => {
+          try {
+            return JSON.parse(line.replace('data: ', '')) as StreamEvent;
+          } catch {
+            return null;
+          }
+        })
+        .filter((chunk): chunk is StreamEvent => chunk !== null);
 
-      const questionChunks = chunks.filter((c: any) => c.type === 'question_chunk');
-      const nextChunk = chunks.find((c: any) => c.type === 'next');
+      const questionChunks = chunks.filter((c) => c.type === 'question_chunk');
+      const nextChunk = chunks.find((c) => c.type === 'next');
 
       expect(questionChunks.length).toBeGreaterThan(0);
       expect(nextChunk).toBeDefined();
-      expect(nextChunk.question).toBeDefined();
-      expect(nextChunk.options).toBeDefined();
+      expect(nextChunk?.question).toBe('오늘 어떤 일이 있었나요?');
+      expect(questionChunks.map((chunk) => chunk.content).join('')).toBe(
+        nextChunk?.question,
+      );
+      expect(
+        chunks.findIndex((chunk) => chunk.type === 'next'),
+      ).toBeGreaterThan(chunks.indexOf(questionChunks[0]));
+      expect(nextChunk?.options).toEqual([
+        '직장 문제',
+        '인간관계',
+        '건강 문제',
+      ]);
     });
   });
 
@@ -233,8 +292,8 @@ describe('ChatController (e2e)', () => {
       // given
       const session = await sessionModel.create({
         userId: testUser._id,
-        context: ['카테고리: 직장', '상담사: 힘들었겠다'],
-        category: '직장',
+        context: ['카테고리: work', '상담사: 힘드셨겠어요'],
+        category: 'work',
         status: 'active',
         responseMode: 'comfort',
       });
@@ -251,6 +310,22 @@ describe('ChatController (e2e)', () => {
 
       const updatedSession = await sessionModel.findById(session._id);
       expect(updatedSession?.status).toBe('completed');
+    });
+
+    it('익명 요청으로 로그인 사용자의 세션을 종료할 수 없다', async () => {
+      const session = await sessionModel.create({
+        userId: testUser._id,
+        isGuest: false,
+        category: 'work',
+        status: 'active',
+      });
+      const response = await request(app.getHttpServer())
+        .post('/chat/end')
+        .send({ sessionId: session._id.toString() });
+
+      expect(response.status).toBe(404);
+      expect((await sessionModel.findById(session._id))?.status).toBe('active');
+      expect(mockOpenAIAgent.summarizeSession).not.toHaveBeenCalled();
     });
   });
 });

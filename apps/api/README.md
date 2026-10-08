@@ -11,7 +11,7 @@ AI 기반 감정 상담 서비스
 | 서비스 | URL |
 |--------|-----|
 | **API (Railway)** | `https://to-highapi-production.up.railway.app` |
-| **Web (Vercel)** | TBD |
+| **Web** | `https://www.wirocare.com/` |
 | **DB** | MongoDB Atlas (Railway 연동) |
 
 ---

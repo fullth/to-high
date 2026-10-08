@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { startSession } from "@/lib/api";
+import { SERVICE_DESCRIPTION } from "@/lib/site-content";
 import "./landing.css";
 
 const DAILY_CATEGORY = "daily";
@@ -139,10 +140,7 @@ export function WirocareLanding({
                   <br />
                   <span className="accent">필요하실 때 찾아주세요.</span>
                 </h1>
-                <p className="lede">
-                  힘든 일을 일일이 설명해 주시지 않아도 돼요. 클릭으로 상담을
-                  시작해요.
-                </p>
+                <p className="lede">{SERVICE_DESCRIPTION}</p>
                 <div className="hero-cta">
                   <button
                     type="button"
@@ -151,7 +149,7 @@ export function WirocareLanding({
                     disabled={!!starting}
                   >
                     {starting
-                      ? "마음을 적어나갈 공책을 생성하는 중이에요..."
+                      ? "공책을 여는 중..."
                       : "당신의 이야기를 들려주세요"}{" "}
                     <ArrowIcon size={18} />
                   </button>
@@ -210,8 +208,7 @@ export function WirocareLanding({
               <span className="eyebrow">위로의 약속</span>
               <h2 className="section-title">이런 날, 곁에 있을게요</h2>
               <p className="section-sub">
-                진료가 아니라, 옆자리에 앉아 듣는 마음으로요. 부담 없이
-                시작하고, 안심하고 마무리해요.
+                편하게 이야기해 주세요. 천천히 듣겠습니다.
               </p>
             </div>
             <div className="features">
@@ -286,7 +283,7 @@ export function WirocareLanding({
               <span className="eyebrow">어떤 대화 방식을 선호하세요?</span>
               <h2 className="section-title">최대한 맞춰 드리고 싶어요</h2>
               <p className="section-sub">
-                일상 이야기를 어떻게 받을지, 모드만 바꾸면 응답이 달라져요.
+                위로가 필요한지, 이야기를 들어주길 바라는지 골라 주세요.
               </p>
             </div>
             <div className="modes">
@@ -311,8 +308,7 @@ export function WirocareLanding({
               잠깐 쉬어가세요
             </h2>
             <p>
-              먼저 와주신 마음, 일상부터 천천히 들을게요. 가입은 나중에 하셔도
-              돼요.
+              오늘 있었던 일부터 편하게 이야기해 주세요. 가입은 나중에 하셔도 돼요.
             </p>
             <button
               type="button"
@@ -321,7 +317,7 @@ export function WirocareLanding({
               disabled={!!starting}
             >
               {starting
-                ? "공책 생성 중..."
+                ? "공책을 여는 중..."
                 : "당신의 이야기를 들려주세요"}{" "}
               <ArrowIcon size={18} />
             </button>
@@ -340,15 +336,9 @@ export function WirocareLanding({
               <Link href="/privacy">개인정보처리방침</Link>
             </div>
           </div>
-          <div className="crisis">
-            <span className="crisis-mark" />
-            <span>
-              <b>자살예방상담전화 1393</b> · 24시간 무료
-            </span>
-          </div>
           <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-4)" }}>
-            © 2026 위로 (To High). 위로는 의료기기가 아니며, 정신건강
-            진단·치료를 대체하지 않습니다.
+            © 2026 위로 (To High). 위로는 의료기기가 아니며, 정신건강 진단이나
+            치료를 대신하지 않습니다.
           </div>
         </div>
       </footer>

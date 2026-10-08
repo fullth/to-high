@@ -710,10 +710,7 @@ export class ChatService {
           `[위기 감지: ${crisisResult.level}] 나: ${userMessage}`,
         );
 
-        const crisisResponse =
-          crisisResult.level === 'high'
-            ? `지금 정말 힘드시군요. 당신의 마음이 느껴집니다.\n\n${crisisResult.recommendedAction}`
-            : `많이 힘든 상황이시네요. ${crisisResult.recommendedAction}`;
+        const crisisResponse = crisisResult.recommendedAction!;
 
         await this.sessionService.addContext(
           sessionId,

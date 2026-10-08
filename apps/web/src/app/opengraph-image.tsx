@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { SERVICE_DESCRIPTION } from "@/lib/site-content";
 
 export const alt = "위로 - AI 심리 상담";
 export const size = { width: 1200, height: 630 };
@@ -104,7 +105,7 @@ export default function OgImage() {
             display: "flex",
           }}
         >
-          말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요
+          {SERVICE_DESCRIPTION}
         </div>
 
         {/* 하단 태그 */}

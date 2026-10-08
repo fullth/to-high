@@ -7,6 +7,7 @@ import {
   COUNSELOR_TYPE_PROMPTS,
   INSTRUCTION_BOUNDARY_PROMPT,
   RESPONSE_MODE_PROMPTS,
+  RESPONSE_MODE_FALLBACKS,
   PROMPT_CONFIG,
 } from '../../prompts';
 
@@ -278,5 +279,130 @@ describe('OpenAIAgent 프롬프트 경계', () => {
         (_, index) => getRequest(index).max_completion_tokens,
       ),
     ).toEqual(expectedOutputLimits);
+  });
+});
+
+describe('OpenAIAgent API 키 없는 응답', () => {
+  let agent: OpenAIAgent;
+  let createCompletion: jest.Mock;
+
+  beforeEach(() => {
+    agent = new OpenAIAgent({
+      get: jest.fn().mockReturnValue(undefined),
+    } as unknown as ConfigService);
+    createCompletion = jest
+      .fn()
+      .mockRejectedValue(new Error('Unexpected request'));
+    (
+      agent as unknown as {
+        openai: { chat: { completions: { create: jest.Mock } } };
+      }
+    ).openai = { chat: { completions: { create: createCompletion } } };
+  });
+
+  afterEach(() => {
+    expect(createCompletion).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'comfort',
+    'listen',
+    'organize',
+    'validate',
+    'direction',
+    'similar',
+  ] as const)(
+    '%s 모드는 T 상담사여도 선택한 모드의 대체 응답을 유지한다',
+    async (mode) => {
+      await expect(
+        agent.generateResponse(
+          ['나: 오늘 마음이 복잡해요'],
+          mode,
+          undefined,
+          'T',
+        ),
+      ).resolves.toBe(RESPONSE_MODE_FALLBACKS[mode]);
+
+      const chunks: string[] = [];
+      for await (const chunk of agent.generateResponseStream(
+        ['나: 오늘 마음이 복잡해요'],
+        mode,
+        undefined,
+        'T',
+      )) {
+        chunks.push(chunk);
+      }
+      expect(chunks.join('')).toBe(RESPONSE_MODE_FALLBACKS[mode]);
+    },
+  );
+
+  it('종료 요약은 저장용 표식만 제거하고 사용자 본문의 대괄호를 보존한다', async () => {
+    const context = [
+      '카테고리: direct',
+      '[사용자 직접 입력] [월요일] 면담이 걱정돼요',
+      '나: [위기 감지: high]는 제가 적은 인용이에요',
+      '상담사: 천천히 이야기해도 괜찮아요.',
+    ];
+    await expect(agent.summarizeSession(context)).resolves.toBe(
+      '[월요일] 면담이 걱정돼요, [위기 감지: high]는 제가 적은 인용이에요, 천천히 이야기해도 괜찮아요.',
+    );
+    expect(context[1]).toBe('[사용자 직접 입력] [월요일] 면담이 걱정돼요');
+  });
+
+  it('이전 상담과 불러온 요약의 본문은 내부 표식 없이 보존한다', async () => {
+    await expect(
+      agent.summarizeSession([
+        '[이전 상담 기록]\n[이전 상담: work] 면담이 걱정돼요\n[이전 상담: self] [일기] 쉬고 싶어요',
+        '[이전 상담 불러오기 - 요약]\n친구와 [약속]이 있어요',
+        '[이전 대화 요약] 주말에 쉬고 싶어요',
+      ]),
+    ).resolves.toBe(
+      '면담이 걱정돼요\n[일기] 쉬고 싶어요, 친구와 [약속]이 있어요, 주말에 쉬고 싶어요',
+    );
+  });
+
+  it('말하기 어려움 요약은 사용자 발화만 인용하고 위기 발화도 보존한다', async () => {
+    await expect(
+      agent.summarizeContextForDifficultToTalk([
+        '카테고리: self',
+        '상담사: 천천히 이야기해주세요.',
+        '[위기 감지: medium] 나: 포기하고 싶은 마음이 들어요',
+        '[말하기 어려움 선택] [마음]을 표현하기 어려워요',
+        '[사용자 직접 입력] [사용자 직접 입력]이라는 문구를 봤어요',
+      ]),
+    ).resolves.toBe(
+      '지금까지 "포기하고 싶은 마음이 들어요", "[마음]을 표현하기 어려워요", "[사용자 직접 입력]이라는 문구를 봤어요" 라고 말씀해주셨어요. 말하기 어려우시면 괜찮아요. 천천히 해도 돼요.',
+    );
+  });
+
+  it('발화가 없는 요약에는 카테고리 메타를 노출하지 않는다', async () => {
+    await expect(agent.summarizeSession(['카테고리: self'])).resolves.toBe(
+      '오늘 이야기를 마쳤어요.',
+    );
+    await expect(
+      agent.summarizeContextForDifficultToTalk([
+        '카테고리: self',
+        '상담사: 천천히 이야기해주세요.',
+      ]),
+    ).resolves.toBe('천천히 마음을 열어주셔서 감사해요.');
+  });
+
+  it('롤링 요약에도 표식이 섞이지 않고 알려지지 않은 대괄호 본문은 유지된다', async () => {
+    await expect(
+      agent.generateRollingSummary('', [
+        '카테고리: work',
+        '나: [면담]이 걱정돼요',
+        '[위기 감지: high] 너무 힘들어요',
+        '[독서 기록] 마음에 남은 구절이에요',
+      ]),
+    ).resolves.toBe(
+      '[면담]이 걱정돼요 / 너무 힘들어요 / [독서 기록] 마음에 남은 구절이에요',
+    );
+  });
+
+  it('불러오기 원문은 저장 컨텍스트가 아니므로 대괄호나 역할 표기를 제거하지 않는다', async () => {
+    const input =
+      '[사용자 직접 입력]이라는 문구를 봤어요.\n나: [약속]을 떠올렸어요.';
+    await expect(agent.summarizeImportedText(input)).resolves.toBe(input);
   });
 });

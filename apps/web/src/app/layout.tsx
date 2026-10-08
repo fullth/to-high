@@ -2,6 +2,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Script from "next/script";
+import { SERVICE_DESCRIPTION } from "@/lib/site-content";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,8 +19,7 @@ export const metadata: Metadata = {
     default: "위로 | AI 심리 상담",
     template: "%s | 위로",
   },
-  description:
-    "오롯이 나만을 위한 AI 심리 상담 서비스",
+  description: SERVICE_DESCRIPTION,
   keywords: ["AI 상담", "심리 상담", "마음 치유", "고민 상담", "위로", "to-high"],
   icons: {
     icon: "/logo.svg",
@@ -31,14 +31,12 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: "위로",
     title: "위로 | AI 심리 상담",
-    description:
-      "말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요",
+    description: SERVICE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
     title: "위로 | AI 심리 상담",
-    description:
-      "말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요",
+    description: SERVICE_DESCRIPTION,
   },
   robots: {
     index: true,
@@ -69,8 +67,7 @@ export default function RootLayout({
     "@type": "WebApplication",
     name: "위로",
     url: SITE_URL,
-    description:
-      "말할 힘도 없을 때는, 그저 클릭만 하시면 되도록 도와드릴게요. 일상부터 천천히 들어드리는 AI 심리 상담 서비스",
+    description: SERVICE_DESCRIPTION,
     applicationCategory: "HealthApplication",
     operatingSystem: "Web",
     inLanguage: "ko",
