@@ -1,0 +1,66 @@
+.canvas {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+.image {
+  position: absolute;
+  inset: 0;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  opacity: 0;
+  visibility: hidden;
+  transform-origin: 50% 80%;
+}
+.active {
+  opacity: 1;
+  visibility: visible;
+}
+.listening {
+  animation: levi-listen 650ms ease-in-out 1;
+}
+.thinking {
+  animation: levi-breathe 1600ms ease-in-out 2;
+}
+.responding {
+  animation: levi-greet 650ms ease-in-out 1;
+}
+@keyframes levi-listen {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  45% {
+    transform: rotate(-3deg);
+  }
+}
+@keyframes levi-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
+}
+@keyframes levi-greet {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-3deg) translateY(-1px);
+  }
+  65% {
+    transform: rotate(3deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}

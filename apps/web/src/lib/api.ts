@@ -57,7 +57,34 @@ function getSseError(event: SseJsonEvent): string | undefined {
     : undefined;
 }
 
-async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+function guestHeaders(sessionId?: string): Record<string, string> {
+  if (!sessionId || typeof window === "undefined") return {};
+  const capability = localStorage.getItem(`guestSession:${sessionId}`);
+  return capability ? { "X-Guest-Token": capability } : {};
+}
+
+function requestSessionId(
+  endpoint: string,
+  body?: BodyInit | null,
+): string | undefined {
+  const fromPath = endpoint.match(
+    /^\/chat\/sessions\/([a-fA-F0-9]{24})(?:\/|$)/,
+  )?.[1];
+  if (fromPath) return fromPath;
+  if (typeof body === "string") {
+    try {
+      return (JSON.parse(body) as { sessionId?: string }).sessionId;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+async function fetchApi<T>(
+  endpoint: string,
+  options: FetchOptions = {},
+): Promise<T> {
   const { token, headers, ...rest } = options;
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -65,15 +92,22 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
     headers: {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
+      ...guestHeaders(requestSessionId(endpoint, rest.body)),
       ...headers,
     },
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "요청에 실패했습니다" }));
+    const error = await response
+      .json()
+      .catch(() => ({ message: "요청에 실패했습니다" }));
     // 세션 제한 초과 에러는 특별히 처리
-    if (error.code === 'SESSION_LIMIT_EXCEEDED') {
-      const limitError = new Error(error.message) as Error & { code: string; sessionCount: number; limit: number };
+    if (error.code === "SESSION_LIMIT_EXCEEDED") {
+      const limitError = new Error(error.message) as Error & {
+        code: string;
+        sessionCount: number;
+        limit: number;
+      };
       limitError.code = error.code;
       limitError.sessionCount = error.sessionCount;
       limitError.limit = error.limit;
@@ -82,7 +116,27 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
     throw new Error(error.message || `HTTP ${response.status}`);
   }
 
-  return response.json();
+  const result = await response.json();
+  if (
+    endpoint === "/chat/start" &&
+    result.guestAccessToken &&
+    typeof window !== "undefined"
+  ) {
+    localStorage.setItem(
+      `guestSession:${result.sessionId}`,
+      result.guestAccessToken,
+    );
+    delete result.guestAccessToken;
+  }
+  if (
+    endpoint.endsWith("/claim") &&
+    result.claimed === true &&
+    typeof window !== "undefined"
+  ) {
+    const sessionId = requestSessionId(endpoint);
+    if (sessionId) localStorage.removeItem(`guestSession:${sessionId}`);
+  }
+  return result;
 }
 
 // 상담 모드: T(논리적), F(공감적), reaction(리액션), listening(경청)
@@ -105,7 +159,11 @@ export interface StartSessionResponse {
   previousSessionSummary?: string;
 }
 
-export function startSession(category: string, token?: string, counselorType?: CounselorType) {
+export function startSession(
+  category: string,
+  token?: string,
+  counselorType?: CounselorType,
+) {
   return fetchApi<StartSessionResponse>("/chat/start", {
     method: "POST",
     body: JSON.stringify({ category, counselorType }),
@@ -118,7 +176,7 @@ export function startSessionWithText(
   initialText: string,
   category?: string,
   token?: string,
-  counselorType?: CounselorType
+  counselorType?: CounselorType,
 ) {
   return fetchApi<StartSessionResponse>("/chat/start", {
     method: "POST",
@@ -145,7 +203,7 @@ export function startSessionWithImportSummary(
   importSummary: string,
   category?: string,
   token?: string,
-  counselorType?: CounselorType
+  counselorType?: CounselorType,
 ) {
   return fetchApi<StartSessionResponse>("/chat/start", {
     method: "POST",
@@ -186,13 +244,16 @@ export async function selectOptionStream(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...guestHeaders(sessionId),
       ...(token && { Authorization: `Bearer ${token}` }),
     },
     body: JSON.stringify({ sessionId, selectedOption }),
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: "요청에 실패했습니다" }));
+    const error = await response
+      .json()
+      .catch(() => ({ message: "요청에 실패했습니다" }));
     throw new Error(error.message || `HTTP ${response.status}`);
   }
 
@@ -220,18 +281,28 @@ export interface SelectOptionResponse {
   crisisMessage?: string;
   contextSummary?: string;
   empathyComment?: string;
-  counselorFeedback?: string;  // 상담가 피드백 (경청모드 제외)
+  counselorFeedback?: string; // 상담가 피드백 (경청모드 제외)
   contextCount?: number;
 }
 
 interface ResponseModeOption {
-  mode: "comfort" | "organize" | "validate" | "direction" | "listen" | "similar";
+  mode:
+    | "comfort"
+    | "organize"
+    | "validate"
+    | "direction"
+    | "listen"
+    | "similar";
   label: string;
   description: string;
   emoji: string;
 }
 
-export function selectOption(sessionId: string, selectedOption: string, token?: string) {
+export function selectOption(
+  sessionId: string,
+  selectedOption: string,
+  token?: string,
+) {
   return fetchApi<SelectOptionResponse>("/chat/select", {
     method: "POST",
     body: JSON.stringify({ sessionId, selectedOption }),
@@ -245,7 +316,11 @@ export interface ChatResponse {
 }
 
 // 응답 모드 설정
-export function setResponseMode(sessionId: string, mode: string, token?: string) {
+export function setResponseMode(
+  sessionId: string,
+  mode: string,
+  token?: string,
+) {
   return fetchApi<ChatResponse>("/chat/mode", {
     method: "POST",
     body: JSON.stringify({ sessionId, mode }),
@@ -254,7 +329,11 @@ export function setResponseMode(sessionId: string, mode: string, token?: string)
 }
 
 // 메시지 전송 (AI 응답 받기)
-export function sendMessage(sessionId: string, message?: string, token?: string) {
+export function sendMessage(
+  sessionId: string,
+  message?: string,
+  token?: string,
+) {
   return fetchApi<ChatResponse>("/chat/message", {
     method: "POST",
     body: JSON.stringify({ sessionId, message }),
@@ -296,12 +375,13 @@ export async function setResponseModeStream(
   sessionId: string,
   mode: string,
   token?: string,
-  onChunk?: (chunk: string) => void
+  onChunk?: (chunk: string) => void,
 ): Promise<string> {
   const response = await fetch(`${API_BASE_URL}/chat/mode/stream`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...guestHeaders(sessionId),
       ...(token && { Authorization: `Bearer ${token}` }),
     },
     body: JSON.stringify({ sessionId, mode }),
@@ -335,12 +415,13 @@ export async function sendMessageStream(
   sessionId: string,
   message: string,
   token?: string,
-  onChunk?: (chunk: string) => void
+  onChunk?: (chunk: string) => void,
 ): Promise<string> {
   const response = await fetch(`${API_BASE_URL}/chat/message/stream`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...guestHeaders(sessionId),
       ...(token && { Authorization: `Bearer ${token}` }),
     },
     body: JSON.stringify({ sessionId, message }),
@@ -462,7 +543,11 @@ export interface SaveSessionResponse {
   savedAt: string;
 }
 
-export function saveSession(sessionId: string, token: string, savedName?: string) {
+export function saveSession(
+  sessionId: string,
+  token: string,
+  savedName?: string,
+) {
   return fetchApi<SaveSessionResponse>(`/chat/sessions/${sessionId}/save`, {
     method: "POST",
     body: JSON.stringify({ savedName }),
@@ -472,7 +557,9 @@ export function saveSession(sessionId: string, token: string, savedName?: string
 
 // 저장된 세션 목록 조회
 export function getSavedSessions(token: string) {
-  return fetchApi<{ sessions: SavedSessionItem[] }>("/chat/sessions/saved", { token });
+  return fetchApi<{ sessions: SavedSessionItem[] }>("/chat/sessions/saved", {
+    token,
+  });
 }
 
 // 세션 삭제
@@ -484,12 +571,19 @@ export function deleteSession(sessionId: string, token: string) {
 }
 
 // 세션 별칭 수정
-export function updateSessionAlias(sessionId: string, alias: string, token: string) {
-  return fetchApi<{ sessionId: string; alias: string }>(`/chat/sessions/${sessionId}/alias`, {
-    method: "PATCH",
-    body: JSON.stringify({ alias }),
-    token,
-  });
+export function updateSessionAlias(
+  sessionId: string,
+  alias: string,
+  token: string,
+) {
+  return fetchApi<{ sessionId: string; alias: string }>(
+    `/chat/sessions/${sessionId}/alias`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ alias }),
+      token,
+    },
+  );
 }
 
 // ============ Admin API ============
@@ -561,7 +655,7 @@ export interface AdminSessionsResponse {
 
 export function getAdminSessions(
   token: string,
-  options?: { anonymous?: boolean; limit?: number; offset?: number }
+  options?: { anonymous?: boolean; limit?: number; offset?: number },
 ) {
   const params = new URLSearchParams();
   if (options?.anonymous !== undefined) {
@@ -578,30 +672,41 @@ export function getAdminSessions(
 }
 
 export function getAdminSessionDetail(sessionId: string, token: string) {
-  return fetchApi<AdminSessionDetail>(`/admin/sessions/${sessionId}`, { token });
+  return fetchApi<AdminSessionDetail>(`/admin/sessions/${sessionId}`, {
+    token,
+  });
 }
 
 export function deleteAdminSession(sessionId: string, token: string) {
-  return fetchApi<{ success: boolean; sessionId: string }>(`/admin/sessions/${sessionId}`, {
-    method: "DELETE",
-    token,
-  });
+  return fetchApi<{ success: boolean; sessionId: string }>(
+    `/admin/sessions/${sessionId}`,
+    {
+      method: "DELETE",
+      token,
+    },
+  );
 }
 
 export function deleteAdminSessions(sessionIds: string[], token: string) {
-  return fetchApi<{ success: boolean; deletedCount: number }>("/admin/sessions/delete-batch", {
-    method: "POST",
-    body: JSON.stringify({ sessionIds }),
-    token,
-  });
+  return fetchApi<{ success: boolean; deletedCount: number }>(
+    "/admin/sessions/delete-batch",
+    {
+      method: "POST",
+      body: JSON.stringify({ sessionIds }),
+      token,
+    },
+  );
 }
 
 // 방문자 추적 (인증 불필요)
 export function trackVisitor(visitorId: string) {
-  return fetchApi<{ visitorId: string; visitCount: number; isNew: boolean }>("/health/track", {
-    method: "POST",
-    body: JSON.stringify({ visitorId }),
-  });
+  return fetchApi<{ visitorId: string; visitCount: number; isNew: boolean }>(
+    "/health/track",
+    {
+      method: "POST",
+      body: JSON.stringify({ visitorId }),
+    },
+  );
 }
 
 // 공개 통계 (인증 불필요)
@@ -627,7 +732,10 @@ export interface AdminVisitor {
   lastVisitAt: string;
 }
 
-export function getAdminVisitors(token: string, options?: { limit?: number; offset?: number }) {
+export function getAdminVisitors(
+  token: string,
+  options?: { limit?: number; offset?: number },
+) {
   const params = new URLSearchParams();
   if (options?.limit !== undefined) {
     params.set("limit", options.limit.toString());
@@ -636,7 +744,10 @@ export function getAdminVisitors(token: string, options?: { limit?: number; offs
     params.set("offset", options.offset.toString());
   }
   const query = params.toString() ? `?${params.toString()}` : "";
-  return fetchApi<{ visitors: AdminVisitor[]; total: number }>(`/admin/visitors${query}`, { token });
+  return fetchApi<{ visitors: AdminVisitor[]; total: number }>(
+    `/admin/visitors${query}`,
+    { token },
+  );
 }
 
 // ============ Payment API ============
@@ -692,7 +803,7 @@ export function confirmPayment(
   orderId: string,
   amount: number,
   tier: SubscriptionTier,
-  token: string
+  token: string,
 ) {
   return fetchApi<{ success: boolean; payment: unknown }>("/payment/confirm", {
     method: "POST",
@@ -708,14 +819,21 @@ export function getSubscription(token: string) {
 
 // 구독 취소
 export function cancelSubscription(token: string) {
-  return fetchApi<{ success: boolean; message: string }>("/payment/cancel-subscription", {
-    method: "POST",
-    token,
-  });
+  return fetchApi<{ success: boolean; message: string }>(
+    "/payment/cancel-subscription",
+    {
+      method: "POST",
+      token,
+    },
+  );
 }
 
 // 결제 환불
-export function refundPayment(paymentKey: string, cancelReason: string, token: string) {
+export function refundPayment(
+  paymentKey: string,
+  cancelReason: string,
+  token: string,
+) {
   return fetchApi<{ success: boolean; message: string }>("/payment/refund", {
     method: "POST",
     body: JSON.stringify({ paymentKey, cancelReason }),
@@ -725,7 +843,9 @@ export function refundPayment(paymentKey: string, cancelReason: string, token: s
 
 // 결제 내역 조회
 export function getPaymentHistory(token: string) {
-  return fetchApi<{ payments: PaymentHistory[] }>("/payment/history", { token });
+  return fetchApi<{ payments: PaymentHistory[] }>("/payment/history", {
+    token,
+  });
 }
 
 // ============ Inquiry API ============
@@ -749,21 +869,36 @@ export interface Inquiry {
 }
 
 // 문의 생성
-export function createInquiry(type: InquiryType, message: string, token?: string, email?: string) {
-  return fetchApi<{ inquiryId: string; messages: InquiryMessage[] }>("/inquiry", {
-    method: "POST",
-    body: JSON.stringify({ type, message, email }),
-    token,
-  });
+export function createInquiry(
+  type: InquiryType,
+  message: string,
+  token?: string,
+  email?: string,
+) {
+  return fetchApi<{ inquiryId: string; messages: InquiryMessage[] }>(
+    "/inquiry",
+    {
+      method: "POST",
+      body: JSON.stringify({ type, message, email }),
+      token,
+    },
+  );
 }
 
 // 문의에 메시지 추가
-export function addInquiryMessage(inquiryId: string, message: string, token?: string) {
-  return fetchApi<{ messages: InquiryMessage[] }>(`/inquiry/${inquiryId}/message`, {
-    method: "POST",
-    body: JSON.stringify({ message }),
-    token,
-  });
+export function addInquiryMessage(
+  inquiryId: string,
+  message: string,
+  token?: string,
+) {
+  return fetchApi<{ messages: InquiryMessage[] }>(
+    `/inquiry/${inquiryId}/message`,
+    {
+      method: "POST",
+      body: JSON.stringify({ message }),
+      token,
+    },
+  );
 }
 
 // 내 문의 목록 조회
@@ -784,12 +919,19 @@ export function getAdminInquiries(token: string) {
 }
 
 // 관리자 - 문의 답변
-export function adminReplyInquiry(inquiryId: string, message: string, token: string) {
-  return fetchApi<{ messages: InquiryMessage[] }>(`/admin/inquiries/${inquiryId}/reply`, {
-    method: "POST",
-    body: JSON.stringify({ message }),
-    token,
-  });
+export function adminReplyInquiry(
+  inquiryId: string,
+  message: string,
+  token: string,
+) {
+  return fetchApi<{ messages: InquiryMessage[] }>(
+    `/admin/inquiries/${inquiryId}/reply`,
+    {
+      method: "POST",
+      body: JSON.stringify({ message }),
+      token,
+    },
+  );
 }
 
 // 관리자 - 문의 종료

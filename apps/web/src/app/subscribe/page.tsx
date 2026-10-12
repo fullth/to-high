@@ -13,13 +13,16 @@ import {
 } from "@/lib/api";
 
 interface TossPaymentsInstance {
-  requestPayment: (method: string, options: {
-    amount: number;
-    orderId: string;
-    orderName: string;
-    successUrl: string;
-    failUrl: string;
-  }) => Promise<void>;
+  requestPayment: (
+    method: string,
+    options: {
+      amount: number;
+      orderId: string;
+      orderName: string;
+      successUrl: string;
+      failUrl: string;
+    },
+  ) => Promise<void>;
 }
 
 declare global {
@@ -32,8 +35,12 @@ function SubscribeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
-  const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(
+    null,
+  );
+  const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,13 +101,22 @@ function SubscribeContent() {
     const processPayment = async () => {
       setIsProcessing(true);
       try {
-        await confirmPayment(paymentKey, orderId, parseInt(amount), tier, token);
+        await confirmPayment(
+          paymentKey,
+          orderId,
+          parseInt(amount),
+          tier,
+          token,
+        );
         localStorage.removeItem("pendingTier");
         // 성공 - 새로고침해서 구독 상태 업데이트
         router.replace("/subscribe?success=true");
         window.location.reload();
       } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : "결제 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.";
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "결제 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.";
         setError(errorMessage);
       } finally {
         setIsProcessing(false);
@@ -172,8 +188,18 @@ function SubscribeContent() {
             onClick={() => router.push("/")}
             className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             돌아가기
           </button>
@@ -198,10 +224,14 @@ function SubscribeContent() {
           <div className="mb-8 p-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-2xl">
             <h2 className="text-xl font-bold mb-2">현재 구독 중</h2>
             <p className="text-slate-300">
-              {subscription.plan?.name} 플랜 · 매달 이야기 {subscription.plan?.sessionLimit}권
+              {subscription.plan?.name} 플랜으로 매달 이야기{" "}
+              {subscription.plan?.sessionLimit}권
             </p>
             <p className="text-sm text-slate-400 mt-2">
-              다음 결제일: {subscription.endDate ? new Date(subscription.endDate).toLocaleDateString("ko-KR") : "-"}
+              다음 결제일:{" "}
+              {subscription.endDate
+                ? new Date(subscription.endDate).toLocaleDateString("ko-KR")
+                : "-"}
             </p>
           </div>
         )}
@@ -216,13 +246,19 @@ function SubscribeContent() {
         {/* 타이틀 */}
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold mb-4">이야기 더 담기</h1>
-          <p className="text-slate-400">이야기를 더 담고 마음을 자유롭게 나눠보세요</p>
+          <p className="text-slate-400">
+            이야기를 더 담고 마음을 자유롭게 나눠보세요
+          </p>
         </div>
 
         {/* 준비중 안내 */}
         <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-center">
-          <p className="text-amber-400 font-medium text-lg mb-2">서비스 준비 중</p>
-          <p className="text-slate-400 text-sm">결제 시스템을 준비하고 있어요. 조금만 기다려 주세요!</p>
+          <p className="text-amber-400 font-medium text-lg mb-2">
+            서비스 준비 중
+          </p>
+          <p className="text-slate-400 text-sm">
+            결제 시스템을 준비하고 있어요. 조금만 기다려 주세요!
+          </p>
         </div>
 
         {/* 요금제 카드 */}
@@ -245,7 +281,9 @@ function SubscribeContent() {
 
               <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
               <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-3xl font-bold">{plan.price.toLocaleString()}</span>
+                <span className="text-3xl font-bold">
+                  {plan.price.toLocaleString()}
+                </span>
                 <span className="text-slate-400">원/월</span>
               </div>
 
@@ -253,20 +291,50 @@ function SubscribeContent() {
 
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center gap-2 text-slate-300">
-                  <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-5 h-5 text-green-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   매달 이야기 {plan.sessionLimit}권 추가
                 </li>
                 <li className="flex items-center gap-2 text-slate-300">
-                  <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-5 h-5 text-green-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   무제한 이야기
                 </li>
                 <li className="flex items-center gap-2 text-slate-300">
-                  <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-5 h-5 text-green-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   이야기 기록 저장
                 </li>
