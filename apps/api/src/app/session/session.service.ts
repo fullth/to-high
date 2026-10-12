@@ -1,3 +1,4 @@
+import { buildCounselingContext } from '../../common/counseling-context';
 import { Injectable } from '@nestjs/common';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { SessionDocument } from '../../database/session.schema';
@@ -11,8 +12,18 @@ export class SessionService {
     private openaiAgent: OpenAIAgent,
   ) {}
 
-  async create(userId: string, category: string, counselorType?: CounselorType): Promise<SessionDocument> {
-    return this.sessionRepository.create(userId, category, counselorType);
+  async create(
+    userId: string,
+    category: string,
+    counselorType?: CounselorType,
+    guestAccessHash?: string,
+  ): Promise<SessionDocument> {
+    return this.sessionRepository.create(
+      userId,
+      category,
+      counselorType,
+      guestAccessHash,
+    );
   }
 
   async findById(id: string): Promise<SessionDocument | null> {
@@ -41,7 +52,9 @@ export class SessionService {
     const session = await this.sessionRepository.findById(sessionId);
     if (!session) return null;
 
-    const summary = await this.openaiAgent.summarizeSession(session.context);
+    const summary = await this.openaiAgent.summarizeSession(
+      buildCounselingContext(session),
+    );
     return this.sessionRepository.complete(sessionId, summary);
   }
 

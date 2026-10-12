@@ -2,6 +2,7 @@ import { ResponseModeOption } from '../../../types/chat';
 import { CounselorType } from '../../../types/session';
 
 export interface StartSessionResponse {
+  guestAccessToken?: string;
   sessionId: string;
   question: string;
   options: string[];

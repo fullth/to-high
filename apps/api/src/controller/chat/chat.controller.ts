@@ -15,12 +15,15 @@ import {
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiHeader,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { LegacyChatDisabledGuard } from '../../common/legacy-chat-disabled.guard';
 import { ChatService } from '../../app/chat/chat.service';
+import { GuestSessionGuard } from '../../common/guest-session.guard';
 import { OptionalJwtAuthGuard } from '../../common/optional-jwt.guard';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe';
 import {
@@ -49,8 +52,14 @@ import type {
 
 @ApiTags('chat')
 @ApiBearerAuth()
+@ApiHeader({
+  name: 'X-Guest-Token',
+  required: false,
+  description:
+    '게스트 상담 시작 시 발급받은 세션별 소유 토큰. 조회·변경·로그인 후 claim에 필요하며 로그인된 상담은 JWT 소유권을 확인합니다.',
+})
 @Controller('chat')
-@UseGuards(OptionalJwtAuthGuard)
+@UseGuards(LegacyChatDisabledGuard, OptionalJwtAuthGuard, GuestSessionGuard)
 export class ChatController {
   constructor(private chatService: ChatService) {}
 
@@ -95,6 +104,11 @@ export class ChatController {
       type: 'object',
       properties: {
         sessionId: { type: 'string' },
+        guestAccessToken: {
+          type: 'string',
+          description:
+            '게스트 시작에서만 1회 반환되는 소유 토큰. 안전하게 보관하고 URL이나 로그에 넣지 않습니다.',
+        },
         question: { type: 'string' },
         options: { type: 'array', items: { type: 'string' } },
         canProceedToResponse: { type: 'boolean' },
@@ -125,6 +139,7 @@ export class ChatController {
     );
     return {
       sessionId: result.sessionId.toString(),
+      guestAccessToken: result.guestAccessToken,
       question: result.question,
       options: result.options,
       canProceedToResponse: result.canProceedToResponse,

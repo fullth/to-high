@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "위로(TO-HIGH): AI 기반 심리 상담 서비스",
   "private": true,
+  "license": "CC-BY-NC-ND-4.0",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -18,5 +19,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "overrides": {
+    "proxy-addr": "2.0.8"
   }
 }

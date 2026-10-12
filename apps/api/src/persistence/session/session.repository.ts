@@ -1,4 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  Optional,
+  Scope,
+} from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { SessionDocument } from '../../database/session.schema';
@@ -10,20 +18,78 @@ const ROLLING_SUMMARY_THRESHOLD = 10;
 // 게스트(비로그인) 세션 보관 기간 (30일)
 const GUEST_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class SessionRepository {
+  private createdGuestHash?: string;
   constructor(
     @InjectModel(SessionDocument.name)
     private sessionModel: Model<SessionDocument>,
+    @Optional()
+    @Inject(REQUEST)
+    private readonly request?: {
+      user?: { userId: string };
+      headers?: Record<string, string | string[] | undefined>;
+      route?: { path?: string };
+    },
   ) {}
 
-  async create(userId: string, category: string, counselorType?: CounselorType): Promise<SessionDocument> {
-    const isValidObjectId = Types.ObjectId.isValid(userId) && userId !== 'anonymous';
+  // Recheck ownership atomically in every DB operation: guards alone cannot
+  // prevent a claim on another replica between authorization and mutation.
+  private ownershipFilter(): Record<string, unknown> {
+    if (!this.request) return {}; // Non-HTTP callers retain their explicit ownership checks.
+    if (this.createdGuestHash)
+      return { isGuest: true, guestAccessHash: this.createdGuestHash };
+    const token = this.request.headers?.['x-guest-token'];
+    const guest =
+      typeof token === 'string' && /^[a-f0-9]{64}$/.test(token)
+        ? {
+            isGuest: true,
+            guestAccessHash: createHash('sha256').update(token).digest('hex'),
+          }
+        : { _id: null };
+    const userId = this.request.user?.userId;
+    if (userId && Types.ObjectId.isValid(userId)) {
+      const owner = {
+        isGuest: { $ne: true },
+        userId: new Types.ObjectId(userId),
+      };
+      return this.request.route?.path?.endsWith('/claim')
+        ? { $or: [owner, guest] }
+        : owner;
+    }
+    return guest;
+  }
+
+  private ownedFilter(sessionId: string): Record<string, unknown> {
+    return {
+      $and: [{ _id: new Types.ObjectId(sessionId) }, this.ownershipFilter()],
+    };
+  }
+
+  private requireOwnedResult<T>(result: T | null): T | null {
+    if (this.request && !result)
+      throw new NotFoundException('이야기를 찾을 수 없어요');
+    return result;
+  }
+
+  async create(
+    userId: string,
+    category: string,
+    counselorType?: CounselorType,
+    guestAccessHash?: string,
+  ): Promise<SessionDocument> {
+    const isValidObjectId =
+      Types.ObjectId.isValid(userId) && userId !== 'anonymous';
     const isGuest = !isValidObjectId;
+    if (this.request && isGuest && guestAccessHash)
+      this.createdGuestHash = guestAccessHash;
     const initialContext = [`카테고리: ${category}`];
     return this.sessionModel.create({
-      userId: isValidObjectId ? new Types.ObjectId(userId) : new Types.ObjectId(),
+      userId: isValidObjectId
+        ? new Types.ObjectId(userId)
+        : new Types.ObjectId(),
       isGuest,
+      ...(isGuest && guestAccessHash && { guestAccessHash }),
       // 게스트 세션은 30일 뒤 자동 삭제되도록 만료 시각을 남긴다.
       ...(isGuest && { expireAt: new Date(Date.now() + GUEST_SESSION_TTL_MS) }),
       context: initialContext,
@@ -37,19 +103,31 @@ export class SessionRepository {
   // 게스트 세션의 소유권을 로그인 사용자에게 이전한다.
   // 이미 실계정 소유(비게스트) 세션은 대상이 아니므로 null 을 반환한다.
   // 이전과 동시에 만료 시각을 제거해 영구 보관으로 전환한다.
-  async claimGuestSession(sessionId: string, userId: string): Promise<SessionDocument | null> {
+  async claimGuestSession(
+    sessionId: string,
+    userId: string,
+  ): Promise<SessionDocument | null> {
     return this.sessionModel.findOneAndUpdate(
-      { _id: new Types.ObjectId(sessionId), isGuest: true },
+      { $and: [this.ownedFilter(sessionId), { isGuest: true }] },
       {
         $set: { userId: new Types.ObjectId(userId), isGuest: false },
-        $unset: { expireAt: '' },
+        $unset: { expireAt: '', guestAccessHash: '' },
       },
       { new: true },
     );
   }
 
+  async findForAccess(id: string): Promise<SessionDocument | null> {
+    return (await this.sessionModel
+      .findById(id)
+      .select('+guestAccessHash')
+      .exec()) as SessionDocument | null;
+  }
+
   async findById(id: string): Promise<SessionDocument | null> {
-    return this.sessionModel.findById(id);
+    return this.requireOwnedResult(
+      await this.sessionModel.findOne(this.ownedFilter(id)),
+    );
   }
 
   async findActiveByUser(userId: string): Promise<SessionDocument | null> {
@@ -66,13 +144,15 @@ export class SessionRepository {
     sessionId: string,
     context: string,
   ): Promise<SessionDocument | null> {
-    return this.sessionModel.findByIdAndUpdate(
-      sessionId,
-      {
-        $push: { context, fullContext: context },
-        $inc: { turnCount: 1 },
-      },
-      { new: true },
+    return this.requireOwnedResult(
+      await this.sessionModel.findOneAndUpdate(
+        this.ownedFilter(sessionId),
+        {
+          $push: { context, fullContext: context },
+          $inc: { turnCount: 1 },
+        },
+        { new: true },
+      ),
     );
   }
 
@@ -84,13 +164,15 @@ export class SessionRepository {
     rollingSummary: string,
     recentContextToKeep: string[],
   ): Promise<SessionDocument | null> {
-    return this.sessionModel.findByIdAndUpdate(
-      sessionId,
-      {
-        rollingSummary,
-        context: recentContextToKeep,
-      },
-      { new: true },
+    return this.requireOwnedResult(
+      await this.sessionModel.findOneAndUpdate(
+        this.ownedFilter(sessionId),
+        {
+          rollingSummary,
+          context: recentContextToKeep,
+        },
+        { new: true },
+      ),
     );
   }
 
@@ -105,10 +187,12 @@ export class SessionRepository {
     sessionId: string,
     mode: ResponseMode,
   ): Promise<SessionDocument | null> {
-    return this.sessionModel.findByIdAndUpdate(
-      sessionId,
-      { responseMode: mode },
-      { new: true },
+    return this.requireOwnedResult(
+      await this.sessionModel.findOneAndUpdate(
+        this.ownedFilter(sessionId),
+        { responseMode: mode },
+        { new: true },
+      ),
     );
   }
 
@@ -119,10 +203,22 @@ export class SessionRepository {
     sessionId: string,
     summary: string,
   ): Promise<SessionDocument | null> {
-    return this.sessionModel.findByIdAndUpdate(
-      sessionId,
-      { status: 'completed', summary },
-      { new: true },
+    return this.requireOwnedResult(
+      await this.sessionModel.findOneAndUpdate(
+        this.ownedFilter(sessionId),
+        { status: 'completed', summary },
+        { new: true },
+      ),
+    );
+  }
+
+  async reactivate(sessionId: string): Promise<SessionDocument | null> {
+    return this.requireOwnedResult(
+      await this.sessionModel.findOneAndUpdate(
+        this.ownedFilter(sessionId),
+        { status: 'active' },
+        { new: true },
+      ),
     );
   }
 
@@ -143,7 +239,10 @@ export class SessionRepository {
   /**
    * 사용자의 활성 + 완료 세션 목록 (이어하기용)
    */
-  async getUserSessions(userId: string, limit = 20): Promise<SessionDocument[]> {
+  async getUserSessions(
+    userId: string,
+    limit = 20,
+  ): Promise<SessionDocument[]> {
     // 목록 미리보기용으로 fullContext 첫 항목만 $slice 로 가져온다(전체 대화 메모리 적재 방지).
     return this.sessionModel
       .find({
@@ -168,7 +267,9 @@ export class SessionRepository {
    * 세션 상세 조회 (전체 대화 포함)
    */
   async getSessionDetail(sessionId: string): Promise<SessionDocument | null> {
-    return this.sessionModel.findById(sessionId);
+    return this.requireOwnedResult(
+      await this.sessionModel.findOne(this.ownedFilter(sessionId)),
+    );
   }
 
   /**
@@ -208,14 +309,16 @@ export class SessionRepository {
     sessionId: string,
     savedName?: string,
   ): Promise<SessionDocument | null> {
-    return this.sessionModel.findByIdAndUpdate(
-      sessionId,
-      {
-        isSaved: true,
-        savedAt: new Date(),
-        ...(savedName && { savedName }),
-      },
-      { new: true },
+    return this.requireOwnedResult(
+      await this.sessionModel.findOneAndUpdate(
+        this.ownedFilter(sessionId),
+        {
+          isSaved: true,
+          savedAt: new Date(),
+          ...(savedName && { savedName }),
+        },
+        { new: true },
+      ),
     );
   }
 
@@ -228,7 +331,9 @@ export class SessionRepository {
         userId: new Types.ObjectId(userId),
         isSaved: true,
       })
-      .select('summary category savedName savedAt createdAt counselorType turnCount')
+      .select(
+        'summary category savedName savedAt createdAt counselorType turnCount',
+      )
       .sort({ savedAt: -1 });
   }
 
@@ -237,9 +342,11 @@ export class SessionRepository {
    */
   async deleteSession(sessionId: string, userId: string): Promise<boolean> {
     const result = await this.sessionModel.deleteOne({
-      _id: sessionId,
+      $and: [this.ownedFilter(sessionId)],
       userId: new Types.ObjectId(userId),
     });
+    if (this.request && result.deletedCount === 0)
+      throw new NotFoundException('이야기를 찾을 수 없어요');
     return result.deletedCount > 0;
   }
 
@@ -252,15 +359,18 @@ export class SessionRepository {
     alias: string,
   ): Promise<SessionDocument | null> {
     try {
-      return this.sessionModel.findOneAndUpdate(
-        {
-          _id: new Types.ObjectId(sessionId),
-          userId: new Types.ObjectId(userId),
-        },
-        { alias },
-        { new: true },
+      return this.requireOwnedResult(
+        await this.sessionModel.findOneAndUpdate(
+          {
+            $and: [this.ownedFilter(sessionId)],
+            userId: new Types.ObjectId(userId),
+          },
+          { alias },
+          { new: true },
+        ),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
       return null;
     }
   }

@@ -56,3 +56,6 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 apps/web/.ds-sync-assets/
+
+# Isolated local test logs and owned process IDs
+scripts/local-test/.runtime/

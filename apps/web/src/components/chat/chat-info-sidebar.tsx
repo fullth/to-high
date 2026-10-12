@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 type ChatStep = "start" | "sharing" | "closing";
@@ -5,10 +6,6 @@ type ChatStep = "start" | "sharing" | "closing";
 interface ChatInfoSidebarProps {
   // 현재 대화 단계 — 진행 상황 표시에 사용.
   activeStep: ChatStep;
-  // 비로그인 상태 — 저장/이어가기 안내 문구를 달리한다.
-  isGuest?: boolean;
-  // 게스트 → 로그인 유도. 지정되면 사이드바에서 로그인 안내를 보여준다.
-  onLogin?: () => void;
 }
 
 const STEPS: { key: ChatStep; title: string; hint: string }[] = [
@@ -19,11 +16,7 @@ const STEPS: { key: ChatStep; title: string; hint: string }[] = [
 
 // 상담 화면 좌측 정보 사이드바(데스크톱 전용).
 // 로고·상담사 상태·진행 단계·안심 문구를 담아 넓은 화면의 허전함을 채운다.
-export function ChatInfoSidebar({
-  activeStep,
-  isGuest,
-  onLogin,
-}: ChatInfoSidebarProps) {
+export function ChatInfoSidebar({ activeStep }: ChatInfoSidebarProps) {
   const activeIndex = STEPS.findIndex((s) => s.key === activeStep);
 
   return (
@@ -44,14 +37,23 @@ export function ChatInfoSidebar({
       </Link>
 
       <div className="ch-info-counselor">
-        <span className="ch-info-avatar" aria-hidden="true">
-          <span className="ch-info-avatar-pulse" />
-        </span>
+        <Image
+          src="/characters/levi.png"
+          alt=""
+          aria-hidden="true"
+          width={56}
+          height={56}
+          className="ch-info-levi"
+        />
         <span className="ch-info-counselor-text">
-          <b>위로 상담사</b>
+          <b>레비</b>
           <span className="ch-info-status">
             <span className="ch-info-status-dot" aria-hidden="true" />
-            이야기 중
+            {activeStep === "closing"
+              ? "상담을 마쳤어요"
+              : activeStep === "start"
+                ? "이야기를 기다려요"
+                : "이야기 중"}
           </span>
         </span>
       </div>
@@ -81,27 +83,16 @@ export function ChatInfoSidebar({
         </ol>
       </div>
 
-      {isGuest ? (
-        <div className="ch-info-guest">
-          <p className="ch-info-guest-note">
-            <span className="ch-info-privacy-dot" aria-hidden="true" />
-            지금 대화는 이 브라우저에 <b>30일간</b> 보관돼요.
-          </p>
-          <p className="ch-info-guest-sub">
-            다른 기기에서도 이어가려면 로그인이 필요해요.
-          </p>
-          {onLogin && (
-            <button type="button" className="ch-info-login" onClick={onLogin}>
-              로그인하고 저장하기
-            </button>
-          )}
-        </div>
-      ) : (
-        <p className="ch-info-privacy">
+      <div className="ch-info-guest">
+        <p className="ch-info-guest-note">
           <span className="ch-info-privacy-dot" aria-hidden="true" />
-          이 대화는 안전하게 보호돼요
+          대화는 이 화면에만 남아요.
         </p>
-      )}
+        <p className="ch-info-guest-sub">
+          새로고침하거나 화면을 떠나면 사라져요. AI와의 대화이며 전문적인
+          진단이나 치료를 대신하지 않아요.
+        </p>
+      </div>
     </aside>
   );
 }

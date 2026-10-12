@@ -1,0 +1,161 @@
+/* Preserve the original chat theme; adapt only the ephemeral chat layout and Levi. */
+.ch-ephemeral {
+  height: 100vh;
+  height: 100dvh;
+}
+.ch-ephemeral .ch-inner {
+  min-width: 0;
+}
+.ch-ephemeral .ch-header,
+.ch-ephemeral .ch-dock {
+  flex-shrink: 0;
+}
+.ch-ephemeral .ch-levi-presence {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin: 16px 24px 0;
+  padding: 0;
+}
+.ch-ephemeral .ch-levi-presence p {
+  margin: 0;
+}
+.ch-ephemeral .ch-levi-presence p:first-child {
+  color: var(--ink);
+}
+.ch-ephemeral .ch-levi-presence p:last-child {
+  color: var(--ink-2);
+}
+.ch-ephemeral .ch-talk-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.ch-ephemeral .ch-messages {
+  padding-top: 20px;
+}
+.ch-ephemeral .ch-conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ch-ephemeral .ch-bubble {
+  overflow-wrap: anywhere;
+}
+.ch-ephemeral .ch-message-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ch-ephemeral .ch-message-name img {
+  object-fit: contain;
+}
+.ch-ephemeral .ch-bubble.user p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.ch-ephemeral .ch-input {
+  min-width: 0;
+  resize: none;
+  min-height: 48px;
+  max-height: 96px;
+  line-height: 1.5;
+  padding: 12px 0;
+}
+.ch-ephemeral .ch-send {
+  flex-shrink: 0;
+}
+.ch-ephemeral .ch-composer-hint {
+  margin: 5px 4px 0;
+  font-size: 11px;
+  text-align: right;
+  color: var(--ink-2);
+}
+.ch-ephemeral .ch-talk-disclaimer,
+.ch-ephemeral .ch-privacy-details {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.ch-ephemeral .ch-privacy-details summary {
+  cursor: pointer;
+}
+.ch-ephemeral .ch-privacy-details p {
+  margin: 8px 0 0;
+  max-height: 100px;
+  overflow: auto;
+}
+.ch-ephemeral .ch-talk-error {
+  color: var(--ink);
+  padding: 12px 16px;
+  border: 1px solid var(--rose);
+  border-radius: 16px;
+}
+.ch-ephemeral .ch-crisis-notice {
+  padding: 16px;
+  border: 2px solid var(--brand);
+  border-radius: 16px;
+  background: var(--brand-tint);
+  white-space: pre-wrap;
+}
+.ch-ephemeral .ch-crisis-notice h2 {
+  font-weight: 700;
+}
+.ch-ephemeral .ch-crisis-notice a {
+  text-decoration: underline;
+}
+.ch-ephemeral .ch-info-levi {
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.ch-ephemeral button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.ch-ephemeral button:focus-visible,
+.ch-ephemeral a:focus-visible,
+.ch-ephemeral summary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .ch-ephemeral .ch-header {
+    padding: 12px 16px;
+  }
+  .ch-ephemeral .ch-messages {
+    padding: 16px;
+    gap: 16px;
+  }
+  .ch-ephemeral .ch-levi-presence {
+    margin: 12px 16px 0;
+  }
+  .ch-ephemeral .ch-dock {
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  }
+  .ch-ephemeral .ch-option {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .ch-ephemeral .ch-options {
+    gap: 8px;
+  }
+  .ch-ephemeral .ch-send {
+    width: auto;
+    min-width: 72px;
+    height: 44px;
+    padding: 0 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ch-ephemeral .ch-typing i,
+  .ch-ephemeral .ch-row {
+    animation: none;
+  }
+}
