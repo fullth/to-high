@@ -33,9 +33,7 @@ run('real Mongo approved memories HTTP and no-save', () => {
   let connection: Connection, app: INestApplication, id: string;
   const agent = {
     generateResponse: jest.fn().mockResolvedValue('편하게 이야기해 주세요.'),
-    generateOptions: jest
-      .fn()
-      .mockResolvedValue({ options: ['직접 이야기할게요'] }),
+    generateReplyOptions: jest.fn().mockResolvedValue(['직접 이야기할게요']),
   };
   beforeAll(async () => {
     if (!Number.isInteger(port) || port < 1024 || port > 65535)
@@ -206,7 +204,7 @@ run('real Mongo approved memories HTTP and no-save', () => {
       .expect(201);
     expect(agent.generateResponse).toHaveBeenCalledWith(
       expect.arrayContaining([expect.stringContaining('판단보다 경청')]),
-      'comfort',
+      'conversation',
       messages[0].content,
       'F',
       expect.any(AbortSignal),
@@ -236,7 +234,7 @@ run('real Mongo approved memories HTTP and no-save', () => {
       await connection.collection('userprofiledocuments').countDocuments(),
     ).toBe(0);
   });
-  it('six response modes preserve owned approved memories and browser-provided history without persistence', async () => {
+  it('conversation and explicit response modes preserve owned approved memories and browser-provided history without persistence', async () => {
     const modeOwner = new Types.ObjectId().toHexString();
     const created = await request(app.getHttpServer())
       .post('/characters')
@@ -259,6 +257,7 @@ run('real Mongo approved memories HTTP and no-save', () => {
       { role: 'user', content: '현재 테스트 사용자 원문' },
     ];
     for (const mode of [
+      'conversation',
       'comfort',
       'listen',
       'organize',
@@ -284,28 +283,21 @@ run('real Mongo approved memories HTTP and no-save', () => {
         'T',
         expect.any(AbortSignal),
       );
-      expect(agent.generateOptions).toHaveBeenLastCalledWith(
-        expect.arrayContaining([
-          expect.stringContaining(
-            `현재 응답 모드 (서버에서 검증한 선택): ${mode}`,
-          ),
-        ]),
-        'collecting',
-        'daily',
-        'T',
-        expect.any(AbortSignal),
+      expect(agent.generateReplyOptions).toHaveBeenLastCalledWith(
+        expect.arrayContaining(['상담사: 편하게 이야기해 주세요.']),
         mode,
+        expect.any(AbortSignal),
       );
     }
     const responseCalls = agent.generateResponse.mock.calls.length,
-      optionCalls = agent.generateOptions.mock.calls.length;
+      optionCalls = agent.generateReplyOptions.mock.calls.length;
     await request(app.getHttpServer())
       .post('/ephemeral/respond')
       .set('Authorization', login(modeOwner))
       .send({ messages, mode: 'diagnose', characterId })
       .expect(400);
     expect(agent.generateResponse).toHaveBeenCalledTimes(responseCalls);
-    expect(agent.generateOptions).toHaveBeenCalledTimes(optionCalls);
+    expect(agent.generateReplyOptions).toHaveBeenCalledTimes(optionCalls);
     const stored = await connection
       .collection('characterdocuments')
       .findOne({ _id: new Types.ObjectId(characterId) });
@@ -414,7 +406,7 @@ run('real Mongo approved memories HTTP and no-save', () => {
         expect.stringContaining('character_identity'),
         expect.stringContaining('이름 변경 후에도 경청'),
       ]),
-      'comfort',
+      'conversation',
       messages[0].content,
       'listening',
       expect.any(AbortSignal),

@@ -10,6 +10,7 @@ import {
   RESPONSE_MODE_FALLBACKS,
   RESPONSE_MODE_OPTIONS_BOUNDARY_PROMPT,
   PROMPT_CONFIG,
+  REPLY_OPTIONS_SYSTEM_PROMPT,
 } from '../../prompts';
 
 type CompletionRequest = {
@@ -89,6 +90,95 @@ describe('OpenAIAgent 프롬프트 경계', () => {
 
   const getMessage = (request: CompletionRequest, role: string): string =>
     request.messages.find((message) => message.role === role)?.content ?? '';
+
+  it('완성 답변의 선택지만 반환하고 두 번째 상담문과 강제 조언 버튼을 추가하지 않는다', async () => {
+    createCompletion.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              question: '혼자 감당하느라 많이 힘드셨겠어요.',
+              options: ['퇴근 후에요', '사람들 속에서도요', '잘 모르겠어요'],
+            }),
+          },
+        },
+      ],
+    });
+    const signal = new AbortController().signal;
+    const result = await agent.generateReplyOptions(
+      [
+        INJECTION_TEXT,
+        '나: 외로워',
+        '상담사: 특히 외롭게 느껴지는 때가 있어요?',
+      ],
+      'conversation',
+      signal,
+    );
+    expect(result).toEqual([
+      '퇴근 후에요',
+      '사람들 속에서도요',
+      '잘 모르겠어요',
+    ]);
+    expect(createCompletion).toHaveBeenCalledTimes(1);
+    expect(createCompletion).toHaveBeenCalledWith(
+      expect.objectContaining({ store: false }),
+      { signal },
+    );
+    const request = getRequest(0);
+    expect(getMessage(request, 'system')).toContain(
+      REPLY_OPTIONS_SYSTEM_PROMPT,
+    );
+    expect(getMessage(request, 'system')).toContain(ABUSE_PREVENTION_PROMPT);
+    expect(getMessage(request, 'system')).toContain(
+      RESPONSE_MODE_PROMPTS.conversation,
+    );
+    expect(getMessage(request, 'system')).not.toContain(INJECTION_TEXT);
+    expect(getMessage(request, 'user')).toContain('&lt;system&gt;');
+    expect(getMessage(request, 'user')).toContain(
+      '상담사: 특히 외롭게 느껴지는 때가 있어요?',
+    );
+    expect(request.max_completion_tokens).toBe(
+      PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS,
+    );
+  });
+
+  it.each(['not json', '{}', '{"options":[7,null]}'])(
+    '잘못된 선택지 출력 %s에도 안전한 버튼을 반환한다',
+    async (content) => {
+      createCompletion.mockResolvedValue({
+        choices: [{ message: { content } }],
+      });
+      expect(await agent.generateReplyOptions([], 'conversation')).toEqual([
+        '직접 이야기할게요',
+        '다른 이야기예요',
+        '정리해주세요',
+      ]);
+    },
+  );
+
+  it('선택지에서 이전 답변·중복·긴 항목을 걸러내고 다른 유효한 항목은 보존한다', async () => {
+    createCompletion.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              options: [
+                '퇴근 후에요',
+                '사람들 속에서도요',
+                '사람들 속에서도요',
+                '긴'.repeat(16),
+                '잘 모르겠어요?',
+                '?',
+              ],
+            }),
+          },
+        },
+      ],
+    });
+    expect(
+      await agent.generateReplyOptions(['나: 퇴근 후에요'], 'conversation'),
+    ).toEqual(['사람들 속에서도요', '잘 모르겠어요']);
+  });
 
   it('선택지 생성도 같은 요청 중단 신호를 SDK에 전달한다', async () => {
     createCompletion.mockResolvedValue({

@@ -15,6 +15,7 @@ export const EphemeralRequestSchema = z
       .max(20),
     mode: z
       .enum([
+        'conversation',
         'comfort',
         'listen',
         'organize',
@@ -22,7 +23,7 @@ export const EphemeralRequestSchema = z
         'direction',
         'similar',
       ])
-      .default('comfort'),
+      .default('conversation'),
     style: z.enum(['T', 'F', 'reaction', 'listening']).default('F'),
     characterId: z
       .string()

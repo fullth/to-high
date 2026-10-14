@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 
 export type ResponseMode =
+  | 'conversation'
   | 'comfort'
   | 'organize'
   | 'validate'

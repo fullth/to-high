@@ -316,7 +316,7 @@ test("launch chat focuses on choices and input without response type controls", 
 }) => {
   await offline(page);
   const bodies: Array<{
-    mode: string;
+    mode?: string;
     style: string;
     messages: Array<{ role: string; content: string }>;
   }> = [];
@@ -345,11 +345,9 @@ test("launch chat focuses on choices and input without response type controls", 
     .getByRole("button", { name: "더 이야기할게요", exact: true })
     .click();
   await expect(page.getByText("대화 답변 3", { exact: true })).toBeVisible();
-  expect(bodies.map((body) => [body.style, body.mode])).toEqual([
-    ["F", "comfort"],
-    ["F", "comfort"],
-    ["F", "comfort"],
-  ]);
+  expect(bodies.map((body) => body.style)).toEqual(["F", "F", "F"]);
+  // The server chooses the conversational default, including during staggered deployments.
+  for (const body of bodies) expect(body).not.toHaveProperty("mode");
   expect(bodies.map((body) => body.messages.length)).toEqual([1, 3, 5]);
   expect(bodies[2].messages[0]).toEqual({
     role: "user",
@@ -408,7 +406,7 @@ test("choice requests and typed input keep their content without hidden mode swi
 }) => {
   await offline(page);
   const bodies: Array<{
-    mode: string;
+    mode?: string;
     messages: Array<{ role: string; content: string }>;
   }> = [];
   await page.route("**/ephemeral/respond", async (route) => {
@@ -423,16 +421,19 @@ test("choice requests and typed input keep their content without hidden mode swi
   await page.goto("/talk");
   await page.getByRole("button", { name: "정리해주세요", exact: true }).click();
   await expect(page.getByText("행동 답변 1", { exact: true })).toBeVisible();
-  expect(bodies[0].mode).toBe("comfort");
+  expect(bodies[0]).not.toHaveProperty("mode");
+  expect(bodies[0].messages).toEqual([
+    { role: "user", content: "정리해주세요" },
+  ]);
   await page
     .getByRole("button", { name: "조언해 주세요", exact: true })
     .click();
   await expect(page.getByText("행동 답변 2", { exact: true })).toBeVisible();
-  expect(bodies[1].mode).toBe("comfort");
+  expect(bodies[1]).not.toHaveProperty("mode");
   expect(bodies[1].messages).toHaveLength(3);
   await send(page, "정리해줘라는 말을 들었지만 위로가 필요해요");
   await expect(page.getByText("행동 답변 3", { exact: true })).toBeVisible();
-  expect(bodies[2].mode).toBe("comfort");
+  expect(bodies[2]).not.toHaveProperty("mode");
   expect(bodies[2].messages).toHaveLength(5);
 });
 
@@ -1081,15 +1082,46 @@ for (const loggedIn of [false, true]) {
   });
 }
 
- test("assistant Markdown preserves emphasis and renders external images as alt without a request", async ({ page }) => {
+test("assistant Markdown uses plain text emphasis while preserving lists and safe links", async ({ page }) => {
   await offline(page);
   let externalImages = 0;
-  await page.route("https://example.invalid/**", async route => { externalImages++; await route.abort(); });
-  await page.route("**/ephemeral/respond", route => route.fulfill({json:{reply:"**천천히** 이야기해요.\n\n![마음 그림](https://example.invalid/private.png)",options:["계속 이야기할게요"]}}));
+  await page.route("https://example.invalid/**", async (route) => {
+    externalImages++;
+    await route.abort();
+  });
+  await page.route("**/ephemeral/respond", (route) =>
+    route.fulfill({
+      json: {
+        reply: [
+          "**천천히** *편하게* `짧게` 이야기해요.",
+          "- 첫 번째 이야기\n- 두 번째 이야기",
+          "[도움 안내](https://example.org/help)",
+          "![마음 그림](https://example.invalid/private.png)",
+        ].join("\n\n"),
+        options: ["계속 이야기할게요"],
+      },
+    }),
+  );
   await page.goto("/talk");
-  await send(page,"합성 Markdown 입력");
-  await expect(page.locator("article strong")).toHaveText("천천히");
-  await expect(page.locator("article").last()).toContainText("마음 그림");
+  const userInput = "**그대로** *남겨요*";
+  await send(page, userInput);
+  await expect(page.locator("article.user")).toContainText(userInput);
+  const reply = page.locator("article .ch-bubble.ai");
+  const paragraph = reply.locator("p.ch-md-p").first();
+  await expect(paragraph).toHaveText("천천히 편하게 짧게 이야기해요.");
+  await expect(reply.locator("strong, em, code, .ch-md-strong, .ch-md-code")).toHaveCount(0);
+  await expect(paragraph).toHaveCSS("font-weight", "400");
+  await expect(paragraph).toHaveCSS("font-style", "normal");
+  await expect(paragraph).toHaveCSS(
+    "color",
+    await reply.evaluate((element) => getComputedStyle(element).color),
+  );
+  await expect(reply.getByRole("listitem")).toHaveText([
+    "첫 번째 이야기",
+    "두 번째 이야기",
+  ]);
+  await expect(reply.getByRole("link", { name: "도움 안내" })).toHaveAttribute("href", "https://example.org/help");
+  await expect(reply).toContainText("마음 그림");
   await expect(page.locator('article img[src*="example.invalid"]')).toHaveCount(0);
   expect(externalImages).toBe(0);
 });

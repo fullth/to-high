@@ -19,7 +19,7 @@ describe('상담 시스템 프롬프트 안전 경계', () => {
       UTILITY: 'gpt-5.6-luna',
     });
     expect(PROMPT_CONFIG.REASONING_EFFORT).toEqual({
-      COUNSELING: 'low',
+      COUNSELING: 'medium',
       UTILITY: 'none',
     });
   });

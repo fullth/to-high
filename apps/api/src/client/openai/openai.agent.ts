@@ -15,6 +15,7 @@ import {
   QUESTION_DEPTH_GUIDE,
   GENERATE_OPTIONS_SYSTEM_PROMPT,
   GENERATE_RESPONSE_SYSTEM_PROMPT,
+  REPLY_OPTIONS_SYSTEM_PROMPT,
   EMPATHY_COMMENT_PROMPT,
   CONTEXT_SUMMARY_PROMPT,
   SESSION_SUMMARY_PROMPT,
@@ -459,6 +460,52 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     return response.choices[0].message.content || '';
   }
 
+  /** Suggest user replies to the finished answer without writing another answer. */
+  async generateReplyOptions(
+    context: string[],
+    mode: ResponseMode,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    if (!this.hasApiKey) {
+      return ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
+    }
+    const response = await this.openai.chat.completions.create(
+      {
+        store: false,
+        model: PROMPT_CONFIG.MODELS.UTILITY,
+        reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
+        messages: [
+          {
+            role: 'system',
+            content: `${REPLY_OPTIONS_SYSTEM_PROMPT}\n\n${RESPONSE_MODE_PROMPTS[mode]}\n\n${RESPONSE_MODE_OPTIONS_BOUNDARY_PROMPT}`,
+          },
+          {
+            role: 'user',
+            content: wrapUntrustedPromptData(
+              'counseling_context',
+              context.join('\n'),
+            ),
+          },
+        ],
+        response_format: { type: 'json_object' },
+        max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS,
+      },
+      { signal },
+    );
+    let options: unknown;
+    try {
+      const output: unknown = JSON.parse(
+        response.choices[0]?.message.content || '{}',
+      );
+      if (output && typeof output === 'object' && 'options' in output) {
+        options = output.options;
+      }
+    } catch {
+      // Invalid suggestions must not discard or rewrite the completed answer.
+    }
+    return OpenAIAgent.validateOptions(options, context, false);
+  }
+
   private getReadableContext(context: string[]): string[] {
     const category =
       '(?:self|future|work|relationship|love|daily|other|direct)';
@@ -890,7 +937,11 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     return question;
   }
 
-  private static validateOptions(value: unknown, context: string[]): string[] {
+  private static validateOptions(
+    value: unknown,
+    context: string[],
+    requireAction = true,
+  ): string[] {
     const parsed = z
       .array(z.string().trim().min(1).max(100))
       .min(2)
@@ -910,20 +961,26 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
         .map((entry) => key(entry.slice(2))),
     );
     const seen = new Set<string>();
-    const options = OpenAIAgent.normalizeOptionsTone(parsed.data).filter(
-      (option) => {
-        const normalized = key(option);
-        const isAction = /(조언|정리)\s*해주세요/.test(option);
-        if (
-          option.length > 15 ||
-          seen.has(normalized) ||
-          (!isAction && recentAnswers.has(normalized))
-        )
-          return false;
-        seen.add(normalized);
-        return true;
-      },
-    );
+    const politeOptions = requireAction
+      ? OpenAIAgent.normalizeOptionsTone(parsed.data)
+      : parsed.data.map((option) =>
+          OpenAIAgent.toPolite(option)
+            .replace(/[?？]+$/u, '')
+            .trim(),
+        );
+    const options = politeOptions.filter((option) => {
+      const normalized = key(option);
+      const isAction = /(조언|정리)\s*해주세요/.test(option);
+      if (
+        !normalized ||
+        option.length > 15 ||
+        seen.has(normalized) ||
+        (!isAction && recentAnswers.has(normalized))
+      )
+        return false;
+      seen.add(normalized);
+      return true;
+    });
     if (options.length < 2)
       return ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
     return options;

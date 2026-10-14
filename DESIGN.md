@@ -62,7 +62,7 @@
 
 - **신규 색상 도입 금지.** 기능 분기가 필요하면 먼저 위 토큰 조합으로 시도. 새 헥스는 `web-architect` + 사용자 승인 필요.
 - **크라이시스 UI 색상:** `destructive`는 **쓰지 않는다**. 배너는 `primary` + `muted` 조합으로 위급함을 "부드럽게" 전달. 빨강은 공포를 자극해 V1(안전)에 역행.
-- **opacity 사용:** `primary/20`, `primary/15` 등 투명도는 자주 사용 (예: `markdown-content strong { bg-primary/15 }`). 과도한 겹침 방지 위해 2단계까지만.
+- **opacity 사용:** `primary/20`, `primary/15` 등 투명도는 카드·버튼 배경에 사용. 과도한 겹침 방지 위해 2단계까지만. 상담 답변의 단어에는 색상 하이라이트를 적용하지 않는다.
 
 ---
 
@@ -96,13 +96,12 @@
 
 ### 3.4 마크다운 (상담사 응답 전용)
 
-`globals.css .markdown-content` 규약 유지. AI 응답에만 적용. 사용자 입력에 마크다운 렌더링 **금지** (XSS).
+현재 상담 화면은 `ChatMessageContent`와 `chat.css`의 `ch-md-*` 스타일을 사용한다. AI 응답에만 적용하고 사용자 입력은 평문으로 표시한다.
 
-- h1–h3: 민트 primary + `border-b primary/20`
-- `strong`: `bg-primary/15` 하이라이트 — 중요어만
-- `code`: 키워드 강조용(`bg-secondary/80`) — 코드 아님
-- 리스트: 커스텀 마커 `bg-primary/60` (ul) / 번호 원형 `bg-primary/20` (ol)
-- `blockquote`: 왼쪽 4px 민트 보더 + `"` 장식
+- `strong`, `em`, `code` 내용은 일반 본문으로 표시한다. 모델이 강조 서식을 보내도 초록색·굵게·기울임·키워드 배지를 만들지 않는다.
+- 문단과 목록은 읽을 수 있는 구조와 간격을 유지한다.
+- 링크는 밑줄로 구분하며 기존 안전 URL 변환을 유지한다. 별도 위기 안내의 도움 연락처는 변경하지 않는다.
+- 외부 이미지는 요청하지 않고 대체 텍스트만 표시한다.
 
 ---
 
@@ -344,10 +343,8 @@ Tailwind 기본 스케일(4의 배수) 사용. 핵심 간격:
   <CardContent>…</CardContent>
 </Card>
 
-// 상담사 응답 (마크다운)
-<div className="markdown-content">
-  <ReactMarkdown remarkPlugins={[remarkGfm]}>{response}</ReactMarkdown>
-</div>
+// 상담사 응답 (장식적 강조 없이 문단·목록·링크 표시)
+<ChatMessageContent content={response} />
 
 // 선택지 버튼
 <button className="rounded-xl bg-secondary/80 hover:bg-secondary text-secondary-foreground px-4 py-3 text-base active:scale-[0.98] transition-all">

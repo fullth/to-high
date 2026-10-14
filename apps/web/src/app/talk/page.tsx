@@ -214,13 +214,13 @@ function TalkContent() {
     setBusy(true);
     setError("");
     try {
+      // Let the server select its default so staggered web/API releases stay compatible.
       const result = await respondEphemeral(
         next,
         characterId ? identity!.style : "F",
         token,
         controller.signal,
         characterId,
-        "comfort",
       );
       if (controller.signal.aborted || current !== version.current.value)
         return;

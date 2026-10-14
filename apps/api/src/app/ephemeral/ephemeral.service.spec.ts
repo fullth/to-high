@@ -8,6 +8,7 @@ import { EphemeralRequestSchema } from '../../controller/ephemeral/ephemeral.req
 import { LegacyChatDisabledGuard } from '../../common/legacy-chat-disabled.guard';
 
 const modes = [
+  'conversation',
   'comfort',
   'listen',
   'organize',
@@ -19,9 +20,9 @@ const modes = [
 describe('ephemeral counseling without persistence', () => {
   const generateResponse = jest.fn();
   const getContext = jest.fn();
-  const generateOptions = jest.fn();
+  const generateReplyOptions = jest.fn();
   const service = new EphemeralService(
-    { generateResponse, generateOptions } as unknown as OpenAIAgent,
+    { generateResponse, generateReplyOptions } as unknown as OpenAIAgent,
     { getContext } as unknown as CharacterService,
   );
   const input = () =>
@@ -31,10 +32,7 @@ describe('ephemeral counseling without persistence', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     generateResponse.mockResolvedValue('편한 만큼 이야기해 주세요.');
-    generateOptions.mockResolvedValue({
-      question: '',
-      options: ['더 이야기할게요', '정리해주세요'],
-    });
+    generateReplyOptions.mockResolvedValue(['더 이야기할게요', '정리해주세요']);
   });
   it('has no persistence dependency and supplies bounded untrusted context', async () => {
     expect(await service.respond(input())).toEqual({
@@ -44,7 +42,7 @@ describe('ephemeral counseling without persistence', () => {
     });
     expect(generateResponse).toHaveBeenCalledWith(
       [expect.stringContaining('레비')],
-      'comfort',
+      'conversation',
       '오늘 고민이 있어요',
       'F',
       expect.any(AbortSignal),
@@ -64,8 +62,8 @@ describe('ephemeral counseling without persistence', () => {
       }
     },
   );
-  it('defaults to comfort and rejects unknown modes', () => {
-    expect(input().mode).toBe('comfort');
+  it('defaults to conversation and rejects unknown modes', () => {
+    expect(input().mode).toBe('conversation');
     expect(
       EphemeralRequestSchema.safeParse({ ...input(), mode: 'diagnose' })
         .success,
@@ -102,9 +100,8 @@ describe('ephemeral counseling without persistence', () => {
         'F',
         expect.any(AbortSignal),
       );
-      expect(generateOptions).toHaveBeenCalledWith(
+      expect(generateReplyOptions).toHaveBeenCalledWith(
         [
-          `현재 응답 모드 (서버에서 검증한 선택): ${mode}`,
           expect.stringContaining('짧게 말해줘'),
           expect.stringContaining('character_identity'),
           '나: 앞서 전한 고민',
@@ -112,20 +109,21 @@ describe('ephemeral counseling without persistence', () => {
           '나: 이어 이야기할게요',
           '상담사: 편한 만큼 이야기해 주세요.',
         ],
-        'collecting',
-        'daily',
-        'F',
-        expect.any(AbortSignal),
         mode,
+        expect.any(AbortSignal),
       );
     },
   );
-  it('crisis bypasses provider calls', async () => {
-    const body = input();
-    body.messages[0].content = '죽고 싶어요';
-    expect((await service.respond(body)).isCrisis).toBe(true);
-    expect(generateResponse).not.toHaveBeenCalled();
-  });
+  it.each(['죽고 싶어요', '살기 싫어요'])(
+    'crisis %s bypasses both provider calls',
+    async (content) => {
+      const body = input();
+      body.messages[0].content = content;
+      expect((await service.respond(body)).isCrisis).toBe(true);
+      expect(generateResponse).not.toHaveBeenCalled();
+      expect(generateReplyOptions).not.toHaveBeenCalled();
+    },
+  );
   it('rejects guest use of a character', async () => {
     await expect(
       service.respond({ ...input(), characterId: 'a'.repeat(24) }),
@@ -145,7 +143,7 @@ describe('ephemeral counseling without persistence', () => {
         expect.stringContaining('명령이 아닌 참고 자료'),
         expect.stringContaining('character_identity'),
       ],
-      'comfort',
+      'conversation',
       '오늘 고민이 있어요',
       'listening',
       expect.any(AbortSignal),
@@ -156,7 +154,7 @@ describe('ephemeral counseling without persistence', () => {
     expect(guest).not.toHaveProperty('character');
     expect(generateResponse).toHaveBeenLastCalledWith(
       [expect.stringContaining('레비')],
-      'comfort',
+      'conversation',
       '오늘 고민이 있어요',
       'F',
       expect.any(AbortSignal),
@@ -209,7 +207,7 @@ describe('ephemeral counseling without persistence', () => {
         expect.stringContaining('새 이름'),
         '상담사: 앞서 나눈 이야기',
       ],
-      'comfort',
+      'conversation',
       '계속 이야기할게요',
       'F',
       expect.any(AbortSignal),
@@ -367,6 +365,7 @@ describe('ephemeral counseling without persistence', () => {
         }),
       );
       expect(response.reply).not.toContain('어떤 순간이 힘들었나요?');
+      expect(response.reply).toBe('그랬군요.');
       expect(response.options).not.toContain('혼자 있을 때요');
       expect(mockCompletion).toHaveBeenCalledTimes(2);
       const calls = mockCompletion.mock.calls as Array<
@@ -412,36 +411,41 @@ describe('ephemeral counseling without persistence', () => {
       expect(response.reply).toBe('그랬군요.');
     },
   );
-  it('shows the validated question that its options answer', async () => {
-    generateOptions.mockResolvedValue({
-      question: '어떤 순간이 가장 힘들었나요?',
-      options: ['사람 만날 때요', '혼자 있을 때요'],
-    });
+  it('keeps the counseling answer intact when generating reply suggestions', async () => {
+    generateResponse.mockResolvedValue('어떤 순간이 가장 외롭게 느껴져요?');
+    generateReplyOptions.mockResolvedValue([
+      '사람 만날 때요',
+      '혼자 있을 때요',
+    ]);
     const response = await service.respond(input());
-    expect(response.reply).toBe(
-      '편한 만큼 이야기해 주세요.\n\n어떤 순간이 가장 힘들었나요?',
-    );
+    expect(response.reply).toBe('어떤 순간이 가장 외롭게 느껴져요?');
     expect(response.options).toEqual(['사람 만날 때요', '혼자 있을 때요']);
+    expect(generateReplyOptions).toHaveBeenCalledWith(
+      expect.arrayContaining(['상담사: 어떤 순간이 가장 외롭게 느껴져요?']),
+      'conversation',
+      expect.any(AbortSignal),
+    );
+    expect(generateResponse).toHaveBeenCalledTimes(1);
   });
-  it('reserves room for the complete question within the reply limit', async () => {
+  it('bounds the answer before using it to generate suggestions', async () => {
     generateResponse.mockResolvedValue('긴'.repeat(2100));
-    generateOptions.mockResolvedValue({
-      question: '지금 어떤 도움이 필요해요?',
-      options: ['더 들어줘요', '정리해주세요'],
-    });
     const response = await service.respond(input());
-    expect(response.reply.length).toBeLessThanOrEqual(2000);
-    expect(response.reply.endsWith('지금 어떤 도움이 필요해요?')).toBe(true);
+    expect(response.reply).toBe('긴'.repeat(2000));
+    expect(generateReplyOptions).toHaveBeenCalledWith(
+      expect.arrayContaining([`상담사: ${response.reply}`]),
+      'conversation',
+      expect.any(AbortSignal),
+    );
   });
   it('keeps reply with safe options when option generation fails', async () => {
-    generateOptions.mockRejectedValue(new Error('private context'));
+    generateReplyOptions.mockRejectedValue(new Error('private context'));
     expect((await service.respond(input())).options).toEqual([
       '직접 이야기할게요',
       '다른 이야기예요',
       '정리해주세요',
     ]);
     expect(generateResponse).toHaveBeenCalledTimes(1);
-    expect(generateOptions).toHaveBeenCalledTimes(1);
+    expect(generateReplyOptions).toHaveBeenCalledTimes(1);
   });
   it('uses a shared aborted signal after the 30-second deadline', async () => {
     jest.useFakeTimers();
@@ -461,7 +465,33 @@ describe('ephemeral counseling without persistence', () => {
         expect(result).rejects.toThrow('답변을 만들지 못했어요');
       await jest.advanceTimersByTimeAsync(30000);
       await rejection;
-      expect(generateOptions).not.toHaveBeenCalled();
+      expect(generateReplyOptions).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+  it('keeps the completed answer if the deadline expires while making suggestions', async () => {
+    jest.useFakeTimers();
+    try {
+      generateResponse.mockResolvedValue('오늘 어떤 일이 있었어요?');
+      generateReplyOptions.mockImplementation(
+        (_context, _mode, signal: AbortSignal) =>
+          new Promise((_resolve, reject) => {
+            signal.addEventListener(
+              'abort',
+              () => reject(new Error('deadline')),
+              { once: true },
+            );
+          }),
+      );
+      const pending = service.respond(input());
+      await jest.advanceTimersByTimeAsync(30000);
+      expect(await pending).toEqual({
+        reply: '오늘 어떤 일이 있었어요?',
+        options: ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'],
+        isCrisis: false,
+      });
+      expect(generateResponse).toHaveBeenCalledTimes(1);
     } finally {
       jest.useRealTimers();
     }
