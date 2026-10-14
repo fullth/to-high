@@ -102,39 +102,22 @@ export class EphemeralService {
       const finalReply = previous.includes(normalized)
         ? '같은 말을 반복했네요. 지금 가장 이야기하고 싶은 부분을 편한 만큼 알려주셔도 괜찮아요.'
         : normalized;
-      let shownReply = finalReply;
       let options = ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
       try {
-        const generated = await this.agent.generateOptions(
-          [
-            `현재 응답 모드 (서버에서 검증한 선택): ${input.mode}`,
-            ...context,
-            `나: ${last.content}`,
-            `상담사: ${finalReply}`,
-          ],
-          'collecting',
-          'daily',
-          style,
-          controller.signal,
+        const generated = await this.agent.generateReplyOptions(
+          [...context, `나: ${last.content}`, `상담사: ${finalReply}`],
           input.mode,
+          controller.signal,
         );
         if (!controller.signal.aborted) {
-          const question = generated.question.trim();
-          // Options describe this validated question: keep it visible and in RAM history.
-          if (question && !finalReply.endsWith(question)) {
-            shownReply =
-              question.length > 1998
-                ? question
-                : `${finalReply.slice(0, 1998 - question.length)}\n\n${question}`;
-          }
-          options = generated.options;
+          options = generated;
         }
       } catch {
         // Keep the completed reply and safe action options; no paid retry.
       }
       if (signal?.aborted) throw new Error('cancelled');
       return {
-        reply: shownReply,
+        reply: finalReply,
         options,
         isCrisis: false,
         ...(characterView ? { character: characterView } : {}),

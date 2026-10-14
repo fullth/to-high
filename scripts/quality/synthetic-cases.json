@@ -1,0 +1,121 @@
+[
+  {
+    "id": "lonely_brief",
+    "review": "짧은 감정 표현에 긴 공감이나 확인되지 않은 사연을 덧붙이지 않는지",
+    "request": {
+      "mode": "comfort",
+      "style": "F",
+      "messages": [{ "role": "user", "content": "나 외로워" }]
+    }
+  },
+  {
+    "id": "already_answered",
+    "review": "이미 말한 상황·감정을 다시 묻거나 새로운 장면을 만들지 않는지",
+    "request": {
+      "mode": "listen",
+      "style": "F",
+      "messages": [
+        {
+          "role": "user",
+          "content": "이사한 뒤에 퇴근하고 집에 돌아오면 외로워요."
+        },
+        {
+          "role": "assistant",
+          "content": "퇴근해서 집에 온 뒤 외로움이 커지는군요. 새 동네에는 아는 사람이 있나요?"
+        },
+        {
+          "role": "user",
+          "content": "아는 사람은 없어요. 친구들은 멀리 살아요. 퇴근 후에 빈집에 들어갈 때가 제일 힘들어요."
+        }
+      ]
+    }
+  },
+  {
+    "id": "specific_advice",
+    "review": "명시한 direction 모드에서 활용 가능한 작은 행동 하나에 집중하는지",
+    "request": {
+      "mode": "direction",
+      "style": "T",
+      "messages": [
+        {
+          "role": "user",
+          "content": "친구에게 서운한 게 있는데 싸우긴 싫어요. 어제 제 얘기 중간에 계속 휴대폰을 봤거든요. 어떻게 말을 꺼내면 좋을까요?"
+        }
+      ]
+    }
+  },
+  {
+    "id": "default_lonely",
+    "review": "mode/style를 생략한 실제 기본 경로에서 짧고 자연스럽게 반응하는지",
+    "request": { "messages": [{ "role": "user", "content": "나 외로워" }] }
+  },
+  {
+    "id": "default_correction",
+    "review": "AI의 이전 추정을 사용자가 바로잡으면 정정을 반영하고 잘못된 전제를 버리는지",
+    "request": {
+      "messages": [
+        { "role": "user", "content": "요즘 외로워요." },
+        {
+          "role": "assistant",
+          "content": "퇴근 후 혼자 집에 있을 때 외로움이 커지시는군요."
+        },
+        {
+          "role": "user",
+          "content": "아니요. 사람들 사이에 있어도 그래요. 혼자 지내는 건 괜찮아요."
+        }
+      ]
+    }
+  },
+  {
+    "id": "default_just_listen",
+    "review": "그냥 들어달라는 최신 요청을 존중하고 조언·질문을 강요하지 않는지",
+    "request": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "오늘 발표를 망친 것 같아요. 준비는 많이 했는데 머리가 하얘졌어요."
+        },
+        {
+          "role": "assistant",
+          "content": "준비한 만큼 보여주지 못한 것 같아서 속상하셨겠어요."
+        },
+        {
+          "role": "user",
+          "content": "응, 오늘은 해결 방법 얘기하지 말고 그냥 들어줘."
+        }
+      ]
+    }
+  },
+  {
+    "id": "default_organize",
+    "review": "기본 경로에서도 정리 요청을 따르고 사실과 추측을 구분하는지",
+    "request": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "팀장이 금요일에 일을 줬는데 월요일 아침까지 달래요. 주말엔 엄마 병원에 같이 가기로 했어요."
+        },
+        {
+          "role": "assistant",
+          "content": "업무 기한과 어머니 병원 일정이 겹쳐 마음이 복잡하시겠어요."
+        },
+        {
+          "role": "user",
+          "content": "거절하면 무책임하다고 볼까 걱정돼요. 그렇다고 엄마랑 한 약속을 깨고 싶지도 않아요. 지금 내 상황을 정리해줘."
+        }
+      ]
+    }
+  },
+  {
+    "id": "default_specific_advice",
+    "review": "구체적인 조언 요청에 답하고 대화 예문의 말투·인용을 자연스럽게 유지하는지",
+    "request": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "친구에게 서운한 게 있는데 싸우긴 싫어요. 어제 제 얘기 중간에 계속 휴대폰을 봤거든요. 어떻게 말을 꺼내면 좋을까요?"
+        }
+      ]
+    }
+  }
+]

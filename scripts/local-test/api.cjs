@@ -49,7 +49,7 @@ const mockAgent = {
     const replies = ['말을 꺼내주셔서 고마워요. 지금 마음을 편한 만큼 이야기해 주세요.', '그랬군요. 가장 마음에 남는 부분부터 천천히 이야기해도 괜찮아요.', '지금은 잠시 쉬어가셔도 괜찮아요. 다음 이야기도 들어볼게요.'];
     return `[로컬 모의 응답] ${replies[Math.floor(context.length / 2) % replies.length]}`;
   },
-  async generateOptions() { return { question: '어떤 이야기를 더 나누고 싶으세요?', options: ['조금 더 이야기할게요', '지금은 쉬고 싶어요', '정리해주세요'] }; },
+  async generateReplyOptions() { return ['조금 더 이야기할게요', '지금은 쉬고 싶어요', '정리해주세요']; },
 };
 async function start() {
   const module = await Test.createTestingModule({
