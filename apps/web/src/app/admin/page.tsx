@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import {
   getAdminDashboard,
@@ -27,7 +26,6 @@ type TabType = "dashboard" | "sessions" | "inquiries";
 type SessionFilter = "all" | "anonymous" | "logged-in";
 
 export default function AdminPage() {
-  const router = useRouter();
   const { token, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -94,11 +92,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!token) {
-      router.push("/");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Isolate home support SDKs from this document.
+      window.location.assign("/");
       return;
     }
     loadDashboard();
-  }, [token, authLoading, router, loadDashboard]);
+  }, [token, authLoading, loadDashboard]);
 
   const loadInquiries = useCallback(async () => {
     if (!token) return;
@@ -256,7 +255,10 @@ export default function AdminPage() {
         <div className="min-h-screen bg-background flex flex-col items-center justify-center text-foreground">
           <h1 className="text-6xl font-bold mb-4">404</h1>
           <p className="text-xl text-muted-foreground mb-6">페이지를 찾을 수 없습니다</p>
-          <button onClick={() => router.push("/")} className="text-primary hover:underline">홈으로 돌아가기</button>
+          <button onClick={() => {
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Isolate home support SDKs from this document.
+            window.location.assign("/");
+          }} className="text-primary hover:underline">홈으로 돌아가기</button>
         </div>
       );
     }

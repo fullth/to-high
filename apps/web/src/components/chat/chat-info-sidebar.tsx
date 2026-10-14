@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { FullPageLink } from "@/components/full-page-link";
 
 type ChatStep = "start" | "sharing" | "closing";
 
@@ -21,7 +21,7 @@ export function ChatInfoSidebar({ activeStep }: ChatInfoSidebarProps) {
 
   return (
     <aside className="ch-info-sidebar" aria-label="상담 정보">
-      <Link className="ch-info-brand" href="/">
+      <FullPageLink className="ch-info-brand" href="/">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="ch-info-logo"
@@ -34,7 +34,7 @@ export function ChatInfoSidebar({ activeStep }: ChatInfoSidebarProps) {
           <b>위로</b>
           <em>TO HIGH</em>
         </span>
-      </Link>
+      </FullPageLink>
 
       <div className="ch-info-counselor">
         <Image

@@ -54,7 +54,8 @@ function SubscribeContent() {
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (!storedToken) {
-      router.push("/?login=required");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Isolate home support SDKs from this document.
+      window.location.assign("/?login=required");
       return;
     }
     setToken(storedToken);
@@ -185,7 +186,10 @@ function SubscribeContent() {
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-8">
           <button
-            onClick={() => router.push("/")}
+            onClick={() => {
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Isolate home support SDKs from this document.
+              window.location.assign("/");
+            }}
             className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
           >
             <svg

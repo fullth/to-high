@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { FullPageLink } from "@/components/full-page-link";
 import { useAuth } from "@/contexts/auth-context";
 import "./landing.css";
 
@@ -36,12 +36,12 @@ export function WirocareLanding() {
       <header className="nav">
         <div className="container nav-inner">
           <div className="nav-left">
-            <Link className="logo" href="/" aria-label="위로">
+            <FullPageLink className="logo" href="/" aria-label="위로">
               <span className="logo-mark" aria-hidden="true" />
               <span>
                 위로 <span className="logo-sub">To High</span>
               </span>
-            </Link>
+            </FullPageLink>
           </div>
           <nav className="nav-actions">
             {!token && (
@@ -49,9 +49,9 @@ export function WirocareLanding() {
                 로그인
               </button>
             )}
-            <Link className="btn btn-soft btn-sm" href="/talk">
+            <FullPageLink className="btn btn-soft btn-sm" href="/talk">
               상담하기 <ArrowIcon size={12} />
-            </Link>
+            </FullPageLink>
           </nav>
         </div>
       </header>
@@ -88,9 +88,9 @@ export function WirocareLanding() {
                   도와드릴게요.
                 </p>
                 <div className="hero-cta">
-                  <Link className="btn btn-primary btn-lg" href="/talk">
+                  <FullPageLink className="btn btn-primary btn-lg" href="/talk">
                     <span><strong>레비</strong>와 이야기하기</span> <ArrowIcon size={18} />
-                  </Link>
+                  </FullPageLink>
                 </div>
                 <div className="trust">
                   <span className="trust-mark" aria-hidden="true" />
@@ -174,9 +174,9 @@ export function WirocareLanding() {
         <section className="final">
           <div className="container">
             <h2>고생했어요, <strong className="levi-name">레비</strong>에게 들려주세요</h2>
-            <Link className="btn btn-primary btn-lg" href="/talk">
+            <FullPageLink className="btn btn-primary btn-lg" href="/talk">
               <span><strong>레비</strong>에게 이야기하기</span> <ArrowIcon size={18} />
-            </Link>
+            </FullPageLink>
           </div>
         </section>
       </main>
@@ -184,12 +184,12 @@ export function WirocareLanding() {
       <footer>
         <div className="container">
           <div className="foot-top">
-            <Link className="logo" href="/" aria-label="위로">
+            <FullPageLink className="logo" href="/" aria-label="위로">
               <span className="logo-mark" />
               <span>위로</span>
-            </Link>
+            </FullPageLink>
             <div className="foot-links">
-              <Link href="/privacy">개인정보 처리 안내</Link>
+              <FullPageLink href="/privacy">개인정보 처리 안내</FullPageLink>
             </div>
           </div>
           <p className="privacy-note">

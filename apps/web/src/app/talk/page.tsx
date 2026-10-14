@@ -2,7 +2,7 @@
 
 import { ChatMessageContent } from "@/components/chat/chat-message-content";
 import Image from "next/image";
-import Link from "next/link";
+import { FullPageLink } from "@/components/full-page-link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
@@ -285,10 +285,10 @@ function TalkContent() {
       />
       <div className="ch-inner">
         <header className="ch-header">
-          <Link className="ch-logo" href="/" onClick={clear}>
+          <FullPageLink className="ch-logo" href="/" onClick={clear}>
             <span className="ch-logo-mark" aria-hidden="true" />
             위로
-          </Link>
+          </FullPageLink>
           <button className="ch-ghostbtn" onClick={clear}>
             상담 종료 후 원문 지우기
           </button>

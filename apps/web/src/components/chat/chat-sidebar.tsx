@@ -3,6 +3,7 @@
 import { getSessions, SessionListItem } from "@/lib/api";
 import { CATEGORY_LABELS } from "@/lib/category-labels";
 import Link from "next/link";
+import { FullPageLink } from "@/components/full-page-link";
 import { useEffect, useRef, useState } from "react";
 
 interface ChatSidebarProps {
@@ -91,10 +92,10 @@ export function ChatSidebar({
   return (
     <aside className="ch-sidebar">
       <div className="ch-sb-top">
-        <Link className="ch-logo" href="/">
+        <FullPageLink className="ch-logo" href="/">
           <span className="ch-logo-mark" aria-hidden="true" />
           위로
-        </Link>
+        </FullPageLink>
         {onClose && (
           <button type="button" className="ch-sb-close" onClick={onClose} aria-label="닫기">
             <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
@@ -104,10 +105,10 @@ export function ChatSidebar({
         )}
       </div>
 
-      <Link href="/" className="ch-sb-newchat">
+      <FullPageLink href="/" className="ch-sb-newchat">
         <span aria-hidden="true">+</span>
         새 이야기 시작
-      </Link>
+      </FullPageLink>
 
       <div className="ch-sb-list">
         {loading ? (
