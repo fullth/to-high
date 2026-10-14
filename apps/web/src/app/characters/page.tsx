@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { FullPageLink } from "@/components/full-page-link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { CHARACTER_MEMORY_AVAILABLE } from "@/lib/product-features";
@@ -87,7 +88,7 @@ function CharactersContent() {
   return (
     <main className="mx-auto max-w-2xl p-6 space-y-6">
       <nav className="flex flex-wrap items-center justify-between gap-3">
-        <Link href="/">위로</Link>
+        <FullPageLink href="/">위로</FullPageLink>
         <Link href="/talk">바로 상담하기</Link>
       </nav>
       <h1 className="text-2xl font-semibold">나만의 레비</h1>

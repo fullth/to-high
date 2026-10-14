@@ -1,8 +1,8 @@
-import Link from "next/link";
+import { FullPageLink } from "@/components/full-page-link";
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-2xl p-6 space-y-6">
-      <Link href="/">위로</Link>
+      <FullPageLink href="/">위로</FullPageLink>
       <h1 className="text-2xl font-semibold">개인정보와 대화 처리 안내</h1>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">저장하지 않는 상담 원문</h2>
@@ -15,6 +15,13 @@ export default function PrivacyPage() {
         <p>
           답변을 만들 때는 현재 대화가 서비스 서버와 AI 제공자에게 전달돼
           처리돼요. 따라서 컴퓨터 안에서만 처리되는 서비스는 아니에요.
+        </p>
+      </section>
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">문의와 후원</h2>
+        <p>
+          홈페이지의 문의는 채널톡에서 별도로 처리해요. AI 상담 대화를 문의에
+          자동으로 전달하지 않아요. 커피 후원은 카카오페이로 연결돼요.
         </p>
       </section>
       <section className="space-y-3">

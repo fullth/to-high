@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { FullPageLink } from "@/components/full-page-link";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
@@ -22,7 +22,7 @@ export function Logo({
   const { icon, text } = sizes[size];
 
   return (
-    <Link
+    <FullPageLink
       href={href}
       onClick={onClick}
       className="flex items-center gap-2 hover:opacity-80 transition-opacity"
@@ -67,6 +67,6 @@ export function Logo({
           </span>
         </span>
       )}
-    </Link>
+    </FullPageLink>
   );
 }
