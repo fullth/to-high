@@ -1,4 +1,4 @@
-import { SERVICE_DESCRIPTION } from "@/lib/site-content";
+import { SERVICE_DESCRIPTION, SERVICE_TITLE, SITE_URL } from "@/lib/site-content";
 import { AuthProvider } from "@/contexts/auth-context";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
@@ -9,13 +9,10 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://to-high.vercel.app";
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "위로 | AI 심리 상담",
+    default: SERVICE_TITLE,
     template: "%s | 위로",
   },
   description: SERVICE_DESCRIPTION,
@@ -32,12 +29,12 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     url: SITE_URL,
     siteName: "위로",
-    title: "위로 | AI 심리 상담",
+    title: SERVICE_TITLE,
     description: SERVICE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "위로 | AI 심리 상담",
+    title: SERVICE_TITLE,
     description: SERVICE_DESCRIPTION,
   },
   robots: {

@@ -729,7 +729,7 @@ test("Levi original image loads on landing and guest counseling", async ({
 }) => {
   await offline(page);
   await page.goto("/");
-  await expect(page).toHaveTitle("위로 | AI 심리 상담");
+  await expect(page).toHaveTitle("레비에게 마음을 털어놔보세요 | 위로");
   await expect(
     page.getByRole("heading", {
       level: 1,
