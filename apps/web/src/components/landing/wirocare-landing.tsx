@@ -78,14 +78,9 @@ export function WirocareLanding() {
           <div className="container">
             <div className="hero-grid">
               <div className="hero-copy fade-in">
-                <h1>위로: AI심리상담 서비스</h1>
+                <h1>레비에게 마음을 털어놔보세요</h1>
                 <p className="lede">
-                  위로는 AI 상담사 <strong className="levi-name">레비</strong>와
-                  함께하는 AI 심리 상담 서비스예요.
-                </p>
-                <p className="lede">
-                  어디서부터 말해야 할지 몰라도 괜찮아요, 클릭만 해주셔도 <strong className="levi-name">레비</strong>가
-                  도와드릴게요.
+                  내 상황을 이해하는 AI 상담사 &apos;<strong className="levi-name">레비</strong>&apos;
                 </p>
                 <div className="hero-cta">
                   <FullPageLink className="btn btn-primary btn-lg" href="/talk">
@@ -127,14 +122,23 @@ export function WirocareLanding() {
           </div>
         </section>
 
-        <section className="section">
+        <section className="section levi-intro">
           <div className="container">
             <div className="section-head">
               <span className="eyebrow"><span><strong className="levi-name">레비</strong>를 소개할게요</span></span>
-              <h2 className="section-title">말하기 어려운 날에도</h2>
+              <h2 className="section-title">레비에게는 일일이 설명해주지 않아도 괜찮아요!</h2>
+              <p className="section-sub">
+                상황에 맞는 버튼을 놓아드릴게요, 기분과 유사한 버튼을 눌러주세요.
+                <br />
+                그러다 마음이 열리면 조금 더 들려주세요.
+                <br />
+                어떤 마음이었는지, 레비도 조금씩 알아갈게요.
+              </p>
               <p className="section-sub">
                 <strong className="levi-name">레비</strong>는 AI 상담 캐릭터예요. 진단이나 치료나 사람 상담사를 대신하지
-                않아요. 부담 없이 말을 건네보세요.
+                않아요.
+                <br />
+                부담 없이 말을 건네보세요.
               </p>
             </div>
             <div className="features">
@@ -197,12 +201,6 @@ export function WirocareLanding() {
             데이터베이스에는 상담 원문을 저장하지 않으며 제공자 측 보관은 해당
             정책과 설정에 따라요.
           </p>
-          <div className="crisis">
-            <span className="crisis-mark" />
-            <span>
-              <b>자살예방상담전화 109</b> 24시간 무료
-            </span>
-          </div>
           <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-4)" }}>
             © 2026 위로. 이 서비스는 의료기기가 아니며, 정신건강 진단이나 치료를
             대체하지 않습니다.

@@ -102,7 +102,9 @@ for (const width of [390, 1440]) {
     const requests = await mockProviders(page);
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: "위로: AI심리상담 서비스" }),
+      page.getByRole("heading", {
+        name: "레비에게 마음을 털어놔보세요",
+      }),
     ).toBeVisible();
     const channel = page.getByRole("button", { name: "문의하기" });
     const coffee = page.getByRole("button", { name: "커피 후원" });
