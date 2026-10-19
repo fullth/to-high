@@ -192,6 +192,15 @@
 
 .btn-sm { height: 38px; padding: 0 14px; font-size: 13.5px; }
 .btn-lg { height: 52px; padding: 0 24px; font-size: 15.5px; border-radius: 999px; }
+.btn-chat {
+  height: 56px;
+  padding: 0 22px;
+  gap: 12px;
+  border-radius: 16px;
+  font-size: 16px;
+}
+.btn-chat svg { flex: none; }
+.btn-chat .arrow { margin-left: 8px; }
 .btn-block { width: 100%; }
 
 .btn .arrow {
@@ -220,10 +229,31 @@
   pointer-events: none;
 }
 .wirocare-landing .hero-levi-image {
+  position: relative;
+  z-index: 1;
   display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
+  clip-path: polygon(0 0, 100% 0, 100% 43%, 81% 43%, 80.5% 48%, 79% 53%, 77% 58%, 74% 62%, 78% 70%, 100% 70%, 100% 100%, 0 100%);
+}
+.wirocare-landing .hero-levi-arm {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  clip-path: polygon(81% 43%, 100% 43%, 100% 70%, 72% 70%, 70% 65%, 74% 62%, 77% 58%, 79% 53%, 80.5% 48%);
+  transform-origin: 74% 66%;
+}
+.wirocare-landing .hero-levi-backdrop[data-ready="true"] .hero-levi-arm {
+  animation: levi-wave 2.2s ease-in-out 0.3s 1 both;
+}
+@keyframes levi-wave {
+  0%, 100% { transform: rotate(0deg); }
+  18%, 54% { transform: rotate(-9deg); }
+  36%, 72%, 88% { transform: rotate(0deg); }
 }
 .hero-copy { position: relative; z-index: 1; max-width: none; }
 .hero .hero-copy .lede { color: #000; }
@@ -345,12 +375,6 @@
   color: var(--ink-3);
 }
 .trust-text { white-space: normal; }
-.trust-mark {
-  width: 14px;
-  height: 1px;
-  background: var(--line-2);
-  flex: none;
-}
 .trust b { color: var(--ink); font-weight: 600; }
 
 /* hero chat preview floating card */
@@ -398,13 +422,6 @@
 .hero-preview .typing i {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--ink-4);
-  animation: typing 1.4s var(--ease) infinite;
-}
-.hero-preview .typing i:nth-child(2) { animation-delay: 0.18s; }
-.hero-preview .typing i:nth-child(3) { animation-delay: 0.36s; }
-@keyframes typing {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-  30% { transform: translateY(-3px); opacity: 1; }
 }
 
 @media (max-width: 1024px) {
@@ -454,15 +471,23 @@
   word-break: keep-all;
 }
 .section-sub {
+  margin: 8px 0 0;
   font-size: 15px;
   color: var(--ink-3);
   max-width: 540px;
-  line-height: 1.6;
+  line-height: 1.8;
   text-wrap: pretty;
   word-break: keep-all;
 }
 
 /* ---------- features ---------- */
+.levi-disclaimer {
+  margin: 24px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--ink-3);
+  word-break: keep-all;
+}
 .features {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -671,9 +696,37 @@
   text-wrap: pretty;
   word-break: keep-all;
 }
+.conversation-invite {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  margin: 28px auto;
+  max-width: 480px;
+}
+.conversation-avatar {
+  flex: none;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+.final .conversation-greeting {
+  margin: 0;
+  padding: 18px 22px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px 20px 20px 5px;
+  text-align: left;
+  line-height: 1.8;
+  box-shadow: var(--shadow-sm);
+}
 @media (max-width: 640px) {
   .final { padding: 64px 0; }
   .final p { font-size: 14px; }
+  .conversation-invite { gap: 8px; }
+  .conversation-avatar { width: 56px; height: 56px; }
+  .final .conversation-greeting { padding: 14px 16px; }
+  .final .btn-chat { width: 100%; max-width: 360px; }
 }
 
 /* ---------- footer ---------- */
@@ -724,12 +777,6 @@
   to { opacity: 1; transform: none; }
 }
 
-/* chat preview entrance float */
-.hero-preview { animation: floatCard 6s var(--ease) infinite alternate; }
-@keyframes floatCard {
-  from { transform: translateY(0) rotate(2deg); }
-  to   { transform: translateY(-8px) rotate(2deg); }
-}
 @media (prefers-reduced-motion: reduce) {
   .hero-preview, .hero-eyebrow .pulse { animation: none !important; }
 }
@@ -771,6 +818,8 @@
 }
 /* Decorative movement is optional; content remains visible without motion. */
 @media (prefers-reduced-motion: reduce) {
+  .wirocare-landing .hero-levi-backdrop[data-ready="true"] .hero-levi-arm { animation: none; display: none; }
+  .wirocare-landing .hero-levi-image { clip-path: none; }
   .wirocare-landing .fade-in,
   .wirocare-landing .hero-preview,
   .wirocare-landing .hero-eyebrow .pulse,

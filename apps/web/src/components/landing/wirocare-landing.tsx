@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
+import { MessageCircle } from "lucide-react";
 import { FullPageLink } from "@/components/full-page-link";
 import { useAuth } from "@/contexts/auth-context";
 import "./landing.css";
@@ -13,6 +15,7 @@ const ArrowIcon = ({
   className?: string;
 }) => (
   <svg
+    aria-hidden="true"
     className={className}
     width={size}
     height={size}
@@ -31,6 +34,7 @@ const ArrowIcon = ({
 
 export function WirocareLanding() {
   const { token, login } = useAuth();
+  const [leviReady, setLeviReady] = useState(false);
   return (
     <div className="wirocare-landing">
       <header className="nav">
@@ -50,7 +54,7 @@ export function WirocareLanding() {
               </button>
             )}
             <FullPageLink className="btn btn-soft btn-sm" href="/talk">
-              상담하기 <ArrowIcon size={12} />
+              대화 시작 <ArrowIcon size={12} />
             </FullPageLink>
           </nav>
         </div>
@@ -67,29 +71,39 @@ export function WirocareLanding() {
           </div>
           <div className="container">
             <div className="hero-grid">
-              <div className="hero-levi-backdrop" aria-hidden="true">
+              <div className="hero-levi-backdrop" aria-hidden="true" data-ready={leviReady}>
                 <Image
-                  src="/characters/levi.png"
+                  src="/characters/levi-waving-pose.png"
                   alt=""
                   width={500}
                   height={500}
                   sizes="(max-width: 640px) 260px, (max-width: 1399px) 380px, 320px"
                   priority
                   className="hero-levi-image"
+                  onLoad={() => setLeviReady(true)}
+                />
+                <Image
+                  src="/characters/levi-waving-pose.png"
+                  alt=""
+                  width={500}
+                  height={500}
+                  sizes="(max-width: 640px) 260px, (max-width: 1399px) 380px, 320px"
+                  loading="eager"
+                  className="hero-levi-arm"
                 />
               </div>
-              <div className="hero-copy fade-in">
+              <div className="hero-copy">
                 <h1>레비에게 마음을 털어놔보세요</h1>
                 <p className="lede">
                   내 상황을 이해하는 AI 상담사 &apos;<strong className="levi-name">레비</strong>&apos;
                 </p>
                 <div className="hero-cta">
-                  <FullPageLink className="btn btn-primary btn-lg" href="/talk">
-                    <span><strong>레비</strong>와 이야기하기</span> <ArrowIcon size={18} />
+                  <FullPageLink className="btn btn-primary btn-chat" href="/talk">
+                    <MessageCircle size={20} aria-hidden="true" />
+                    <span>레비와 대화 시작하기</span> <ArrowIcon size={18} />
                   </FullPageLink>
                 </div>
                 <div className="trust">
-                  <span className="trust-mark" aria-hidden="true" />
                   <span className="trust-text">가입 없이 시작할 수 있어요</span>
                 </div>
               </div>
@@ -126,20 +140,12 @@ export function WirocareLanding() {
         <section className="section levi-intro">
           <div className="container">
             <div className="section-head">
-              <span className="eyebrow"><span><strong className="levi-name">레비</strong>를 소개할게요</span></span>
+              <span className="eyebrow">레비를 소개할게요</span>
               <h2 className="section-title">레비에게는 일일이 설명해주지 않아도 괜찮아요!</h2>
               <p className="section-sub">
-                상황에 맞는 버튼을 놓아드릴게요, 기분과 유사한 버튼을 눌러주세요.
+                지금 마음과 가까운 버튼을 골라보세요.
                 <br />
-                그러다 마음이 열리면 조금 더 들려주세요.
-                <br />
-                어떤 마음이었는지, 레비도 조금씩 알아갈게요.
-              </p>
-              <p className="section-sub">
-                <strong className="levi-name">레비</strong>는 AI 상담 캐릭터예요. 진단이나 치료나 사람 상담사를 대신하지
-                않아요.
-                <br />
-                부담 없이 말을 건네보세요.
+                마음이 열리면, 그때 조금 더 들려주세요.
               </p>
             </div>
             <div className="features">
@@ -173,14 +179,33 @@ export function WirocareLanding() {
                 </p>
               </div>
             </div>
+            <p className="levi-disclaimer">
+              레비는 AI 상담 캐릭터로, 진단·치료나 사람 상담사를 대신하지 않아요.
+            </p>
           </div>
         </section>
 
         <section className="final">
           <div className="container">
-            <h2>고생했어요, <strong className="levi-name">레비</strong>에게 들려주세요</h2>
-            <FullPageLink className="btn btn-primary btn-lg" href="/talk">
-              <span><strong>레비</strong>에게 이야기하기</span> <ArrowIcon size={18} />
+            <h2>지금, 레비와 이야기해볼까요?</h2>
+            <div className="conversation-invite">
+              <Image
+                src="/characters/levi-listening-pose.png"
+                alt=""
+                width={80}
+                height={80}
+                className="conversation-avatar"
+                loading="eager"
+              />
+              <p className="conversation-greeting">
+                안녕하세요, 레비예요.
+                <br />
+                지금 어떤 마음인지 들려주실래요?
+              </p>
+            </div>
+            <FullPageLink className="btn btn-primary btn-chat" href="/talk">
+              <MessageCircle size={20} aria-hidden="true" />
+              <span>레비와 대화 시작하기</span> <ArrowIcon size={18} />
             </FullPageLink>
           </div>
         </section>

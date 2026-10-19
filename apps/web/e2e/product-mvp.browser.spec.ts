@@ -748,7 +748,7 @@ test("Levi original image loads on landing and guest counseling", async ({
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
-      name: "고생했어요, 레비에게 들려주세요",
+      name: "지금, 레비와 이야기해볼까요?",
       exact: true,
     }),
   ).toBeVisible();
@@ -764,7 +764,7 @@ test("Levi original image loads on landing and guest counseling", async ({
   await expect(
     page.getByText("정리되지 않은 말이어도 괜찮아요.", { exact: true }),
   ).toHaveCount(0);
-  const primaryCta = page.getByRole("link", { name: /레비와 이야기하기/ });
+  const primaryCta = page.getByRole("link", { name: "레비와 대화 시작하기", exact: true }).first();
   await expect(primaryCta).toHaveCSS("color", "rgb(255, 255, 255)");
   const hero = page.getByRole("img", { name: "레비 AI 캐릭터" });
   await expect
@@ -804,7 +804,13 @@ test("Levi original image loads on landing and guest counseling", async ({
     path: "/tmp/to-high-ing-levi-landing.png",
     fullPage: true,
   });
-  await page.getByRole("link", { name: /레비와 이야기하기/ }).click();
+  await expect(
+    page.locator("section.final").getByRole("link", { name: "레비와 대화 시작하기", exact: true }),
+  ).toHaveAttribute("href", "/talk");
+  await page.locator("section.final").screenshot({
+    path: "/tmp/levi-conversation-invite.png",
+  });
+  await primaryCta.click();
   await expect(
     page.getByRole("heading", {
       name: "레비에게 지금 마음을 이야기해요",
@@ -1061,7 +1067,7 @@ for (const loggedIn of [false, true]) {
     await page.goto("/characters");
     await expect(page.getByRole("heading", { name: "이 기능은 준비 중이에요" })).toBeVisible();
     await expect(page.getByRole("button", { name: /기억.*저장|캐릭터 만들기/ })).toHaveCount(0);
-    await page.getByRole("link", { name: "레비와 이야기하기", exact: true }).click();
+    await page.getByRole("link", { name: "레비와 대화 시작하기", exact: true }).first().click();
     await expect(page.getByLabel("전하고 싶은 마음")).toBeVisible();
     await expect(page.getByText(/기억 설정|기억 만들기/)).toHaveCount(0);
     await page.goto(`/talk?characterId=${id}`);
