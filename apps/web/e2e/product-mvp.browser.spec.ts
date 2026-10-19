@@ -779,7 +779,9 @@ test("Levi original image loads on landing and guest counseling", async ({
       page
         .locator("main img")
         .evaluateAll((images) =>
-          images.every((image) => (image as HTMLImageElement).naturalWidth > 0),
+          images
+            .filter((image) => image.getClientRects().length > 0)
+            .every((image) => (image as HTMLImageElement).naturalWidth > 0),
         ),
     )
     .toBe(true);

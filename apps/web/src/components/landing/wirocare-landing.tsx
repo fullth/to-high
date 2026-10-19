@@ -65,18 +65,19 @@ export function WirocareLanding() {
             <div className="blob b3" />
             <div className="blob b4" />
           </div>
-          <div className="hero-levi-backdrop" aria-hidden="true">
-            <Image
-              src="/characters/levi.png"
-              alt=""
-              width={500}
-              height={500}
-              sizes="(max-width: 1399px) 280px, 500px"
-              className="hero-levi-image"
-            />
-          </div>
           <div className="container">
             <div className="hero-grid">
+              <div className="hero-levi-backdrop" aria-hidden="true">
+                <Image
+                  src="/characters/levi.png"
+                  alt=""
+                  width={500}
+                  height={500}
+                  sizes="(max-width: 640px) 260px, (max-width: 1399px) 380px, 320px"
+                  priority
+                  className="hero-levi-image"
+                />
+              </div>
               <div className="hero-copy fade-in">
                 <h1>레비에게 마음을 털어놔보세요</h1>
                 <p className="lede">

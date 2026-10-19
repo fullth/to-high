@@ -27,10 +27,6 @@ export const metadata: Metadata = {
     "위로",
     "to-high",
   ],
-  icons: {
-    icon: "/logo.svg",
-    apple: "/logo.svg",
-  },
   openGraph: {
     type: "website",
     locale: "ko_KR",
