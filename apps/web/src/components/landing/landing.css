@@ -248,7 +248,7 @@
   transform-origin: 74% 66%;
 }
 .wirocare-landing .hero-levi-backdrop[data-ready="true"] .hero-levi-arm {
-  animation: levi-wave 2.2s ease-in-out 0.3s 1 both;
+  animation: levi-wave 2.2s ease-in-out 0.3s infinite both;
 }
 @keyframes levi-wave {
   0%, 100% { transform: rotate(0deg); }
