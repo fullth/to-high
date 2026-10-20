@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { recordModelUsage } from '../../common/chat-metrics';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import {
@@ -36,6 +37,10 @@ import { Category, CounselorType, ResponseMode } from '../../types/session';
 export class OpenAIAgent {
   private openai: OpenAI;
   private hasApiKey: boolean;
+
+  isConfigured(): boolean {
+    return this.hasApiKey;
+  }
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
@@ -457,6 +462,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       { signal },
     );
 
+    recordModelUsage('reply', response.usage);
     return response.choices[0].message.content || '';
   }
 
@@ -492,6 +498,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       },
       { signal },
     );
+    recordModelUsage('options', response.usage);
     let options: unknown;
     try {
       const output: unknown = JSON.parse(
@@ -741,6 +748,7 @@ ${wrapUntrustedPromptData('selected_option', selectedOption)}
     mode: ResponseMode,
     userMessage?: string,
     counselorType?: CounselorType,
+    signal?: AbortSignal,
   ): AsyncGenerator<string, void, unknown> {
     if (!this.hasApiKey) {
       const fallback = RESPONSE_MODE_FALLBACKS[mode];
@@ -768,20 +776,26 @@ ${wrapUntrustedPromptData(
 
 ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응답을 해주세요.'}`;
 
-    const stream = await this.openai.chat.completions.create({
-      store: false,
-      model: PROMPT_CONFIG.MODELS.COUNSELING,
-      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.COUNSELING,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      max_completion_tokens:
-        PROMPT_CONFIG.MAX_OUTPUT_TOKENS.COUNSELING_RESPONSE,
-      stream: true,
-    });
+    const stream = await this.openai.chat.completions.create(
+      {
+        store: false,
+        model: PROMPT_CONFIG.MODELS.COUNSELING,
+        reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.COUNSELING,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        max_completion_tokens:
+          PROMPT_CONFIG.MAX_OUTPUT_TOKENS.COUNSELING_RESPONSE,
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      { signal },
+    );
 
     for await (const chunk of stream) {
+      if (signal?.aborted) throw new Error('cancelled');
+      recordModelUsage('reply', chunk.usage);
       const content = chunk.choices[0]?.delta?.content;
       if (content) {
         yield content;
@@ -795,6 +809,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
   async generateRollingSummary(
     existingSummary: string,
     contextToSummarize: string[],
+    signal?: AbortSignal,
   ): Promise<string> {
     if (!this.hasApiKey) {
       // API 키 없을 때 간단한 요약
@@ -809,18 +824,24 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       ? `${wrapUntrustedPromptData('existing_summary', existingSummary)}\n\n추가된 대화:\n${counselingContext}\n\n기존 요약에 추가된 대화 내용을 통합하여 새로운 요약을 작성하세요.`
       : `대화 내용:\n${counselingContext}`;
 
-    const response = await this.openai.chat.completions.create({
-      store: false,
-      model: PROMPT_CONFIG.MODELS.UTILITY,
-      reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
-      messages: [
-        { role: 'system', content: ROLLING_SUMMARY_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.ROLLING_SUMMARY,
-    });
+    const response = await this.openai.chat.completions.create(
+      {
+        store: false,
+        model: PROMPT_CONFIG.MODELS.UTILITY,
+        reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
+        messages: [
+          { role: 'system', content: ROLLING_SUMMARY_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.ROLLING_SUMMARY,
+      },
+      { signal },
+    );
 
-    return response.choices[0].message.content || existingSummary;
+    recordModelUsage('summary', response.usage);
+    const summary = response.choices[0].message.content?.trim();
+    if (signal && !summary) throw new Error('empty-summary');
+    return summary || existingSummary;
   }
 
   /**
@@ -854,7 +875,15 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
         max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.USER_PROFILE,
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
+      const result = z
+        .object({
+          emotions: z.array(z.string()).catch([]),
+          topics: z.array(z.string()).catch([]),
+          importantContext: z.array(z.string()).catch([]),
+        })
+        .parse(
+          JSON.parse(response.choices[0].message.content || '{}') as unknown,
+        );
       return {
         emotions: result.emotions || [],
         topics: result.topics || [],

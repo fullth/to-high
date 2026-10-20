@@ -13,7 +13,10 @@ describe('privacy exception boundary', () => {
       json: jest.fn(),
     };
     const host = {
-      switchToHttp: () => ({ getResponse: () => response }),
+      switchToHttp: () => ({
+        getResponse: () => response,
+        getRequest: () => ({ path: '/ephemeral/respond' }),
+      }),
     } as unknown as ArgumentsHost;
     const logs = jest
       .spyOn(console, 'error')

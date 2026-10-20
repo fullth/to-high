@@ -5,6 +5,8 @@ import {
   HttpException,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { chatErrorCode } from './chat-failure';
+import { recordRejected } from './chat-metrics';
 
 /** Do not log arbitrary errors, provider messages or request data. */
 @Catch()
@@ -13,6 +15,12 @@ export class PrivacyExceptionFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
     const status =
       exception instanceof HttpException ? exception.getStatus() : 500;
+    // Guard rejections happen before the chat controller can start its timer.
+    const request = host
+      .switchToHttp()
+      .getRequest<{ path?: string; chatMetricsRecorded?: boolean }>();
+    if (request?.path === '/ephemeral/respond' && !request.chatMetricsRecorded)
+      recordRejected(chatErrorCode(exception));
     const messages: Record<number, string> = {
       400: '입력 형식이나 길이를 확인해 주세요.',
       401: '로그인이 필요하거나 만료됐어요.',
@@ -27,6 +35,7 @@ export class PrivacyExceptionFilter implements ExceptionFilter {
     if (!response.headersSent)
       response.status(status).json({
         statusCode: status,
+        code: chatErrorCode(exception),
         message: messages[status] || '요청을 처리하지 못했어요.',
       });
   }

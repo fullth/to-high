@@ -97,19 +97,6 @@
   border: 1px solid var(--rose);
   border-radius: 16px;
 }
-.ch-ephemeral .ch-crisis-notice {
-  padding: 16px;
-  border: 2px solid var(--brand);
-  border-radius: 16px;
-  background: var(--brand-tint);
-  white-space: pre-wrap;
-}
-.ch-ephemeral .ch-crisis-notice h2 {
-  font-weight: 700;
-}
-.ch-ephemeral .ch-crisis-notice a {
-  text-decoration: underline;
-}
 .ch-ephemeral .ch-info-levi {
   object-fit: contain;
   flex-shrink: 0;

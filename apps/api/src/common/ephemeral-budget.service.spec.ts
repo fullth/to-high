@@ -13,9 +13,7 @@ describe('body-free ephemeral budget', () => {
     process.env.TO_HIGH_LLM_DAILY_REQUEST_LIMIT = '10';
     const budget = new EphemeralBudgetService();
     const release = budget.acquireOwner('account', '127.0.0.1');
-    expect(() => budget.acquireOwner('account', '127.0.0.2')).toThrow(
-      '한 번에',
-    );
+    expect(() => budget.acquireOwner('account', '127.0.0.2')).toThrow();
     const other = budget.acquireOwner('other', '127.0.0.1');
     release();
     release();
@@ -26,7 +24,7 @@ describe('body-free ephemeral budget', () => {
     process.env.TO_HIGH_LLM_DAILY_REQUEST_LIMIT = '1';
     const budget = new EphemeralBudgetService();
     budget.acquireOwner(undefined, '127.0.0.1')();
-    expect(() => budget.acquireOwner(undefined, '127.0.0.2')).toThrow('한도');
+    expect(() => budget.acquireOwner(undefined, '127.0.0.2')).toThrow();
   });
   it('fails closed in production without a reviewed limit', () => {
     process.env.NODE_ENV = 'production';

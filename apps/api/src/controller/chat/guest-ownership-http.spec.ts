@@ -4,6 +4,7 @@ import { ExecutionContext, INestApplication } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import request from 'supertest';
 import { ChatController } from './chat.controller';
+import { LegacyChatDisabledGuard } from '../../common/legacy-chat-disabled.guard';
 import { ChatService } from '../../app/chat/chat.service';
 import { GuestSessionGuard } from '../../common/guest-session.guard';
 import { OptionalJwtAuthGuard } from '../../common/optional-jwt.guard';
@@ -34,6 +35,8 @@ describe('chat HTTP ownership with mock auth/persistence', () => {
         },
       ],
     })
+      .overrideGuard(LegacyChatDisabledGuard)
+      .useValue({ canActivate: () => true })
       .overrideGuard(OptionalJwtAuthGuard)
       .useValue({
         canActivate: (ctx: ExecutionContext) => {

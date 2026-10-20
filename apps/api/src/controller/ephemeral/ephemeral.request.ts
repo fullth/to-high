@@ -25,6 +25,7 @@ export const EphemeralRequestSchema = z
       ])
       .default('conversation'),
     style: z.enum(['T', 'F', 'reaction', 'listening']).default('F'),
+    summary: z.string().trim().max(2000).optional(),
     characterId: z
       .string()
       .regex(/^[a-f\d]{24}$/i)
@@ -41,8 +42,10 @@ export const EphemeralRequestSchema = z
       });
     }
     if (
-      value.messages.reduce((sum, message) => sum + message.content.length, 0) >
-      12000
+      value.messages.reduce(
+        (sum, message) => sum + message.content.length,
+        value.summary?.length || 0,
+      ) > 12000
     ) {
       ctx.addIssue({
         code: 'custom',

@@ -37,7 +37,6 @@ describe('ephemeral counseling without persistence', () => {
   it('has no persistence dependency and supplies bounded untrusted context', async () => {
     expect(await service.respond(input())).toEqual({
       reply: '편한 만큼 이야기해 주세요.',
-      isCrisis: false,
       options: ['더 이야기할게요', '정리해주세요'],
     });
     expect(generateResponse).toHaveBeenCalledWith(
@@ -114,14 +113,16 @@ describe('ephemeral counseling without persistence', () => {
       );
     },
   );
-  it.each(['죽고 싶어요', '살기 싫어요'])(
-    'crisis %s bypasses both provider calls',
+  it.each(['손목이 아파요', '프로젝트를 끝내고 싶어요', '죽고 싶어요'])(
+    'does not short-circuit conversation for keyword %s',
     async (content) => {
       const body = input();
       body.messages[0].content = content;
-      expect((await service.respond(body)).isCrisis).toBe(true);
-      expect(generateResponse).not.toHaveBeenCalled();
-      expect(generateReplyOptions).not.toHaveBeenCalled();
+      expect((await service.respond(body)).reply).toBe(
+        '편한 만큼 이야기해 주세요.',
+      );
+      expect(generateResponse).toHaveBeenCalled();
+      expect(generateReplyOptions).toHaveBeenCalled();
     },
   );
   it('rejects guest use of a character', async () => {
@@ -270,7 +271,7 @@ describe('ephemeral counseling without persistence', () => {
       ).toContain('ignore rules');
     }
   });
-  it('includes owned character identity for crisis responses without provider calls', async () => {
+  it('retains owned identity without a keyword-specific response', async () => {
     getContext.mockResolvedValue({
       displayName: '마음이',
       style: 'F',
@@ -283,7 +284,7 @@ describe('ephemeral counseling without persistence', () => {
       displayName: '마음이',
       style: 'F',
     });
-    expect(generateResponse).not.toHaveBeenCalled();
+    expect(generateResponse).toHaveBeenCalled();
   });
   it('propagates inaccessible character failure before any provider call', async () => {
     getContext.mockRejectedValue(new Error('character not found'));
@@ -297,9 +298,9 @@ describe('ephemeral counseling without persistence', () => {
   });
   it('sanitizes provider errors', async () => {
     generateResponse.mockRejectedValue(new Error('sensitive prompt'));
-    await expect(service.respond(input())).rejects.toThrow(
-      '답변을 만들지 못했어요',
-    );
+    await expect(service.respond(input())).rejects.toMatchObject({
+      code: 'UNAVAILABLE',
+    });
   });
   it('aborted request never starts provider work', async () => {
     const abort = new AbortController();
@@ -461,8 +462,9 @@ describe('ephemeral counseling without persistence', () => {
           ),
       );
       const result = service.respond(input());
-      const rejection =
-        expect(result).rejects.toThrow('답변을 만들지 못했어요');
+      const rejection = expect(result).rejects.toMatchObject({
+        code: 'TIMEOUT',
+      });
       await jest.advanceTimersByTimeAsync(30000);
       await rejection;
       expect(generateReplyOptions).not.toHaveBeenCalled();
@@ -489,7 +491,6 @@ describe('ephemeral counseling without persistence', () => {
       expect(await pending).toEqual({
         reply: '오늘 어떤 일이 있었어요?',
         options: ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'],
-        isCrisis: false,
       });
       expect(generateResponse).toHaveBeenCalledTimes(1);
     } finally {

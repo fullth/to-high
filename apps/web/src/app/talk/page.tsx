@@ -21,6 +21,12 @@ import { CHARACTER_MEMORY_AVAILABLE } from "@/lib/product-features";
 import { ChatInfoSidebar } from "@/components/chat/chat-info-sidebar";
 import "@/components/chat/chat.css";
 import "@/components/talk/talk-chat.css";
+import {
+  CHAT_ERROR_COPY,
+  ChatRequestError,
+  getChatErrorCopy,
+  type ChatErrorCode,
+} from "@/lib/chat-errors";
 
 const styles: Array<[CounselorType, string]> = [
   ["F", "따뜻한 공감"],
@@ -36,7 +42,7 @@ const initialOptions = [
   "정리해주세요",
 ];
 function TalkContent() {
-  const { token, isLoading: authLoading, login } = useAuth();
+  const { token, isLoading: authLoading, login, logout } = useAuth();
   const params = useSearchParams();
   const characterId = CHARACTER_MEMORY_AVAILABLE
     ? params.get("characterId") || undefined
@@ -72,12 +78,15 @@ function TalkContent() {
   }, [busy]);
   const [ended, setEnded] = useState(false);
   const [error, setError] = useState("");
-  const [crisis, setCrisis] = useState("");
+  const [streaming, setStreaming] = useState(false);
+  const [errorCode, setErrorCode] = useState<ChatErrorCode | null>(null);
   useEffect(() => {
     const pane = messagesPane.current;
     if (pane) pane.scrollTop = pane.scrollHeight;
-  }, [messages, busy, error, crisis, ended]);
+  }, [messages, busy, error, ended]);
   const history = useRef<TalkMessage[]>([]);
+  const summary = useRef("");
+  const transcript = useRef<TalkMessage[]>([]);
   const request = useRef<AbortController | null>(null);
   const version = useRef({ value: 0 });
   const target = useRef({ characterId, token });
@@ -88,11 +97,14 @@ function TalkContent() {
     request.current?.abort();
     request.current = null;
     history.current = [];
+    summary.current = "";
+    transcript.current = [];
     setOptions([]);
     setMessages([]);
     setInput("");
     setError("");
-    setCrisis("");
+    setErrorCode(null);
+    setStreaming(false);
     setBusy(false);
     setEnded(true);
   }, []);
@@ -109,6 +121,8 @@ function TalkContent() {
       request.current?.abort();
       request.current = null;
       history.current = [];
+      summary.current = "";
+      transcript.current = [];
       window.removeEventListener("pagehide", hide);
       window.removeEventListener("pageshow", show);
     };
@@ -125,6 +139,8 @@ function TalkContent() {
     request.current?.abort();
     request.current = null;
     history.current = [];
+    summary.current = "";
+    transcript.current = [];
     if (hadConversation) queueMicrotask(clear);
   }, [characterId, token, clear]);
   useEffect(() => {
@@ -186,17 +202,21 @@ function TalkContent() {
     )
       return;
     if (
-      history.current.length + 1 > 19 ||
+      history.current.length + 1 > 20 ||
       history.current.reduce(
         (sum, message) => sum + message.content.length,
-        0,
+        summary.current.length,
       ) +
         value.trim().length >
         12000
     ) {
-      setError(
-        "이번 대화의 맥락 한도에 도달했어요. 원문을 지우고 새 상담을 시작하거나 상담을 마쳐 주세요.",
-      );
+      setError(CHAT_ERROR_COPY.SUMMARY_FAILED);
+      setErrorCode("SUMMARY_FAILED");
+      return;
+    }
+    if (value.trim().length > 500) {
+      setError(CHAT_ERROR_COPY.INVALID_INPUT);
+      setErrorCode("INVALID_INPUT");
       return;
     }
     const identityAtRequest = identityRevision.current;
@@ -207,12 +227,19 @@ function TalkContent() {
       ...history.current,
       { role: "user", content: value.trim() },
     ];
+    const before = transcript.current;
+    const visibleNext: TalkMessage[] = [
+      ...before,
+      { role: "user", content: value.trim() },
+    ];
     history.current = next;
-    setMessages(next);
+    setMessages(visibleNext);
+    setStreaming(false);
     setInput("");
     setArrival(false);
     setBusy(true);
     setError("");
+    setErrorCode(null);
     try {
       // Let the server select its default so staggered web/API releases stay compatible.
       const result = await respondEphemeral(
@@ -221,6 +248,15 @@ function TalkContent() {
         token,
         controller.signal,
         characterId,
+        undefined,
+        summary.current || undefined,
+        (text) => {
+          if (controller.signal.aborted || current !== version.current.value)
+            return;
+          setStreaming(true);
+          setArrival(true);
+          setMessages([...visibleNext, { role: "assistant", content: text }]);
+        },
       );
       if (controller.signal.aborted || current !== version.current.value)
         return;
@@ -234,26 +270,26 @@ function TalkContent() {
         identityRevision.current++;
         setIdentity(result.character);
       }
-      const updated: TalkMessage[] = [
-        ...next,
-        { role: "assistant", content: result.reply },
+      const reply: TalkMessage = { role: "assistant", content: result.reply };
+      if (result.context) summary.current = result.context.summary;
+      history.current = [
+        ...(result.context
+          ? next.slice(-result.context.retainedMessages)
+          : next),
+        reply,
       ];
+      transcript.current = [...visibleNext, reply];
       setArrival(true);
       setOptions(result.options || ["더 이야기할게요", "정리해주세요"]);
-      history.current = updated;
-      setMessages(updated);
-      if (result.isCrisis)
-        setCrisis(
-          result.crisisMessage ||
-            "혼자 감당하지 않아도 괜찮아요. 자살예방 상담전화 109, 긴급한 위험에는 112 또는 119로 연락해 주세요.",
-        );
-    } catch {
+      setMessages(transcript.current);
+    } catch (error) {
       if (!controller.signal.aborted && current === version.current.value) {
         history.current = next.slice(0, -1);
-        setMessages(history.current);
+        setMessages(before);
         setInput(value);
-        setError(
-          "답변을 받지 못했어요. 다시 말하고 싶은 내용을 입력해 주세요.",
+        setError(getChatErrorCopy(error));
+        setErrorCode(
+          error instanceof ChatRequestError ? error.code : "UNAVAILABLE",
         );
       }
     } finally {
@@ -261,6 +297,7 @@ function TalkContent() {
         request.current = null;
         restoreInputFocus.current = true;
         setBusy(false);
+        setStreaming(false);
       }
     }
   };
@@ -268,16 +305,13 @@ function TalkContent() {
     ? "ended"
     : error
       ? "error"
-      : busy
+      : busy && !streaming
         ? "thinking"
-        : arrival
+        : arrival || streaming
           ? "arrived"
           : input.length > 0
             ? "listening"
             : "idle";
-  const atLimit =
-    messages.length >= 20 ||
-    messages.reduce((sum, message) => sum + message.content.length, 0) >= 11500;
   return (
     <main className="ch-frame ch-frame-split ch-ephemeral">
       <ChatInfoSidebar
@@ -355,14 +389,6 @@ function TalkContent() {
             </section>
           ) : (
             <>
-              {crisis && (
-                <aside role="alert" className="ch-crisis-notice">
-                  <h2>지금 안전을 먼저 챙겨요</h2>
-                  <p>{crisis}</p>
-                  <a href="tel:109">109 상담전화</a>{" "}
-                  <a href="tel:119">119 긴급 도움</a>
-                </aside>
-              )}
               <div
                 role="log"
                 aria-live="polite"
@@ -407,7 +433,7 @@ function TalkContent() {
                     </div>
                   </article>
                 ))}
-                {busy && (
+                {busy && !streaming && (
                   <div className="ch-row">
                     <div className="ch-typing" aria-hidden="true">
                       <i />
@@ -421,23 +447,35 @@ function TalkContent() {
                 )}
               </div>
               {error && (
-                <p role="alert" className="ch-talk-error">
-                  {error}
-                </p>
-              )}
-              {atLimit && (
-                <section
-                  role="region"
-                  aria-label="대화 맥락 한도"
-                  className="ch-inline-card"
-                >
-                  <p>
-                    이번 대화의 맥락 한도에 가까워졌어요. 나눈 원문을 지우고 새
-                    상담을 시작하거나 상담을 마칠 수 있어요.
-                  </p>
-                  <button className="ch-primary" onClick={clear}>
-                    원문 지우고 마치기
-                  </button>
+                <section role="alert" className="ch-talk-error">
+                  <p>{error}</p>
+                  {(errorCode === "SUMMARY_FAILED" ||
+                    errorCode === "AUTH_REQUIRED") && (
+                    <button
+                      className="ch-ghostbtn"
+                      onClick={() => {
+                        if (errorCode === "AUTH_REQUIRED") logout();
+                        clear();
+                        setEnded(false);
+                        setOptions(initialOptions);
+                      }}
+                    >
+                      {errorCode === "AUTH_REQUIRED"
+                        ? "가입 없이 새 대화 시작"
+                        : "새 상담 시작"}
+                    </button>
+                  )}
+                  {errorCode === "AUTH_REQUIRED" && (
+                    <button
+                      className="ch-ghostbtn"
+                      onClick={() => {
+                        clear();
+                        login();
+                      }}
+                    >
+                      원문 지우고 로그인
+                    </button>
+                  )}
                 </section>
               )}
             </>
@@ -446,25 +484,23 @@ function TalkContent() {
         <div className="ch-dock">
           {!ended && (
             <>
-              {!atLimit && (
-                <div aria-label="답변 선택지" className="ch-options">
-                  {options.map((option) => (
-                    <button
-                      key={option}
-                      className="ch-option"
-                      disabled={
-                        busy ||
-                        authLoading ||
-                        !characterReady ||
-                        (!!characterId && !token)
-                      }
-                      onClick={() => void sendText(option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div aria-label="답변 선택지" className="ch-options">
+                {options.map((option) => (
+                  <button
+                    key={option}
+                    className="ch-option"
+                    disabled={
+                      busy ||
+                      authLoading ||
+                      !characterReady ||
+                      (!!characterId && !token)
+                    }
+                    onClick={() => void sendText(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
               <form
                 className="ch-input-row"
                 onSubmit={(event) => {
@@ -485,7 +521,6 @@ function TalkContent() {
                   value={input}
                   disabled={
                     busy ||
-                    atLimit ||
                     authLoading ||
                     !characterReady ||
                     (!!characterId && !token)
@@ -507,7 +542,6 @@ function TalkContent() {
                   disabled={
                     busy ||
                     !characterReady ||
-                    atLimit ||
                     !input.trim() ||
                     authLoading ||
                     (!!characterId && !token)
@@ -525,11 +559,11 @@ function TalkContent() {
           <details className="ch-privacy-details">
             <summary>대화는 이 화면에만 남아요. 이용 안내</summary>
             <p>
-              대화 원문은 현재 브라우저 화면의 메모리에서만 유지하고 서비스
-              데이터베이스에 저장하지 않아요. 답변을 위해 서버와 AI 제공자가
-              처리하며, 제공자 측 보관은 해당 정책과 설정의 적용을 받아요.
-              종료하거나 페이지를 떠나면 이 화면의 원문이 사라져요. 새로고침해도
-              원문을 다시 불러올 수 없어요.
+              대화 원문과 대화를 이어가기 위한 요약은 현재 브라우저 화면의
+              메모리에서만 유지하고 서비스 데이터베이스에 저장하지 않아요.
+              답변을 위해 서버와 AI 제공자가 처리하며, 제공자 측 보관은 해당
+              정책과 설정의 적용을 받아요. 종료하거나 페이지를 떠나면 이 화면의
+              원문과 요약이 사라져요. 새로고침해도 원문을 다시 불러올 수 없어요.
             </p>
           </details>
         </div>

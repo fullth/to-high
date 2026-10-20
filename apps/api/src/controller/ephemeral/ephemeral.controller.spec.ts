@@ -20,6 +20,15 @@ describe('ephemeral request lifecycle', () => {
     const response = Object.assign(new EventEmitter(), {
       setHeader: jest.fn(),
       writableEnded: false,
+      headersSent: false,
+      write: jest.fn(),
+      json: jest.fn(),
+      flushHeaders: jest.fn().mockImplementation(() => {
+        response.headersSent = true;
+      }),
+      end: jest.fn().mockImplementation(() => {
+        response.writableEnded = true;
+      }),
     });
     const request = {
       user: { userId: 'verified-owner' },
@@ -37,7 +46,7 @@ describe('ephemeral request lifecycle', () => {
     expect(acquireOwner).toHaveBeenCalledWith('verified-owner', '127.0.0.1');
     expect(response.setHeader).toHaveBeenCalledWith(
       'Cache-Control',
-      'no-store',
+      'no-store, no-transform',
     );
     expect(release).toHaveBeenCalledTimes(1);
     expect(response.listenerCount('close')).toBe(0);
@@ -59,9 +68,43 @@ describe('ephemeral request lifecycle', () => {
       request,
       response as unknown as Response,
     );
-    const failure = expect(pending).rejects.toThrow('cancelled');
     response.emit('close');
-    await failure;
+    await expect(pending).resolves.toBeUndefined();
     expect(release).toHaveBeenCalledTimes(1);
+  });
+  it('flushes SSE events in order, completes and releases the request', async () => {
+    const respond = jest
+      .fn()
+      .mockImplementation((_body, _user, _signal, emit) => {
+        emit({ type: 'delta', text: '먼저 도착' });
+        emit({ type: 'reply', reply: '먼저 도착' });
+        emit({ type: 'options', options: ['계속 이야기할게요'] });
+        return Promise.resolve({ reply: '먼저 도착' });
+      });
+    const { controller, response, request, release } = setup(respond);
+    request.headers = { accept: 'text/event-stream' };
+    await controller.respond(body, request, response as unknown as Response);
+    expect(response.flushHeaders).toHaveBeenCalledTimes(1);
+    expect(response.write.mock.calls.map((call) => call[0])).toEqual([
+      'data: {"type":"delta","text":"먼저 도착"}\n\n',
+      'data: {"type":"reply","reply":"먼저 도착"}\n\n',
+      'data: {"type":"options","options":["계속 이야기할게요"]}\n\n',
+      'data: {"type":"done"}\n\n',
+    ]);
+    expect(response.end).toHaveBeenCalledTimes(1);
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+  it('sends only an allowlisted code on a streaming failure', async () => {
+    const { controller, response, request } = setup(
+      jest.fn().mockRejectedValue(new Error('private-prompt-marker')),
+    );
+    request.headers = { accept: 'text/event-stream' };
+    await controller.respond(body, request, response as unknown as Response);
+    expect(response.write).toHaveBeenCalledWith(
+      'data: {"type":"error","code":"UNAVAILABLE"}\n\n',
+    );
+    expect(JSON.stringify(response.write.mock.calls)).not.toContain(
+      'private-prompt-marker',
+    );
   });
 });

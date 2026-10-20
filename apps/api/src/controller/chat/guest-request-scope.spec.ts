@@ -4,6 +4,7 @@ import { ExecutionContext, INestApplication } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import request from 'supertest';
 import { ChatController } from './chat.controller';
+import { LegacyChatDisabledGuard } from '../../common/legacy-chat-disabled.guard';
 import { ChatService } from '../../app/chat/chat.service';
 import { SessionService } from '../../app/session/session.service';
 import { SessionRepository } from '../../persistence/session/session.repository';
@@ -72,6 +73,8 @@ describe('real request-scoped ownership composition with in-memory model', () =>
         { provide: OpenAIAgent, useValue: {} },
       ],
     })
+      .overrideGuard(LegacyChatDisabledGuard)
+      .useValue({ canActivate: () => true })
       .overrideGuard(OptionalJwtAuthGuard)
       .useValue({
         canActivate: (ctx: ExecutionContext) => {

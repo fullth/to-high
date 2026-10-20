@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
+import { ChatFailure } from './chat-failure';
 import {
-  HttpException,
   HttpStatus,
   Injectable,
   ServiceUnavailableException,
@@ -32,10 +32,7 @@ export class EphemeralBudgetService {
       )
       .digest('hex');
     if (this.active.has(key)) {
-      throw new HttpException(
-        '한 번에 한 대화의 답변을 기다려 주세요.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new ChatFailure('BUSY', HttpStatus.TOO_MANY_REQUESTS);
     }
     const today = new Date().toISOString().slice(0, 10);
     if (today !== this.day) {
@@ -43,10 +40,7 @@ export class EphemeralBudgetService {
       this.requests = 0;
     }
     if (this.requests >= limit) {
-      throw new HttpException(
-        '오늘의 상담 사용량 한도에 도달했어요.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new ChatFailure('RATE_LIMITED', HttpStatus.TOO_MANY_REQUESTS);
     }
     // Reserve before provider calls; failed/aborted requests still consume quota.
     this.requests += 1;

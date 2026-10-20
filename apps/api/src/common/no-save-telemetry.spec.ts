@@ -23,4 +23,54 @@ describe('no-save telemetry transport boundary', () => {
     expect(config.beforeSendTransaction(privateEvent)).toBeNull();
     expect(config.beforeBreadcrumb(privateEvent)).toBeNull();
   });
+  it('allows explicit server metrics without allowing counseling events', () => {
+    const previousDsn = process.env.SENTRY_DSN;
+    const previousEnabled = process.env.SENTRY_METRICS_ENABLED;
+    try {
+      process.env.SENTRY_DSN = 'https://public@example.com/1';
+      process.env.SENTRY_METRICS_ENABLED = 'true';
+      jest.isolateModules(() => {
+        require('../instrument');
+      });
+      const config = (Sentry.init as jest.Mock).mock.calls.at(-1)![0] as {
+        enabled: boolean;
+        enableMetrics: boolean;
+        enableLogs: boolean;
+        beforeSend: (event: unknown) => unknown;
+        beforeSendMetric: (metric: unknown) => unknown;
+      };
+      expect(config.enabled).toBe(true);
+      expect(config.enableMetrics).toBe(true);
+      expect(config.enableLogs).toBe(false);
+      expect(
+        config.beforeSend({ message: 'private-counseling-marker' }),
+      ).toBeNull();
+      expect(
+        config.beforeSendMetric({
+          name: 'private-counseling-marker',
+          type: 'counter',
+          value: 1,
+        }),
+      ).toBeNull();
+      expect(
+        config.beforeSendMetric({
+          name: 'levi.chat.requests',
+          type: 'counter',
+          value: 1,
+          attributes: { outcome: 'ok', summary: 'private-summary-marker' },
+        }),
+      ).toEqual({
+        name: 'levi.chat.requests',
+        type: 'counter',
+        value: 1,
+        attributes: { outcome: 'ok' },
+      });
+    } finally {
+      if (previousDsn === undefined) delete process.env.SENTRY_DSN;
+      else process.env.SENTRY_DSN = previousDsn;
+      if (previousEnabled === undefined)
+        delete process.env.SENTRY_METRICS_ENABLED;
+      else process.env.SENTRY_METRICS_ENABLED = previousEnabled;
+    }
+  });
 });

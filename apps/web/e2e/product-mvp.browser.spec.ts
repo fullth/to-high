@@ -131,59 +131,22 @@ test("reload, navigation back and BFCache restore discard counseling RAM", async
   await expect(page.getByLabel("전하고 싶은 마음")).toHaveCount(0);
 });
 
-test("context limit stops with explicit reset rather than silently slicing history", async ({
+test("former crisis keywords stay in the normal conversation without a fixed notice", async ({
   page,
 }) => {
   await offline(page);
-  const lengths: number[] = [];
-  await page.route("**/ephemeral/respond", async (route) => {
-    lengths.push(route.request().postDataJSON().messages.length);
-    await route.fulfill({
-      json: { reply: `답변 ${lengths.length}`, options: ["계속 이야기해요"] },
-    });
-  });
-  await page.goto("/talk");
-  for (let index = 1; index <= 10; index++) {
-    await send(page, `사용자 ${index}`);
-    await expect(
-      page.getByText(`답변 ${index}`, { exact: true }),
-    ).toBeVisible();
-  }
-  expect(lengths).toEqual([1, 3, 5, 7, 9, 11, 13, 15, 17, 19]);
-  await expect(
-    page.getByRole("region", { name: "대화 맥락 한도" }),
-  ).toContainText("맥락 한도");
-  await expect(
-    page.getByRole("button", { name: "보내기", exact: true }),
-  ).toBeDisabled();
-  await expect(page.getByText("사용자 1", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "원문 지우고 마치기" }).click();
-  await expect(page.getByText("사용자 1", { exact: true })).toHaveCount(0);
-});
-
-test("crisis reply prominently preserves safe help and end deletion", async ({
-  page,
-}) => {
-  await offline(page);
-  await page.route("**/ephemeral/respond", async (route) =>
+  await page.route("**/ephemeral/respond", (route) =>
     route.fulfill({
-      json: {
-        reply: "지금 도움을 받아요",
-        options: [],
-        isCrisis: true,
-        crisisMessage: "안전을 위해 109로 연락해요",
-      },
+      json: { reply: "어떤 일을 하고 계셨어요?", options: ["일 이야기예요"] },
     }),
   );
   await page.goto("/talk");
-  await send(page, "위기 테스트");
+  await send(page, "프로젝트를 끝내고 싶어요");
   await expect(
-    page.getByRole("alert").filter({ hasText: "지금 안전" }),
-  ).toContainText("109");
-  await page.getByRole("button", { name: "상담 종료 후 원문 지우기" }).click();
-  await expect(
-    page.getByText("안전을 위해 109로 연락해요", { exact: true }),
-  ).toHaveCount(0);
+    page.getByText("어떤 일을 하고 계셨어요?", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".ch-crisis-notice")).toHaveCount(0);
+  await expect(page.locator('a[href="tel:109"]')).toHaveCount(0);
 });
 
 test("guest character path requires login before any character counseling", async ({
@@ -741,10 +704,7 @@ test("Levi original image loads on landing and guest counseling", async ({
     page.getByRole("link", { name: "위로", exact: true }).first(),
   ).toBeVisible();
   await expect(
-    page.getByText(
-      "내 상황을 이해하는 AI 상담사 '레비'",
-      { exact: true },
-    ),
+    page.getByText("내 상황을 이해하는 AI 상담사 '레비'", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", {
@@ -764,7 +724,9 @@ test("Levi original image loads on landing and guest counseling", async ({
   await expect(
     page.getByText("정리되지 않은 말이어도 괜찮아요.", { exact: true }),
   ).toHaveCount(0);
-  const primaryCta = page.getByRole("link", { name: "레비와 대화 시작하기", exact: true }).first();
+  const primaryCta = page
+    .getByRole("link", { name: "레비와 대화 시작하기", exact: true })
+    .first();
   await expect(primaryCta).toHaveCSS("color", "rgb(255, 255, 255)");
   const hero = page.getByRole("img", { name: "레비 AI 캐릭터" });
   await expect
@@ -805,7 +767,9 @@ test("Levi original image loads on landing and guest counseling", async ({
     fullPage: true,
   });
   await expect(
-    page.locator("section.final").getByRole("link", { name: "레비와 대화 시작하기", exact: true }),
+    page
+      .locator("section.final")
+      .getByRole("link", { name: "레비와 대화 시작하기", exact: true }),
   ).toHaveAttribute("href", "/talk");
   await page.locator("section.final").screenshot({
     path: "/tmp/levi-conversation-invite.png",
@@ -942,12 +906,9 @@ test("Levi expression assets switch without layout jumps and use finite motion",
   browser,
 }) => {
   const context = await browser.newContext({
+    baseURL: test.info().project.use.baseURL,
     viewport: { width: 1280, height: 720 },
     reducedMotion: "no-preference",
-    recordVideo: {
-      dir: "/tmp/levi-expression-video",
-      size: { width: 1280, height: 720 },
-    },
   });
   const page = await context.newPage();
   try {
@@ -1037,7 +998,9 @@ test("Levi expression assets switch without layout jumps and use finite motion",
     await page.waitForTimeout(1900);
     await expect(presence).toHaveAttribute("data-character-state", "idle");
     await expect(presence).toHaveAttribute("data-character-visual", "idle");
-    await page.getByRole("button", { name: "상담 종료 후 원문 지우기" }).click();
+    await page
+      .getByRole("button", { name: "상담 종료 후 원문 지우기" })
+      .click();
     await check("idle", "levi.png", false);
     await page.waitForTimeout(1900);
     await expect(presence).toHaveAttribute("data-character-state", "ended");
@@ -1048,11 +1011,16 @@ test("Levi expression assets switch without layout jumps and use finite motion",
 });
 
 for (const loggedIn of [false, true]) {
-  test(`unreleased memory entry points stay hidden (${loggedIn ? "signed in" : "guest"})`, async ({ page }) => {
+  test(`unreleased memory entry points stay hidden (${loggedIn ? "signed in" : "guest"})`, async ({
+    page,
+  }) => {
     await offline(page, loggedIn);
     let characterReads = 0;
     await page.route("**/characters**", async (route) => {
-      if (new URL(route.request().url()).origin === new URL(test.info().project.use.baseURL!).origin) {
+      if (
+        new URL(route.request().url()).origin ===
+        new URL(test.info().project.use.baseURL!).origin
+      ) {
         return route.continue();
       }
       characterReads++;
@@ -1060,14 +1028,25 @@ for (const loggedIn of [false, true]) {
     });
     await page.goto("/");
     await expect(page.locator(".features .feature")).toHaveCount(2);
-    await expect(page.getByText("기억은 내가 정해요", { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByText("기억은 내가 정해요", { exact: true }),
+    ).toHaveCount(0);
     await expect(page.locator('a[href="/characters"]')).toHaveCount(0);
     await expect(page.getByText("나만의 레비", { exact: true })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "로그인", exact: true })).toHaveCount(loggedIn ? 0 : 1);
+    await expect(
+      page.getByRole("button", { name: "로그인", exact: true }),
+    ).toHaveCount(loggedIn ? 0 : 1);
     await page.goto("/characters");
-    await expect(page.getByRole("heading", { name: "이 기능은 준비 중이에요" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /기억.*저장|캐릭터 만들기/ })).toHaveCount(0);
-    await page.getByRole("link", { name: "레비와 대화 시작하기", exact: true }).first().click();
+    await expect(
+      page.getByRole("heading", { name: "이 기능은 준비 중이에요" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /기억.*저장|캐릭터 만들기/ }),
+    ).toHaveCount(0);
+    await page
+      .getByRole("link", { name: "레비와 이야기하기", exact: true })
+      .first()
+      .click();
     await expect(page.getByLabel("전하고 싶은 마음")).toBeVisible();
     await expect(page.getByText(/기억 설정|기억 만들기/)).toHaveCount(0);
     await page.goto(`/talk?characterId=${id}`);
@@ -1075,7 +1054,9 @@ for (const loggedIn of [false, true]) {
     let body: Record<string, unknown> | undefined;
     await page.route("**/ephemeral/respond", async (route) => {
       body = route.request().postDataJSON();
-      await route.fulfill({ json: { reply: "잘 들었어요", options: ["더 이야기할게요"] } });
+      await route.fulfill({
+        json: { reply: "잘 들었어요", options: ["더 이야기할게요"] },
+      });
     });
     await send(page, "일반 상담 확인");
     await expect(page.getByText("잘 들었어요", { exact: true })).toBeVisible();
@@ -1084,7 +1065,9 @@ for (const loggedIn of [false, true]) {
   });
 }
 
-test("assistant Markdown uses plain text emphasis while preserving lists and safe links", async ({ page }) => {
+test("assistant Markdown uses plain text emphasis while preserving lists and safe links", async ({
+  page,
+}) => {
   await offline(page);
   let externalImages = 0;
   await page.route("https://example.invalid/**", async (route) => {
@@ -1111,7 +1094,9 @@ test("assistant Markdown uses plain text emphasis while preserving lists and saf
   const reply = page.locator("article .ch-bubble.ai");
   const paragraph = reply.locator("p.ch-md-p").first();
   await expect(paragraph).toHaveText("천천히 편하게 짧게 이야기해요.");
-  await expect(reply.locator("strong, em, code, .ch-md-strong, .ch-md-code")).toHaveCount(0);
+  await expect(
+    reply.locator("strong, em, code, .ch-md-strong, .ch-md-code"),
+  ).toHaveCount(0);
   await expect(paragraph).toHaveCSS("font-weight", "400");
   await expect(paragraph).toHaveCSS("font-style", "normal");
   await expect(paragraph).toHaveCSS(
@@ -1122,8 +1107,13 @@ test("assistant Markdown uses plain text emphasis while preserving lists and saf
     "첫 번째 이야기",
     "두 번째 이야기",
   ]);
-  await expect(reply.getByRole("link", { name: "도움 안내" })).toHaveAttribute("href", "https://example.org/help");
+  await expect(reply.getByRole("link", { name: "도움 안내" })).toHaveAttribute(
+    "href",
+    "https://example.org/help",
+  );
   await expect(reply).toContainText("마음 그림");
-  await expect(page.locator('article img[src*="example.invalid"]')).toHaveCount(0);
+  await expect(page.locator('article img[src*="example.invalid"]')).toHaveCount(
+    0,
+  );
   expect(externalImages).toBe(0);
 });
