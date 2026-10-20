@@ -4,4 +4,4 @@ export const SITE_URL =
 export const SERVICE_TITLE = "레비에게 마음을 털어놔보세요 | 위로";
 
 export const SERVICE_DESCRIPTION =
-  "내 상황을 이해하는 AI 상담사 레비. 지금 마음과 가까운 버튼을 고르고, 마음이 열리면 조금 더 들려주세요.";
+  "대화 내용은 저장되지 않아요. 가입 없이 대화를 시작해보세요!";

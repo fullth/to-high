@@ -2,21 +2,21 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 
 .wirocare-landing {
-  /* ===== sage + apricot palette (회복 그린 + 새벽 햇살) ===== */
-  --page: #faf8f3;
-  --page-2: #f3f5ee;
-  --soft: #eef3ec;
+  /* ===== mint white + sage palette ===== */
+  --page: #f5fbf7;
+  --page-2: #eaf4ed;
+  --soft: #e8f4ed;
   --card: #ffffff;
-  --card-2: #f6f8f4;
-  --chip: #f1f4ef;
+  --card-2: #f2f9f4;
+  --chip: #edf7f0;
 
   --ink: #213128;
   --ink-2: #4c5b53;
   --ink-3: #6f7d75;
   --ink-4: #9aa49d;
 
-  --line: #e5e9e0;
-  --line-2: #d3ddd3;
+  --line: #dfebe3;
+  --line-2: #cddfd2;
 
   --brand: #2e9b6d;
   --brand-h: #34ac79;
@@ -24,24 +24,24 @@
   --brand-soft: #d8eddf;
   --brand-ink: #ffffff;
 
-  --accent: #ef9f5b;
-  --accent-tint: #fae6d2;
+  --accent: #8bc9a6;
+  --accent-tint: #e4f3e9;
 
-  --grad: linear-gradient(110deg, #2e9b6d, #46b083 45%, #ef9f5b);
+  --grad: linear-gradient(110deg, #2e9b6d, #46b083 45%, #8bc9a6);
 
   --sage: #6fae87;
   --rose: #d98d8d;
   --tan:  #c2a875;
 
-  --blob-1: rgba(46,155,109,0.16);
-  --blob-2: rgba(239,159,91,0.16);
-  --blob-3: rgba(46,155,109,0.10);
-  --blob-4: rgba(111,174,135,0.14);
+  --blob-1: rgba(46,155,109,0.17);
+  --blob-2: rgba(113,195,153,0.19);
+  --blob-3: rgba(46,155,109,0.09);
+  --blob-4: rgba(111,174,135,0.13);
 
   --shadow-sm: 0 4px 14px rgba(40,84,62,0.08);
   --shadow-md: 0 8px 22px rgba(40,84,62,0.10);
   --shadow-lg: 0 12px 28px rgba(40,84,62,0.10), 0 22px 50px rgba(40,84,62,0.08);
-  --glass: rgba(250,248,243,0.82);
+  --glass: rgba(245,251,247,0.9);
   --dot: rgba(46,90,68,0.06);
 
   --radius-sm: 10px;
@@ -447,7 +447,7 @@
   padding: 48px 0;
 }
 .section.soft { background: var(--soft); }
-.levi-intro { background: #edf3ec; }
+.levi-intro { background: #e4f2e9; }
 @media (max-width: 768px) {
   .section { padding: 36px 0; }
 }
