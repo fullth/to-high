@@ -4,7 +4,7 @@ type SupportWindow = Window & {
   __testDocumentId?: string;
   __testChannelBoot?: { pluginKey: string };
   __testMessengerOpened?: boolean;
-  __testCoffeeBoot?: { kakaoPayUrl: string; name: string; siteKey: string };
+  __testCoffeeBoot?: { kakaoPayUrl: string; name?: string; siteKey: string };
   ChannelIO?: unknown;
   SMTC?: unknown;
 };
@@ -132,9 +132,11 @@ for (const width of [320, 390, 1440]) {
       await page.evaluate(() => (window as SupportWindow).__testCoffeeBoot),
     ).toMatchObject({
       kakaoPayUrl: "https://qr.kakaopay.com/Ej84nMWnw",
-      name: "임태환",
       siteKey: "fin-term",
     });
+    expect(
+      await page.evaluate(() => (window as SupportWindow).__testCoffeeBoot),
+    ).not.toHaveProperty("name");
     const channelBox = (await channel.boundingBox())!;
     const coffeeBox = (await coffee.boundingBox())!;
     expect(coffeeBox.x).toBeGreaterThanOrEqual(0);

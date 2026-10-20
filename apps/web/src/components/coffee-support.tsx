@@ -2,9 +2,8 @@
 
 import { useEffect } from "react";
 
-// 후원 링크·수취인은 show-me-the-coffee 예제(fin-term)와 동일하게 맞춘다.
+// 기존 카카오페이 후원 링크를 유지한다.
 const KAKAO_PAY_URL = "https://qr.kakaopay.com/Ej84nMWnw";
-const RECIPIENT_NAME = "임태환";
 const SITE_KEY = "fin-term";
 
 // 랜딩의 세이지 배경과 진한 초록 글자로 후원 위젯의 톤을 맞춘다.
@@ -28,10 +27,10 @@ function loadCoffeeWidget() {
   const boot = () => {
     w.SMTC?.("boot", {
       kakaoPayUrl: KAKAO_PAY_URL,
-      name: RECIPIENT_NAME,
       siteKey: SITE_KEY,
       analytics: true,
       label: "커피 후원",
+      description: "아래 버튼으로 카카오페이를 열어주세요.",
       accentColor: ACCENT_COLOR,
       textColor: TEXT_COLOR,
       position: "br",
@@ -58,7 +57,7 @@ function alignToChannelTalk() {
   const fab = host?.shadowRoot?.querySelector<HTMLElement>(".fab");
   if (!host || !fab) return false;
 
-  // 위젯의 Shadow DOM 안에서 런처에만 유리 질감을 적용한다.
+  // Shadow DOM 안에서 런처의 유리 질감과 모바일 후원 창을 설정한다.
   if (!host.shadowRoot?.querySelector("#levi-coffee-glass")) {
     const style = document.createElement("style");
     style.id = "levi-coffee-glass";
@@ -75,6 +74,9 @@ function alignToChannelTalk() {
       .fab:hover {
         box-shadow: inset 0 1px 0 rgba(255,255,255,1),
           0 9px 24px rgba(35,82,58,.22), 0 0 0 1px rgba(77,125,97,.18);
+      }
+      @media (max-width: 767px) {
+        .qr { display: none; }
       }
     `;
     host.shadowRoot?.appendChild(style);
