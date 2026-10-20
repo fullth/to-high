@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { MessageCircle } from "lucide-react";
+import "./support-widgets.css";
 
 const PLUGIN_KEY =
   process.env.NEXT_PUBLIC_CHANNEL_TALK_PLUGIN_KEY ||
@@ -37,15 +39,37 @@ function loadChannelTalk() {
   script.src = "https://cdn.channel.io/plugin/ch-plugin-web.js";
   document.head.appendChild(script);
 
-  ch("boot", { pluginKey: PLUGIN_KEY });
+  ch("boot", {
+    pluginKey: PLUGIN_KEY,
+    hideChannelButtonOnBoot: window.matchMedia("(max-width: 767px)").matches,
+  });
 }
 
 export function ChannelTalk() {
   useEffect(() => {
     loadChannelTalk();
+    const mobile = window.matchMedia("(max-width: 767px)");
+    const syncLauncher = () => {
+      (window as ChannelWindow).ChannelIO?.(
+        mobile.matches ? "hideChannelButton" : "showChannelButton",
+      );
+    };
+    syncLauncher();
+    mobile.addEventListener("change", syncLauncher);
+    return () => mobile.removeEventListener("change", syncLauncher);
   }, []);
 
-  return null;
+  return (
+    <button
+      id="mobile-channel-launcher"
+      className="mobile-channel-launcher"
+      type="button"
+      aria-label="문의하기"
+      onClick={() => (window as ChannelWindow).ChannelIO?.("showMessenger")}
+    >
+      <MessageCircle size={28} aria-hidden="true" />
+    </button>
+  );
 }
 
 // 상담 화면 등 채널톡 버튼을 감추고 싶은 곳에서 사용.

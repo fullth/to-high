@@ -69,6 +69,19 @@ function alignToChannelTalk() {
   const fabHeight = fab.getBoundingClientRect().height;
   if (fabHeight === 0) return false;
 
+  const mobileLauncher = document.getElementById("mobile-channel-launcher");
+  if (mobileLauncher && window.matchMedia("(max-width: 767px)").matches) {
+    const launcher = mobileLauncher.getBoundingClientRect();
+    const offsetX = window.innerWidth - launcher.left + 12;
+    const centerAdjustment = (launcher.height - fabHeight) / 2;
+    host.style.setProperty("--smtc-offset-x", `${offsetX}px`);
+    host.style.setProperty(
+      "--smtc-offset-y",
+      `calc(20px + env(safe-area-inset-bottom, 0px) + ${centerAdjustment}px)`,
+    );
+    return true;
+  }
+
   // 런처 왼쪽 = 화면 우측에서 (런처 오른쪽 여백 + 지름) 만큼 들어온 지점.
   // 그 왼쪽에 간격을 두고 후원 버튼(우측 기준 offsetX)을 붙인다.
   const offsetX = CH_LAUNCHER_RIGHT + CH_LAUNCHER_SIZE + GAP;
@@ -85,15 +98,35 @@ export function CoffeeSupport() {
   useEffect(() => {
     loadCoffeeWidget();
 
+    const syncPosition = () => {
+      alignToChannelTalk();
+    };
+    const observer = new ResizeObserver(syncPosition);
+    // 비동기 위젯이 생성되면 버튼 크기 변경도 감지한다.
+    let observed = false;
+
     // 위젯 mount 가 비동기라 정렬될 때까지 짧게 폴링한다.
     let tries = 0;
     const timer = window.setInterval(() => {
-      if (alignToChannelTalk() || ++tries > 40) {
+      const aligned = alignToChannelTalk();
+      const fab = document.getElementById("smtc-root")?.shadowRoot?.querySelector(".fab");
+      if (fab && !observed) {
+        observer.observe(fab);
+        observed = true;
+      }
+      if (aligned || ++tries > 40) {
         window.clearInterval(timer);
       }
     }, 250);
 
-    return () => window.clearInterval(timer);
+    window.addEventListener("resize", syncPosition);
+    window.visualViewport?.addEventListener("resize", syncPosition);
+    return () => {
+      window.clearInterval(timer);
+      observer.disconnect();
+      window.removeEventListener("resize", syncPosition);
+      window.visualViewport?.removeEventListener("resize", syncPosition);
+    };
   }, []);
 
   return null;

@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 type SupportWindow = Window & {
   __testDocumentId?: string;
   __testChannelBoot?: { pluginKey: string };
+  __testMessengerOpened?: boolean;
   __testCoffeeBoot?: { kakaoPayUrl: string; name: string; siteKey: string };
   ChannelIO?: unknown;
   SMTC?: unknown;
@@ -12,12 +13,17 @@ type SupportWindow = Window & {
 const channelSdk = `
   const queued = window.ChannelIO.q || [];
   window.ChannelIO = (command, options) => {
+    const launcher = document.getElementById('channel-test-launcher');
+    if (command === 'hideChannelButton' && launcher) launcher.style.display = 'none';
+    if (command === 'showChannelButton' && launcher) launcher.style.display = 'block';
+    if (command === 'showMessenger') window.__testMessengerOpened = true;
     if (command !== 'boot') return;
     window.__testChannelBoot = options;
     const button = document.createElement('button');
     button.id = 'channel-test-launcher';
     button.textContent = '문의하기';
     button.style.cssText = 'position:fixed;right:24px;bottom:25px;width:55px;height:55px;z-index:1000';
+    if (options.hideChannelButtonOnBoot) button.style.display = 'none';
     document.body.appendChild(button);
   };
   queued.forEach(args => window.ChannelIO(...args));
@@ -94,7 +100,7 @@ async function expectNoWidgets(page: Page) {
   await expect(page.getByRole("button", { name: "커피 후원" })).toHaveCount(0);
 }
 
-for (const width of [390, 1440]) {
+for (const width of [320, 390, 1440]) {
   test(`home restores both widgets and isolates counseling at ${width}px`, async ({
     page,
   }) => {
@@ -106,7 +112,7 @@ for (const width of [390, 1440]) {
         name: "레비에게 마음을 털어놔보세요",
       }),
     ).toBeVisible();
-    const channel = page.getByRole("button", { name: "문의하기" });
+    const channel = page.getByRole("button", { name: "문의하기" }).filter({ visible: true });
     const coffee = page.getByRole("button", { name: "커피 후원" });
     await expect(channel).toBeVisible();
     await expect(coffee).toBeVisible();
@@ -116,7 +122,7 @@ for (const width of [390, 1440]) {
           .locator("#smtc-root")
           .evaluate((host) => host.style.getPropertyValue("--smtc-offset-x")),
       )
-      .toBe("95px");
+      .toBe(width < 768 ? "80px" : "95px");
     expect(
       await page.evaluate(
         () => (window as SupportWindow).__testChannelBoot?.pluginKey,
@@ -134,6 +140,8 @@ for (const width of [390, 1440]) {
     expect(coffeeBox.x).toBeGreaterThanOrEqual(0);
     expect(coffeeBox.x + coffeeBox.width).toBeLessThan(channelBox.x);
     expect(channelBox.x + channelBox.width).toBeLessThanOrEqual(width);
+    expect(900 - channelBox.y - channelBox.height).toBeGreaterThanOrEqual(20);
+    expect(900 - coffeeBox.y - coffeeBox.height).toBeGreaterThanOrEqual(20);
     expect(
       Math.abs(
         coffeeBox.y +
@@ -143,6 +151,25 @@ for (const width of [390, 1440]) {
       ),
     ).toBeLessThan(1);
     expect(requests.sort()).toEqual(["channel", "coffee"]);
+
+    if (width < 768) {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      const copyright = page.getByText("© 2026 위로.", { exact: false });
+      await expect.poll(async () => {
+        const textBox = (await copyright.boundingBox())!;
+        const buttonBox = (await coffee.boundingBox())!;
+        return buttonBox.y - textBox.y - textBox.height;
+      }).toBeGreaterThanOrEqual(12);
+      await channel.click();
+      expect(await page.evaluate(() => (window as SupportWindow).__testMessengerOpened)).toBe(true);
+      await page.setViewportSize({ width: 844, height: 390 });
+      await expect(page.locator("#mobile-channel-launcher")).toBeHidden();
+      await expect(page.locator("#channel-test-launcher")).toBeVisible();
+      await expect.poll(() => page.locator("#smtc-root").evaluate(host => host.style.getPropertyValue("--smtc-offset-x"))).toBe("95px");
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.locator("#channel-test-launcher")).toBeHidden();
+      await expect.poll(() => page.locator("#smtc-root").evaluate(host => host.style.getPropertyValue("--smtc-offset-x"))).toBe("80px");
+    }
 
     const homeDocument = await documentId(page);
     await page.locator('a[href="/talk"]').nth(1).click();

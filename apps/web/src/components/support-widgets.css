@@ -1,0 +1,32 @@
+.mobile-channel-launcher {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-channel-launcher {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border: 1px solid #cddfd2;
+    border-radius: 50%;
+    background: #e4f2e9;
+    color: #245b42;
+    box-shadow: 0 4px 14px rgba(40, 84, 62, 0.12);
+    z-index: 1000;
+    cursor: pointer;
+  }
+
+  .mobile-channel-launcher:focus-visible {
+    outline: 2px solid #245b42;
+    outline-offset: 3px;
+  }
+
+  .wirocare-landing > footer:last-child {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  }
+}
