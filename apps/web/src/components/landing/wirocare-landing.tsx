@@ -7,6 +7,22 @@ import { FullPageLink } from "@/components/full-page-link";
 import { useAuth } from "@/contexts/auth-context";
 import "./landing.css";
 
+function LeviPose({ inviting = false }: { inviting?: boolean }) {
+  return (
+    <svg
+      viewBox={`${inviting ? 627 : 0} 0 627 651`}
+      className={inviting ? "conversation-avatar" : "levi-intro-image"}
+      role={inviting ? undefined : "img"}
+      aria-label={inviting ? undefined : "고개를 기울여 이야기를 듣는 레비"}
+      aria-hidden={inviting || undefined}
+      width={inviting ? 80 : 120}
+      height={inviting ? 80 : 120}
+    >
+      <image href="/characters/levi-approved-poses.png" width="1254" height="1254" />
+    </svg>
+  );
+}
+
 const ArrowIcon = ({
   size = 16,
   className = "arrow",
@@ -165,13 +181,7 @@ export function WirocareLanding() {
                 </p>
               </div>
               <div className="feature">
-                <Image
-                  src="/characters/levi-listening-pose.png"
-                  alt="편안히 이야기를 듣는 레비"
-                  width={120}
-                  height={120}
-                  className="levi-intro-image"
-                />
+                <LeviPose />
                 <h4>대화는 저장하지 않아요</h4>
                 <p>
                   대화는 이 화면에만 남아요. 새로고침하거나 화면을 떠나면
@@ -189,14 +199,7 @@ export function WirocareLanding() {
           <div className="container">
             <h2>지금, 레비와 이야기해볼까요?</h2>
             <div className="conversation-invite">
-              <Image
-                src="/characters/levi-listening-pose.png"
-                alt=""
-                width={80}
-                height={80}
-                className="conversation-avatar"
-                loading="eager"
-              />
+              <LeviPose inviting />
               <p className="conversation-greeting">
                 안녕하세요, 레비예요.
                 <br />
