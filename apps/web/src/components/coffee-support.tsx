@@ -66,6 +66,28 @@ function alignToChannelTalk() {
   const fab = host?.shadowRoot?.querySelector<HTMLElement>(".fab");
   if (!host || !fab) return false;
 
+  // 위젯의 Shadow DOM 안에서 런처에만 유리 질감을 적용한다.
+  if (!host.shadowRoot?.querySelector("#levi-coffee-glass")) {
+    const style = document.createElement("style");
+    style.id = "levi-coffee-glass";
+    style.textContent = `
+      .fab {
+        background: linear-gradient(160deg, rgba(255,255,255,.94), rgba(233,247,239,.78));
+        color: #245b42;
+        border: 1px solid rgba(255,255,255,.95);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        backdrop-filter: blur(16px) saturate(140%);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.98),
+          0 6px 20px rgba(35,82,58,.18), 0 0 0 1px rgba(77,125,97,.12);
+      }
+      .fab:hover {
+        box-shadow: inset 0 1px 0 rgba(255,255,255,1),
+          0 9px 24px rgba(35,82,58,.22), 0 0 0 1px rgba(77,125,97,.18);
+      }
+    `;
+    host.shadowRoot?.appendChild(style);
+  }
+
   const fabHeight = fab.getBoundingClientRect().height;
   if (fabHeight === 0) return false;
 
