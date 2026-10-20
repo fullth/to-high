@@ -41,28 +41,19 @@ function loadChannelTalk() {
 
   ch("boot", {
     pluginKey: PLUGIN_KEY,
-    hideChannelButtonOnBoot: window.matchMedia("(max-width: 767px)").matches,
+    hideChannelButtonOnBoot: true,
   });
 }
 
 export function ChannelTalk() {
   useEffect(() => {
     loadChannelTalk();
-    const mobile = window.matchMedia("(max-width: 767px)");
-    const syncLauncher = () => {
-      (window as ChannelWindow).ChannelIO?.(
-        mobile.matches ? "hideChannelButton" : "showChannelButton",
-      );
-    };
-    syncLauncher();
-    mobile.addEventListener("change", syncLauncher);
-    return () => mobile.removeEventListener("change", syncLauncher);
   }, []);
 
   return (
     <button
-      id="mobile-channel-launcher"
-      className="mobile-channel-launcher"
+      id="support-channel-launcher"
+      className="support-channel-launcher"
       type="button"
       aria-label="문의하기"
       onClick={() => (window as ChannelWindow).ChannelIO?.("showMessenger")}

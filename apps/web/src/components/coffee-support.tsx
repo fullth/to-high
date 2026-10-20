@@ -11,14 +11,6 @@ const SITE_KEY = "fin-term";
 const ACCENT_COLOR = "#e4f2e9";
 const TEXT_COLOR = "#245b42";
 
-// 채널톡 데스크톱 런처 배치값. 런처는 iframe 안에 그려져 부모 페이지에서
-// 실측이 불가하므로 렌더 결과를 캡처해 측정한 지오메트리(우 24 / 하 25 / 지름 55)에 맞춘다.
-const CH_LAUNCHER_RIGHT = 24;
-const CH_LAUNCHER_BOTTOM = 25;
-const CH_LAUNCHER_SIZE = 55;
-// 채널톡 런처와 후원 버튼 사이 좌우 간격(px).
-const GAP = 16;
-
 type SmtcFn = (command: "boot", options: Record<string, unknown>) => void;
 
 type SmtcWindow = Window & {
@@ -91,28 +83,19 @@ function alignToChannelTalk() {
   const fabHeight = fab.getBoundingClientRect().height;
   if (fabHeight === 0) return false;
 
-  const mobileLauncher = document.getElementById("mobile-channel-launcher");
-  if (mobileLauncher && window.matchMedia("(max-width: 767px)").matches) {
-    const launcher = mobileLauncher.getBoundingClientRect();
-    const offsetX = window.innerWidth - launcher.left + 12;
-    const centerAdjustment = (launcher.height - fabHeight) / 2;
-    host.style.setProperty("--smtc-offset-x", `${offsetX}px`);
-    host.style.setProperty(
-      "--smtc-offset-y",
-      `calc(20px + env(safe-area-inset-bottom, 0px) + ${centerAdjustment}px)`,
-    );
-    return true;
-  }
-
-  // 런처 왼쪽 = 화면 우측에서 (런처 오른쪽 여백 + 지름) 만큼 들어온 지점.
-  // 그 왼쪽에 간격을 두고 후원 버튼(우측 기준 offsetX)을 붙인다.
-  const offsetX = CH_LAUNCHER_RIGHT + CH_LAUNCHER_SIZE + GAP;
-  // 런처 세로 중심(하단 기준)에 후원 버튼 중심을 맞춘다.
-  const launcherCenterFromBottom = CH_LAUNCHER_BOTTOM + CH_LAUNCHER_SIZE / 2;
-  const offsetY = launcherCenterFromBottom - fabHeight / 2;
-
+  const channelLauncher = document.getElementById("support-channel-launcher");
+  if (!channelLauncher) return false;
+  const launcher = channelLauncher.getBoundingClientRect();
+  const mobile = window.matchMedia("(max-width: 767px)").matches;
+  const offsetX = window.innerWidth - launcher.left + (mobile ? 12 : 16);
+  const centerAdjustment = (launcher.height - fabHeight) / 2;
   host.style.setProperty("--smtc-offset-x", `${offsetX}px`);
-  host.style.setProperty("--smtc-offset-y", `${Math.max(offsetY, 0)}px`);
+  host.style.setProperty(
+    "--smtc-offset-y",
+    mobile
+      ? `calc(20px + env(safe-area-inset-bottom, 0px) + ${centerAdjustment}px)`
+      : `${window.innerHeight - launcher.bottom + centerAdjustment}px`,
+  );
   return true;
 }
 

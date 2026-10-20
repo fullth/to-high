@@ -160,17 +160,18 @@ for (const width of [320, 390, 1440]) {
         const buttonBox = (await coffee.boundingBox())!;
         return buttonBox.y - textBox.y - textBox.height;
       }).toBeGreaterThanOrEqual(12);
-      await channel.click();
-      expect(await page.evaluate(() => (window as SupportWindow).__testMessengerOpened)).toBe(true);
       await page.setViewportSize({ width: 844, height: 390 });
-      await expect(page.locator("#mobile-channel-launcher")).toBeHidden();
-      await expect(page.locator("#channel-test-launcher")).toBeVisible();
+      await expect(page.locator("#support-channel-launcher")).toBeVisible();
+      await expect(page.locator("#support-channel-launcher")).toHaveCSS("width", "55px");
+      await expect(page.locator("#channel-test-launcher")).toBeHidden();
       await expect.poll(() => page.locator("#smtc-root").evaluate(host => host.style.getPropertyValue("--smtc-offset-x"))).toBe("95px");
       await page.setViewportSize({ width, height: 900 });
       await expect(page.locator("#channel-test-launcher")).toBeHidden();
       await expect.poll(() => page.locator("#smtc-root").evaluate(host => host.style.getPropertyValue("--smtc-offset-x"))).toBe("80px");
     }
 
+    await channel.click();
+    expect(await page.evaluate(() => (window as SupportWindow).__testMessengerOpened)).toBe(true);
     const homeDocument = await documentId(page);
     await page.locator('a[href="/talk"]').nth(1).click();
     await expect(page).toHaveURL(/\/talk$/);
