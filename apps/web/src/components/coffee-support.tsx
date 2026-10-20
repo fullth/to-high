@@ -7,9 +7,9 @@ const KAKAO_PAY_URL = "https://qr.kakaopay.com/Ej84nMWnw";
 const RECIPIENT_NAME = "임태환";
 const SITE_KEY = "fin-term";
 
-// 채널톡 런처와 톤을 맞춘 색(크림 배경 + 브라운 글자).
-const ACCENT_COLOR = "#f0dec1";
-const TEXT_COLOR = "#7b511d";
+// 랜딩의 세이지 배경과 진한 초록 글자로 후원 위젯의 톤을 맞춘다.
+const ACCENT_COLOR = "#e4f2e9";
+const TEXT_COLOR = "#245b42";
 
 // 채널톡 데스크톱 런처 배치값. 런처는 iframe 안에 그려져 부모 페이지에서
 // 실측이 불가하므로 렌더 결과를 캡처해 측정한 지오메트리(우 24 / 하 25 / 지름 55)에 맞춘다.
