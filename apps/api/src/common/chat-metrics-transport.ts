@@ -24,7 +24,12 @@ export function filterMetricsEnvelope(envelope: Envelope): Envelope | null {
       if (!raw || typeof raw !== 'object' || !Number.isFinite(raw.timestamp))
         continue;
       const attributes: Record<string, string> = {};
-      for (const key of ['outcome', 'operation', 'token_type', 'option_result']) {
+      for (const key of [
+        'outcome',
+        'operation',
+        'token_type',
+        'option_result',
+      ]) {
         const attribute = raw.attributes?.[key];
         if (attribute?.type === 'string' && typeof attribute.value === 'string')
           attributes[key] = attribute.value;
