@@ -3,7 +3,7 @@ import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { wrapUntrustedPromptData } from '../../prompts';
 import type { CounselorType } from '../../types/session';
 import { ChatFailure } from '../../common/chat-failure';
-import { recordSummary } from '../../common/chat-metrics';
+import { recordOptionsResult, recordSummary } from '../../common/chat-metrics';
 import { CharacterService } from '../character/character.service';
 import type { EphemeralRequest } from '../../controller/ephemeral/ephemeral.request';
 
@@ -180,6 +180,13 @@ export class EphemeralService {
         }
       } catch {
         // Keep the completed reply and safe action options; no paid retry.
+        recordOptionsResult(
+          signal?.aborted
+            ? 'cancelled'
+            : controller.signal.aborted
+              ? 'deadline'
+              : 'provider_error',
+        );
       }
       if (signal?.aborted) throw new Error('cancelled');
       emit?.({ type: 'options', options });

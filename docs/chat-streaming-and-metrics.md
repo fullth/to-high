@@ -37,6 +37,7 @@ SENTRY_METRICS_ENABLED=true
 | `levi.chat.rejected`    | 인증·입력·분당 제한 등 컨트롤러 이전에 거절된 요청 수            | `outcome`                                                      |
 | `levi.chat.summaries`   | 완료된 문맥 요약 수                                              | 없음                                                           |
 | `levi.ai.tokens`        | 제공자가 반환한 실제 입력·출력 토큰 합계                         | `operation`: reply/options/summary, `token_type`: input/output |
+| `levi.chat.options`     | 선택지 생성 성공 또는 기본값 사용 원인 (요청 취소 별도 구분)     | `option_result`: generated/invalid_output/provider_error/deadline/cancelled |
 
 Sentry Metrics에서 위 이름으로 검색해 요청 수를 결과별로 묶고, 처리 시간과 첫 청크 시간의 p50·p95를 확인합니다. 취소는 실패와 따로 표시합니다. 컨트롤러 이전 거절은 `rejected`에서 별도로 확인합니다. 입력·출력 토큰을 작업별로 합산하면 사용량을 확인할 수 있지만 실제 청구액은 제공자 요금·캐시·실패 처리에 따라 달라집니다. 중간 취소처럼 제공자 usage가 도착하지 않은 호출은 토큰 합계에 반영되지 않을 수 있습니다.
 

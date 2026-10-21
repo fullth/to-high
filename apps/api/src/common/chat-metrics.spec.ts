@@ -1,6 +1,25 @@
 import { filterChatMetric } from './chat-metrics';
 
 describe('chat metric privacy boundary', () => {
+  it('counts option fallback reasons without forwarding any conversation data', () => {
+    expect(
+      filterChatMetric({
+        name: 'levi.chat.options',
+        type: 'counter',
+        value: 1,
+        attributes: {
+          option_result: 'provider_error',
+          messages: 'private',
+          error: 'private',
+        },
+      }),
+    ).toEqual({
+      name: 'levi.chat.options',
+      type: 'counter',
+      value: 1,
+      attributes: { option_result: 'provider_error' },
+    });
+  });
   it('strips inherited request, identity, text, URLs and unknown attributes', () => {
     const metric = filterChatMetric({
       name: 'levi.ai.tokens',

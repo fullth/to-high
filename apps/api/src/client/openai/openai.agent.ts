@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { recordModelUsage } from '../../common/chat-metrics';
+import {
+  recordModelUsage,
+  recordOptionsResult,
+} from '../../common/chat-metrics';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import {
@@ -494,7 +497,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
           },
         ],
         response_format: { type: 'json_object' },
-        max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS,
+        max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.REPLY_OPTIONS,
       },
       { signal },
     );
@@ -976,8 +979,21 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       .min(2)
       .max(8)
       .safeParse(value);
-    if (!parsed.success)
+    const candidates = requireAction
+      ? parsed.success
+        ? parsed.data
+        : []
+      : Array.isArray(value)
+        ? value
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0 && item.length <= 100)
+            .slice(0, 8)
+        : [];
+    if (!candidates.length) {
+      if (!requireAction) recordOptionsResult('invalid_output');
       return ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
+    }
     const key = (text: string) =>
       text
         .normalize('NFKC')
@@ -991,8 +1007,8 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     );
     const seen = new Set<string>();
     const politeOptions = requireAction
-      ? OpenAIAgent.normalizeOptionsTone(parsed.data)
-      : parsed.data.map((option) =>
+      ? OpenAIAgent.normalizeOptionsTone(candidates)
+      : candidates.map((option) =>
           OpenAIAgent.toPolite(option)
             .replace(/[?？]+$/u, '')
             .trim(),
@@ -1002,7 +1018,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       const isAction = /(조언|정리)\s*해주세요/.test(option);
       if (
         !normalized ||
-        option.length > 15 ||
+        option.length > (requireAction ? 15 : 24) ||
         seen.has(normalized) ||
         (!isAction && recentAnswers.has(normalized))
       )
@@ -1010,8 +1026,11 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       seen.add(normalized);
       return true;
     });
-    if (options.length < 2)
+    if (options.length < (requireAction ? 2 : 1)) {
+      if (!requireAction) recordOptionsResult('invalid_output');
       return ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
+    }
+    if (!requireAction) recordOptionsResult('generated');
     return options;
   }
 

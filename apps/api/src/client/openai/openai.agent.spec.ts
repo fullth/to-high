@@ -138,7 +138,7 @@ describe('OpenAIAgent 프롬프트 경계', () => {
       '상담사: 특히 외롭게 느껴지는 때가 있어요?',
     );
     expect(request.max_completion_tokens).toBe(
-      PROMPT_CONFIG.MAX_OUTPUT_TOKENS.OPTIONS,
+      PROMPT_CONFIG.MAX_OUTPUT_TOKENS.REPLY_OPTIONS,
     );
   });
 
@@ -166,7 +166,7 @@ describe('OpenAIAgent 프롬프트 경계', () => {
                 '퇴근 후에요',
                 '사람들 속에서도요',
                 '사람들 속에서도요',
-                '긴'.repeat(16),
+                '긴'.repeat(25),
                 '잘 모르겠어요?',
                 '?',
               ],
@@ -178,6 +178,48 @@ describe('OpenAIAgent 프롬프트 경계', () => {
     expect(
       await agent.generateReplyOptions(['나: 퇴근 후에요'], 'conversation'),
     ).toEqual(['사람들 속에서도요', '잘 모르겠어요']);
+  });
+
+  it('일부 항목이 잘못되어도 맥락에 맞는 선택지는 보존한다', async () => {
+    createCompletion.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              options: [
+                null,
+                '혼자 있을 때 더 외롭게 느껴져요',
+                3,
+                '사람들 속에서도요',
+              ],
+            }),
+          },
+        },
+      ],
+    });
+    expect(
+      await agent.generateReplyOptions(
+        ['나: 요즘 외로워요', '상담사: 언제 더 외롭게 느껴져요?'],
+        'conversation',
+      ),
+    ).toEqual(['혼자 있을 때 더 외롭게 느껴져요', '사람들 속에서도요']);
+  });
+
+  it('반복을 걸러낸 뒤 남은 구체적인 답 하나를 기본 버튼으로 덮지 않는다', async () => {
+    createCompletion.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              options: ['퇴근 후에요', '퇴근 후에요', '혼자 있고 싶어요'],
+            }),
+          },
+        },
+      ],
+    });
+    expect(
+      await agent.generateReplyOptions(['나: 퇴근 후에요'], 'conversation'),
+    ).toEqual(['혼자 있고 싶어요']);
   });
 
   it('선택지 생성도 같은 요청 중단 신호를 SDK에 전달한다', async () => {

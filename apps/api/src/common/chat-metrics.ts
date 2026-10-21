@@ -8,6 +8,7 @@ const names = new Set([
   'levi.chat.summaries',
   'levi.ai.tokens',
   'levi.chat.rejected',
+  'levi.chat.options',
 ]);
 const values: Record<string, readonly string[]> = {
   outcome: [
@@ -24,6 +25,13 @@ const values: Record<string, readonly string[]> = {
   ],
   operation: ['reply', 'options', 'summary'],
   token_type: ['input', 'output'],
+  option_result: [
+    'generated',
+    'invalid_output',
+    'provider_error',
+    'deadline',
+    'cancelled',
+  ],
 };
 
 /** Rebuild metrics from an allowlist; never forward inherited SDK scope data. */
@@ -81,6 +89,18 @@ export function recordModelUsage(
 
 export function recordSummary() {
   Sentry.metrics.count('levi.chat.summaries', 1);
+}
+export function recordOptionsResult(
+  option_result:
+    | 'generated'
+    | 'invalid_output'
+    | 'provider_error'
+    | 'deadline'
+    | 'cancelled',
+) {
+  Sentry.metrics.count('levi.chat.options', 1, {
+    attributes: { option_result },
+  });
 }
 export function recordRejected(outcome: string) {
   Sentry.metrics.count('levi.chat.rejected', 1, { attributes: { outcome } });
