@@ -77,6 +77,61 @@ test.afterEach(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
+test.describe("mobile choice input", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test("replies and errors do not focus the composer; tapping it still works", async ({
+    page,
+  }) => {
+    let active: ServerResponse | undefined;
+    handler = (_body, response) => {
+      active = response;
+      open(response);
+    };
+    await page.goto("/talk");
+    const input = page.getByLabel("전하고 싶은 마음");
+    await expect(input).toHaveCSS("font-size", "16px");
+    await page
+      .getByRole("button", { name: "일 때문에 힘들어요", exact: true })
+      .tap();
+    await expect(input).toBeDisabled();
+    await expect(input).not.toBeFocused();
+    await expect.poll(() => !!active).toBe(true);
+    event(active!, { type: "delta", text: "먼저 도착한 이야기" });
+    await expect(
+      page.getByText("먼저 도착한 이야기", { exact: true }),
+    ).toBeVisible();
+    await expect(input).not.toBeFocused();
+    finish(active!);
+    await expect(input).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "계속 이야기할게요", exact: true }),
+    ).toBeEnabled();
+    await expect(input).not.toBeFocused();
+
+    handler = (_body, response) => {
+      response.writeHead(503, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ code: "UNAVAILABLE" }));
+    };
+    await page
+      .getByRole("button", { name: "계속 이야기할게요", exact: true })
+      .tap();
+    await expect(
+      page.getByRole("alert").filter({ hasText: CHAT_ERROR_COPY.UNAVAILABLE }),
+    ).toBeVisible();
+    await expect(input).toHaveValue("계속 이야기할게요");
+    await expect(input).not.toBeFocused();
+
+    await input.tap();
+    await expect(input).toBeFocused();
+    await expect(input).toHaveCSS("font-size", "16px");
+  });
+});
+
 test("partial text is visible before reply choices finish, including split UTF-8 and CRLF", async ({
   page,
 }) => {

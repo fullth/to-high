@@ -72,8 +72,14 @@ function TalkContent() {
   useEffect(() => {
     if (!busy && restoreInputFocus.current) {
       restoreInputFocus.current = false;
-      if (document.activeElement === document.body)
-        inputElement.current?.focus();
+      // Touch devices should only open the keyboard when the user taps the input.
+      if (
+        window.matchMedia(
+          "(min-width: 768px) and (hover: hover) and (pointer: fine)",
+        ).matches &&
+        document.activeElement === document.body
+      )
+        inputElement.current?.focus({ preventScroll: true });
     }
   }, [busy]);
   const [ended, setEnded] = useState(false);

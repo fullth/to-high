@@ -60,6 +60,8 @@
   margin-bottom: 0;
 }
 .ch-ephemeral .ch-input {
+  /* iOS Safari zooms focused form controls when their text is smaller than 16px. */
+  font-size: 16px;
   min-width: 0;
   resize: none;
   min-height: 48px;
