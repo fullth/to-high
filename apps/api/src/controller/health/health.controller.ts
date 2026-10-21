@@ -12,6 +12,7 @@ export class HealthController {
   check() {
     return {
       status: 'ok',
+      revision: process.env.RAILWAY_GIT_COMMIT_SHA || null,
       timestamp: new Date().toISOString(),
     };
   }
