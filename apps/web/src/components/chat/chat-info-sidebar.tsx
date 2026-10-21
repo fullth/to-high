@@ -22,13 +22,12 @@ export function ChatInfoSidebar({ activeStep }: ChatInfoSidebarProps) {
   return (
     <aside className="ch-info-sidebar" aria-label="상담 정보">
       <FullPageLink className="ch-info-brand" href="/">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           className="ch-info-logo"
-          src="/logo.svg"
-          alt="위로"
+          src="/characters/levi.png"
+          alt=""
           width={40}
-          height={40}
+          height={44}
         />
         <span className="ch-info-brand-text">
           <b>위로</b>

@@ -1,3 +1,4 @@
+import { openComposer } from "./chat-helpers";
 import { expect, test, type Page } from "@playwright/test";
 const id = "507f1f77bcf86cd799439011";
 async function offline(page: Page, loggedIn = false) {
@@ -18,6 +19,7 @@ async function offline(page: Page, loggedIn = false) {
   });
 }
 async function send(page: Page, value: string) {
+  await openComposer(page);
   await page.getByLabel("전하고 싶은 마음").fill(value);
   await page.getByRole("button", { name: "보내기", exact: true }).click();
 }
@@ -43,6 +45,27 @@ test("choices and direct input preserve chronological context without storing co
     .getByRole("button", { name: "일 때문에 힘들어요", exact: true })
     .click();
   await expect(page.getByText("답변 1", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("전하고 싶은 마음")).toBeHidden();
+  await expect(page.locator("article.user .ch-message-name")).toHaveCount(0);
+  const speaker = page.locator("article.assistant .ch-message-speaker");
+  await expect(speaker.getByText("레비", { exact: true })).toBeVisible();
+  const avatarBox = await speaker.locator("img").boundingBox();
+  const nameBox = await speaker.locator(".ch-message-name").boundingBox();
+  expect(nameBox!.y).toBeGreaterThanOrEqual(avatarBox!.y + avatarBox!.height);
+  await expect(speaker.locator(".ch-message-name")).toHaveCSS(
+    "font-size",
+    "12px",
+  );
+  const draft = await openComposer(page);
+  await expect(draft).not.toBeFocused();
+  await draft.fill("아직 보내지 않은 마음");
+  await page
+    .getByRole("button", { name: "선택지로 돌아가기", exact: true })
+    .click();
+  await expect(draft).toBeHidden();
+  await openComposer(page);
+  await expect(draft).toHaveValue("아직 보내지 않은 마음");
+
   await send(page, "상담 원문 비밀 테스트");
   await expect(page.getByText("답변 2", { exact: true })).toBeVisible();
   expect(requests[1].messages).toEqual([
@@ -117,6 +140,7 @@ test("reload, navigation back and BFCache restore discard counseling RAM", async
   await expect(page.getByText("뒤로가기 원문", { exact: true })).toHaveCount(0);
   if (await page.getByRole("button", { name: "새 상담 시작" }).isVisible())
     await page.getByRole("button", { name: "새 상담 시작" }).click();
+  await openComposer(page);
   await page.getByLabel("전하고 싶은 마음").fill("bfcache 초안");
   await page.evaluate(() =>
     window.dispatchEvent(
@@ -163,7 +187,11 @@ test("guest character path requires login before any character counseling", asyn
     page.getByText("캐릭터와 상담하려면 먼저 로그인", { exact: false }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "보내기", exact: true }),
+    page.getByRole("button", {
+      name: "보내기",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toBeDisabled();
   expect(requests).toBe(0);
   await page.goto("/characters");
@@ -351,7 +379,11 @@ test("pending request disables choices and duplicate input while end still clear
     page.getByRole("button", { name: "일 때문에 힘들어요", exact: true }),
   ).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "보내기", exact: true }),
+    page.getByRole("button", {
+      name: "보내기",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toBeDisabled();
   expect(requests).toBe(1);
   await page.getByRole("button", { name: "상담 종료 후 원문 지우기" }).click();
@@ -840,6 +872,7 @@ test("character state feedback preserves keyboard focus and reduced-motion seman
   const presence = page.locator('[aria-label="AI 캐릭터 상태"]');
   const input = page.getByLabel("전하고 싶은 마음");
   await expect(presence).toHaveAttribute("data-character-state", "idle");
+  await openComposer(page);
   await input.fill("마음을 적고 있어요");
   await expect(presence).toHaveAttribute("data-character-state", "listening");
   const option = page.getByRole("button", {
@@ -855,7 +888,7 @@ test("character state feedback preserves keyboard focus and reduced-motion seman
     json: { reply: "상태 모의 답변", options: ["더 이야기할게요"] },
   });
   await expect(presence).toHaveAttribute("data-character-state", "arrived");
-  await expect(input).toBeFocused();
+  await expect(input).toBeHidden();
   await expect(
     page.getByRole("log", { name: "현재 상담 대화" }),
   ).toHaveAttribute("aria-live", "polite");
@@ -875,6 +908,7 @@ test("character state feedback preserves keyboard focus and reduced-motion seman
   await expect(page.getByText("상태 모의 답변", { exact: true })).toBeVisible();
   await page.waitForTimeout(1900);
   await expect(presence).toHaveAttribute("data-character-state", "idle");
+  await openComposer(page);
   await input.fill("실패 입력");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
   await expect(presence).toHaveAttribute("data-character-state", "thinking");
@@ -956,6 +990,7 @@ test("Levi expression assets switch without layout jumps and use finite motion",
       expect(animation.iterations).not.toContain("infinite");
     }
     await check("idle", "levi.png", false);
+    await openComposer(page);
     await page.getByLabel("전하고 싶은 마음").fill("짧은 입력");
     await check("listening", "levi-listening.png", true);
     await page.screenshot({
@@ -1047,6 +1082,7 @@ for (const loggedIn of [false, true]) {
       .getByRole("link", { name: "레비와 이야기하기", exact: true })
       .first()
       .click();
+    await openComposer(page);
     await expect(page.getByLabel("전하고 싶은 마음")).toBeVisible();
     await expect(page.getByText(/기억 설정|기억 만들기/)).toHaveCount(0);
     await page.goto(`/talk?characterId=${id}`);

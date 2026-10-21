@@ -1,3 +1,4 @@
+import { openComposer } from "./chat-helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 type SupportWindow = Window & {
@@ -178,9 +179,10 @@ for (const width of [320, 390, 1440]) {
     const homeDocument = await documentId(page);
     await page.locator('a[href="/talk"]').nth(1).click();
     await expect(page).toHaveURL(/\/talk$/);
-    await expect(page.getByLabel("전하고 싶은 마음")).toBeVisible();
+    await expect(page.getByLabel("전하고 싶은 마음")).toBeHidden();
     expect(await documentId(page)).not.toBe(homeDocument);
     await expectNoWidgets(page);
+    await openComposer(page);
     await page
       .getByLabel("전하고 싶은 마음")
       .fill("외부 위젯에 남기지 않을 상담 원문");
@@ -197,6 +199,7 @@ test("counseling to home and browser back cannot retain support SDKs or the conv
   await page.goto("/talk");
   await expectNoWidgets(page);
   expect(requests).toHaveLength(0);
+  await openComposer(page);
   await page
     .getByLabel("전하고 싶은 마음")
     .fill("뒤로가기 후에도 남지 않을 원문");

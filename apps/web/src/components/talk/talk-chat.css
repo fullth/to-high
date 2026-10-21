@@ -1,5 +1,16 @@
-/* Preserve the original chat theme; adapt only the ephemeral chat layout and Levi. */
+/* Match the landing palette and keep the conversation choice-led. */
 .ch-ephemeral {
+  --page: #f5fbf7;
+  --page-2: #eaf4ed;
+  --soft: #e8f4ed;
+  --card-2: #f2f9f4;
+  --chip: #edf7f0;
+  --line: #dfebe3;
+  --line-2: #cddfd2;
+  --accent: #8bc9a6;
+  --grad: linear-gradient(110deg, #2e9b6d, #46b083 45%, #8bc9a6);
+  --glass: rgba(245, 251, 247, 0.9);
+  --dot: rgba(46, 90, 68, 0.04);
   height: 100vh;
   height: 100dvh;
 }
@@ -42,18 +53,100 @@
   gap: 20px;
 }
 .ch-ephemeral .ch-bubble {
+  padding: 18px 20px;
+  line-height: 1.8;
+  word-break: keep-all;
   overflow-wrap: anywhere;
 }
-.ch-ephemeral .ch-message-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 700;
+.ch-ephemeral .ch-bubble.ai {
+  border-radius: 30px;
+  background: #fff;
+  border-color: rgba(109, 158, 126, 0.1);
+  box-shadow: 0 6px 24px rgba(40, 84, 62, 0.055);
 }
-.ch-ephemeral .ch-message-name img {
+.ch-ephemeral .ch-bubble.user {
+  border-radius: 28px;
+}
+.ch-ephemeral .ch-row.assistant {
+  align-items: flex-start;
+  gap: 10px;
+}
+.ch-ephemeral .ch-row.assistant .ch-bubble {
+  max-width: min(calc(100% - 54px), 560px);
+}
+.ch-ephemeral .ch-message-speaker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 44px;
+  gap: 4px;
+  padding-top: 4px;
+  min-width: 0;
+}
+.ch-ephemeral .ch-message-speaker img {
   object-fit: contain;
+}
+.ch-ephemeral .ch-message-name {
+  margin: 0;
+  max-width: 44px;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.ch-ephemeral .ch-option {
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 26px;
+  padding: 12px;
+  min-height: 52px;
+  color: #245b42;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.ch-ephemeral .ch-dock {
+  background: linear-gradient(180deg, rgba(245, 251, 247, 0.88), #eaf4ed);
+  border-top: 1px solid var(--line);
+}
+.ch-ephemeral .ch-info-sidebar {
+  background: rgba(234, 244, 237, 0.65);
+}
+.ch-ephemeral .ch-logo-mark {
+  background: url("/characters/levi.png") center / contain no-repeat;
+  width: 26px;
+  height: 30px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.ch-ephemeral .ch-info-logo {
+  object-fit: contain;
+}
+.ch-ephemeral .ch-choice-guide {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.ch-ephemeral .ch-composer-toggle {
+  display: block;
+  margin: 10px auto 12px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.ch-ephemeral .ch-composer-toggle:hover {
+  background: var(--brand-tint);
+}
+.ch-ephemeral .ch-input-row[hidden] {
+  display: none;
 }
 .ch-ephemeral .ch-bubble.user p {
   margin-top: 0;
@@ -128,8 +221,8 @@
     padding: 12px 16px max(12px, env(safe-area-inset-bottom));
   }
   .ch-ephemeral .ch-option {
-    min-height: 44px;
-    padding: 10px 12px;
+    min-height: 52px;
+    padding: 12px;
     font-size: 14px;
   }
   .ch-ephemeral .ch-options {

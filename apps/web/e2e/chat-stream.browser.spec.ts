@@ -1,3 +1,4 @@
+import { openComposer } from "./chat-helpers";
 import { expect, test, type Page } from "@playwright/test";
 import { createServer, type Server, type ServerResponse } from "node:http";
 import { CHAT_ERROR_COPY } from "../src/lib/chat-errors";
@@ -27,6 +28,7 @@ function finish(response: ServerResponse, reply = "잘 들었어요") {
   response.end();
 }
 async function send(page: Page, text: string) {
+  await openComposer(page);
   await page.getByLabel("전하고 싶은 마음").fill(text);
   await page.getByRole("button", { name: "보내기", exact: true }).click();
 }
@@ -126,6 +128,8 @@ test.describe("mobile choice input", () => {
     await expect(input).toHaveValue("계속 이야기할게요");
     await expect(input).not.toBeFocused();
 
+    await openComposer(page);
+    await expect(input).not.toBeFocused();
     await input.tap();
     await expect(input).toBeFocused();
     await expect(input).toHaveCSS("font-size", "16px");

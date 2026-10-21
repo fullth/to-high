@@ -59,6 +59,7 @@ function TalkContent() {
   const [messages, setMessages] = useState<TalkMessage[]>([]);
   const [options, setOptions] = useState<string[]>(initialOptions);
   const [input, setInput] = useState("");
+  const [inputOpen, setInputOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [arrival, setArrival] = useState(false);
   const inputElement = useRef<HTMLTextAreaElement>(null);
@@ -74,6 +75,7 @@ function TalkContent() {
       restoreInputFocus.current = false;
       // Touch devices should only open the keyboard when the user taps the input.
       if (
+        inputOpen &&
         window.matchMedia(
           "(min-width: 768px) and (hover: hover) and (pointer: fine)",
         ).matches &&
@@ -81,7 +83,7 @@ function TalkContent() {
       )
         inputElement.current?.focus({ preventScroll: true });
     }
-  }, [busy]);
+  }, [busy, inputOpen]);
   const [ended, setEnded] = useState(false);
   const [error, setError] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -108,6 +110,7 @@ function TalkContent() {
     setOptions([]);
     setMessages([]);
     setInput("");
+    setInputOpen(false);
     setError("");
     setErrorCode(null);
     setStreaming(false);
@@ -288,6 +291,7 @@ function TalkContent() {
       setArrival(true);
       setOptions(result.options || ["더 이야기할게요", "정리해주세요"]);
       setMessages(transcript.current);
+      setInputOpen(false);
     } catch (error) {
       if (!controller.signal.aborted && current === version.current.value) {
         history.current = next.slice(0, -1);
@@ -406,31 +410,31 @@ function TalkContent() {
                 {!messages.length && !busy && (
                   <div className="ch-row">
                     <div className="ch-bubble ai">
-                      어디서부터 말해야 할지 몰라도 괜찮아요. 선택지를 누르거나
-                      편하게 이야기해 주세요.
+                      어디서부터 말해야 할지 몰라도 괜찮아요. 선택지만 눌러도
+                      괜찮아요.
                     </div>
                   </div>
                 )}
                 {messages.map((message, index) => (
                   <article
                     key={index}
-                    className={`ch-row ${message.role === "user" ? "user" : ""}`}
+                    className={`ch-row ${message.role === "user" ? "user" : "assistant"}`}
                   >
+                    {message.role === "assistant" && (
+                      <div className="ch-message-speaker">
+                        <Image
+                          src="/characters/levi.png"
+                          alt=""
+                          aria-hidden="true"
+                          width={36}
+                          height={40}
+                        />
+                        <p className="ch-message-name">{aiName}</p>
+                      </div>
+                    )}
                     <div
-                      className={`ch-bubble ${message.role === "user" ? "user" : "ai glow"}`}
+                      className={`ch-bubble ${message.role === "user" ? "user" : "ai"}`}
                     >
-                      <p className="ch-message-name">
-                        {message.role === "assistant" && (
-                          <Image
-                            src="/characters/levi.png"
-                            alt=""
-                            aria-hidden="true"
-                            width={24}
-                            height={24}
-                          />
-                        )}
-                        {message.role === "user" ? "나" : aiName}
-                      </p>
                       {message.role === "user" ? (
                         <p>{message.content}</p>
                       ) : (
@@ -490,6 +494,9 @@ function TalkContent() {
         <div className="ch-dock">
           {!ended && (
             <>
+              <p className="ch-choice-guide">
+                지금 마음과 가까운 답을 골라주세요
+              </p>
               <div aria-label="답변 선택지" className="ch-options">
                 {options.map((option) => (
                   <button
@@ -507,7 +514,19 @@ function TalkContent() {
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                className="ch-composer-toggle"
+                aria-expanded={inputOpen}
+                aria-controls="talk-composer"
+                disabled={busy}
+                onClick={() => setInputOpen((open) => !open)}
+              >
+                {inputOpen ? "선택지로 돌아가기" : "다른 마음이 있어요"}
+              </button>
               <form
+                id="talk-composer"
+                hidden={!inputOpen}
                 className="ch-input-row"
                 onSubmit={(event) => {
                   event.preventDefault();
@@ -556,7 +575,9 @@ function TalkContent() {
                   보내기
                 </button>
               </form>
-              <p className="ch-composer-hint">{input.length}/500자</p>
+              <p className="ch-composer-hint" hidden={!inputOpen}>
+                {input.length}/500자
+              </p>
             </>
           )}
           <p className="ch-talk-disclaimer">

@@ -70,7 +70,9 @@ export function CharacterPresence({
           aria-atomic="true"
           className="text-sm text-muted-foreground break-words"
         >
-          {labels[state]}
+          {appearance === "chat" && state === "idle"
+            ? "선택지만 눌러도 괜찮아요."
+            : labels[state]}
         </p>
       </div>
     </section>
