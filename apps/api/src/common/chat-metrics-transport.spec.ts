@@ -69,4 +69,31 @@ describe('final Sentry transport boundary', () => {
     await transport.flush(100);
     expect(flush).toHaveBeenCalledWith(100);
   });
+  it('preserves allowed option diagnostics through the final transport', () => {
+    const input = [
+      {},
+      [
+        [
+          { type: 'trace_metric' },
+          {
+            items: [
+              {
+                timestamp: 100,
+                name: 'levi.chat.options',
+                type: 'counter',
+                value: 1,
+                attributes: {
+                  option_result: { type: 'string', value: 'invalid_output' },
+                  summary: { type: 'string', value: 'private-summary' },
+                },
+              },
+            ],
+          },
+        ],
+      ],
+    ] as unknown as Envelope;
+    const output = JSON.stringify(filterMetricsEnvelope(input));
+    expect(output).toContain('invalid_output');
+    expect(output).not.toContain('private-summary');
+  });
 });
