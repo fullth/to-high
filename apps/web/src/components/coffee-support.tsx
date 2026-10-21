@@ -27,6 +27,7 @@ function loadCoffeeWidget() {
   const boot = () => {
     w.SMTC?.("boot", {
       kakaoPayUrl: KAKAO_PAY_URL,
+      hideQrOnMobile: true,
       siteKey: SITE_KEY,
       analytics: true,
       label: "커피 후원",
@@ -45,7 +46,7 @@ function loadCoffeeWidget() {
   const script = document.createElement("script");
   script.async = true;
   script.src =
-    "https://cdn.jsdelivr.net/npm/show-me-the-coffee/dist/show-me-the-coffee.js";
+    "https://cdn.jsdelivr.net/npm/show-me-the-coffee@0.1.3/dist/show-me-the-coffee.js";
   script.onload = boot;
   document.head.appendChild(script);
 }
@@ -74,9 +75,6 @@ function alignToChannelTalk() {
       .fab:hover {
         box-shadow: inset 0 1px 0 rgba(255,255,255,1),
           0 9px 24px rgba(35,82,58,.22), 0 0 0 1px rgba(77,125,97,.18);
-      }
-      @media (max-width: 767px) {
-        .qr { display: none; }
       }
     `;
     host.shadowRoot?.appendChild(style);

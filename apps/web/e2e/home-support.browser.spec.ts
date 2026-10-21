@@ -63,7 +63,7 @@ async function mockProviders(page: Page) {
     }
     if (
       url.href ===
-      "https://cdn.jsdelivr.net/npm/show-me-the-coffee/dist/show-me-the-coffee.js"
+      "https://cdn.jsdelivr.net/npm/show-me-the-coffee@0.1.3/dist/show-me-the-coffee.js"
     ) {
       sdkRequests.push("coffee");
       return route.fulfill({
@@ -132,6 +132,7 @@ for (const width of [320, 390, 1440]) {
       await page.evaluate(() => (window as SupportWindow).__testCoffeeBoot),
     ).toMatchObject({
       kakaoPayUrl: "https://qr.kakaopay.com/Ej84nMWnw",
+      hideQrOnMobile: true,
       siteKey: "fin-term",
     });
     expect(
