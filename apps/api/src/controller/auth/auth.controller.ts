@@ -8,6 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { GoogleOAuthGuard, KakaoOAuthGuard } from '../../common/oauth.guard';
 import { AuthService } from '../../app/auth/auth.service';
 import type { UserResponse } from './dto/auth.response';
 
@@ -24,8 +25,11 @@ export class AuthController {
     summary: 'Google OAuth 로그인',
     description: 'Google OAuth 로그인 페이지로 리다이렉트합니다.',
   })
-  @ApiResponse({ status: 302, description: 'Google 로그인 페이지로 리다이렉트' })
-  @UseGuards(AuthGuard('google'))
+  @ApiResponse({
+    status: 302,
+    description: 'Google 로그인 페이지로 리다이렉트',
+  })
+  @UseGuards(GoogleOAuthGuard)
   googleLogin() {}
 
   @Get('google/callback')
@@ -33,13 +37,20 @@ export class AuthController {
     summary: 'Google OAuth 콜백',
     description: 'Google 인증 후 토큰과 함께 프론트엔드로 리다이렉트합니다.',
   })
-  @ApiResponse({ status: 302, description: '프론트엔드로 리다이렉트 (토큰 포함)' })
-  @UseGuards(AuthGuard('google'))
+  @ApiResponse({
+    status: 302,
+    description: '프론트엔드로 리다이렉트 (토큰 포함)',
+  })
+  @UseGuards(GoogleOAuthGuard)
   googleCallback(@Req() req: any, @Res() res: Response): void {
     const token = this.authService.generateToken(req.user);
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
-    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    // The fragment is consumed once by the initiating tab, never sent to the web server.
+    const result = new URLSearchParams({ token, state: req.query.state });
+    res.redirect(`${frontendUrl}/auth/callback#${result}`);
   }
 
   @Get('kakao')
@@ -48,7 +59,7 @@ export class AuthController {
     description: 'Kakao OAuth 로그인 페이지로 리다이렉트합니다.',
   })
   @ApiResponse({ status: 302, description: 'Kakao 로그인 페이지로 리다이렉트' })
-  @UseGuards(AuthGuard('kakao'))
+  @UseGuards(KakaoOAuthGuard)
   kakaoLogin() {}
 
   @Get('kakao/callback')
@@ -56,13 +67,20 @@ export class AuthController {
     summary: 'Kakao OAuth 콜백',
     description: 'Kakao 인증 후 토큰과 함께 프론트엔드로 리다이렉트합니다.',
   })
-  @ApiResponse({ status: 302, description: '프론트엔드로 리다이렉트 (토큰 포함)' })
-  @UseGuards(AuthGuard('kakao'))
+  @ApiResponse({
+    status: 302,
+    description: '프론트엔드로 리다이렉트 (토큰 포함)',
+  })
+  @UseGuards(KakaoOAuthGuard)
   kakaoCallback(@Req() req: any, @Res() res: Response): void {
     const token = this.authService.generateToken(req.user);
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
-    res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    // The fragment is consumed once by the initiating tab, never sent to the web server.
+    const result = new URLSearchParams({ token, state: req.query.state });
+    res.redirect(`${frontendUrl}/auth/callback#${result}`);
   }
 
   @Get('me')

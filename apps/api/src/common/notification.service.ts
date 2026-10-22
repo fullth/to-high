@@ -2,6 +2,31 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[char]!,
+  );
+}
+
+function safePicture(value?: string): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.username || url.password) return null;
+    return escapeHtml(url.href);
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
 export class NotificationService {
   private transporter: nodemailer.Transporter | null = null;
@@ -40,6 +65,7 @@ export class NotificationService {
 
     const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
 
+    const picture = safePicture(user.picture);
     try {
       await this.transporter.sendMail({
         from: this.configService.get<string>('GMAIL_USER'),
@@ -51,11 +77,11 @@ export class NotificationService {
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="padding: 8px 0; color: #666;">이름</td>
-                <td style="padding: 8px 0; font-weight: bold;">${user.name || '-'}</td>
+                <td style="padding: 8px 0; font-weight: bold;">${escapeHtml(user.name || '-')}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">이메일</td>
-                <td style="padding: 8px 0; font-weight: bold;">${user.email}</td>
+                <td style="padding: 8px 0; font-weight: bold;">${escapeHtml(user.email)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666;">가입 시간</td>
@@ -66,7 +92,7 @@ export class NotificationService {
                 <td style="padding: 8px 0; font-weight: bold; color: #6366F1;">${totalUsers}명</td>
               </tr>
             </table>
-            ${user.picture ? `<img src="${user.picture}" style="width: 60px; height: 60px; border-radius: 50%; margin-top: 16px;" />` : ''}
+            ${picture ? `<img src="${picture}" style="width: 60px; height: 60px; border-radius: 50%; margin-top: 16px;" />` : ''}
           </div>
         `,
       });

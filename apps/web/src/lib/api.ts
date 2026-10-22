@@ -1,3 +1,4 @@
+import { createOAuthLoginUrl } from "./oauth";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 interface FetchOptions extends RequestInit {
@@ -367,7 +368,7 @@ export function getMe(token: string) {
 
 // Google OAuth URL
 export function getGoogleAuthUrl() {
-  return `${API_BASE_URL}/auth/google`;
+  return createOAuthLoginUrl(API_BASE_URL, "google");
 }
 
 // 스트리밍 방식 응답 모드 설정

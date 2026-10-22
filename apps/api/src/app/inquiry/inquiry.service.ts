@@ -10,7 +10,12 @@ export class InquiryService {
     private readonly inquiryModel: Model<InquiryDocument>,
   ) {}
 
-  async create(userId: string | null, type: InquiryType, message: string, email?: string) {
+  async create(
+    userId: string | null,
+    type: InquiryType,
+    message: string,
+    email?: string,
+  ) {
     const data: any = {
       type,
       email,
@@ -24,8 +29,10 @@ export class InquiryService {
   }
 
   async addMessage(inquiryId: string, userId: string | null, content: string) {
-    // 비회원인 경우 inquiryId만으로 조회
-    const query = userId ? { _id: inquiryId, userId } : { _id: inquiryId };
+    // 비회원은 소유자가 없는 문의에만 접근할 수 있다.
+    const query = userId
+      ? { _id: inquiryId, userId }
+      : { _id: inquiryId, userId: null };
     const inquiry = await this.inquiryModel.findOne(query);
     if (!inquiry) throw new NotFoundException('문의를 찾을 수 없어요.');
     if (inquiry.status === 'closed') throw new Error('이미 종료된 문의예요.');
@@ -36,14 +43,13 @@ export class InquiryService {
   }
 
   async getUserInquiries(userId: string) {
-    return this.inquiryModel
-      .find({ userId })
-      .sort({ updatedAt: -1 })
-      .lean();
+    return this.inquiryModel.find({ userId }).sort({ updatedAt: -1 }).lean();
   }
 
   async getInquiry(inquiryId: string, userId: string) {
-    const inquiry = await this.inquiryModel.findOne({ _id: inquiryId, userId }).lean();
+    const inquiry = await this.inquiryModel
+      .findOne({ _id: inquiryId, userId })
+      .lean();
     if (!inquiry) throw new NotFoundException('문의를 찾을 수 없어요.');
     return inquiry;
   }

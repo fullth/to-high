@@ -1,13 +1,12 @@
 "use client";
-import { useSearchParams } from "next/navigation";
+import { consumeOAuthResult } from "@/lib/oauth";
 import { Suspense, useEffect, useRef } from "react";
 function CallbackContent() {
-  const params = useSearchParams();
   const initialized = useRef(false);
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    const token = params.get("token");
+    const token = consumeOAuthResult(window.location.hash);
     window.history.replaceState(null, "", "/auth/callback");
     // Legacy guest sessions and drafts are never carried into the new product.
     localStorage.removeItem("pendingClaimSession");
@@ -19,7 +18,7 @@ function CallbackContent() {
     }
     localStorage.setItem("accessToken", token);
     window.location.replace("/characters");
-  }, [params]);
+  }, []);
   return (
     <main className="p-8">
       <p>로그인 처리 중...</p>

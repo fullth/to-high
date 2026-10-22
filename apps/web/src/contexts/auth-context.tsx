@@ -1,7 +1,15 @@
 "use client";
 
+import { createOAuthLoginUrl } from "@/lib/oauth";
 import { getMe, User } from "@/lib/api";
-import { createContext, ReactNode, useContext, useEffect, useState, useRef } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+} from "react";
 
 interface AuthContextType {
   user: User | null;
@@ -43,12 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    window.location.href = `${apiUrl}/auth/google`;
+    window.location.href = createOAuthLoginUrl(apiUrl, "google");
   };
 
   const loginWithKakao = () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    window.location.href = `${apiUrl}/auth/kakao`;
+    window.location.href = createOAuthLoginUrl(apiUrl, "kakao");
   };
 
   const logout = () => {
@@ -58,7 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, loginWithKakao, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, loginWithKakao, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
