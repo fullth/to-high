@@ -167,8 +167,8 @@ export function WirocareLanding() {
             <div className="features">
               <div className="feature">
                 <Image
-                  src="/characters/levi-waving-pose.png"
-                  alt="레비 AI 캐릭터"
+                  src="/characters/levi-memory-pose.png"
+                  alt="하트를 안고 웃으며 반기는 레비"
                   width={120}
                   height={120}
                   priority
