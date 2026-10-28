@@ -90,6 +90,7 @@ async function fetchApi<T>(
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...rest,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -138,6 +139,13 @@ async function fetchApi<T>(
     if (sessionId) localStorage.removeItem(`guestSession:${sessionId}`);
   }
   return result;
+}
+
+export function revokeAuthSession(token: string) {
+  return fetchApi<{ loggedOut: true }>("/auth/logout", {
+    method: "POST",
+    token,
+  });
 }
 
 // 상담 모드: T(논리적), F(공감적), reaction(리액션), listening(경청)

@@ -14,6 +14,10 @@ describe('OAuth request binding over HTTP', () => {
   const other = 'b'.repeat(64);
   const exchanges = jest.fn();
   const sign = jest.fn(() => 'synthetic-jwt');
+  const findById = jest.fn(() =>
+    Promise.resolve({ name: 'synthetic-user' }),
+  );
+  let authController: AuthController;
   beforeAll(async () => {
     for (const name of ['google', 'kakao'])
       passport.use(name, {
@@ -41,9 +45,13 @@ describe('OAuth request binding over HTTP', () => {
               })[key],
           },
         },
-        { provide: AuthService, useValue: { generateToken: sign } },
+        {
+          provide: AuthService,
+          useValue: { generateToken: sign, findById },
+        },
       ],
     }).compile();
+    authController = module.get(AuthController);
     app = module.createNestApplication();
     await app.init();
     await app.listen(0, '127.0.0.1');
@@ -51,6 +59,7 @@ describe('OAuth request binding over HTTP', () => {
   beforeEach(() => {
     exchanges.mockClear();
     sign.mockClear();
+    findById.mockClear();
   });
   afterAll(async () => {
     await app.close();
@@ -115,5 +124,23 @@ describe('OAuth request binding over HTTP', () => {
         'Expires=Thu, 01 Jan 1970',
       );
     });
+  });
+
+  it('marks the authenticated user response as uncacheable', async () => {
+    const response = { setHeader: jest.fn() };
+
+    await (authController.getMe as any)(
+      { user: { userId: 'synthetic-owner', email: 'user@example.com' } },
+      response,
+    );
+
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'no-store',
+    );
+    expect(response.setHeader).toHaveBeenCalledWith(
+      'Vary',
+      'Authorization',
+    );
   });
 });

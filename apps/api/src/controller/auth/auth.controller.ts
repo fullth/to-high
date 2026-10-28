@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -42,8 +42,8 @@ export class AuthController {
     description: '프론트엔드로 리다이렉트 (토큰 포함)',
   })
   @UseGuards(GoogleOAuthGuard)
-  googleCallback(@Req() req: any, @Res() res: Response): void {
-    const token = this.authService.generateToken(req.user);
+  async googleCallback(@Req() req: any, @Res() res: Response): Promise<void> {
+    const token = await this.authService.generateToken(req.user, 'google');
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
     res.setHeader('Cache-Control', 'no-store');
@@ -72,8 +72,8 @@ export class AuthController {
     description: '프론트엔드로 리다이렉트 (토큰 포함)',
   })
   @UseGuards(KakaoOAuthGuard)
-  kakaoCallback(@Req() req: any, @Res() res: Response): void {
-    const token = this.authService.generateToken(req.user);
+  async kakaoCallback(@Req() req: any, @Res() res: Response): Promise<void> {
+    const token = await this.authService.generateToken(req.user, 'kakao');
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
     res.setHeader('Cache-Control', 'no-store');
@@ -103,12 +103,31 @@ export class AuthController {
   })
   @ApiResponse({ status: 401, description: '인증 실패' })
   @UseGuards(AuthGuard('jwt'))
-  async getMe(@Req() req: any): Promise<UserResponse> {
+  async getMe(
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<UserResponse> {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Vary', 'Authorization');
     const user = await this.authService.findById(req.user.userId);
     return {
       userId: req.user.userId,
       email: req.user.email,
       name: user?.name,
     };
+  }
+
+  @Post('logout')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '로그아웃',
+    description: '현재 로그인 세션을 폐기합니다.',
+  })
+  @ApiResponse({ status: 200, description: '로그인 세션 폐기 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  @UseGuards(AuthGuard('jwt'))
+  async logout(@Req() req: any): Promise<{ loggedOut: true }> {
+    await this.authService.revokeSession(req.user.userId, req.user.sessionId);
+    return { loggedOut: true };
   }
 }

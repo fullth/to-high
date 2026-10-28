@@ -13,11 +13,11 @@ function CallbackContent() {
     for (const key of Object.keys(localStorage))
       if (key.startsWith("guestSession:")) localStorage.removeItem(key);
     if (!token) {
-      window.location.replace("/characters?error=auth_failed");
+      window.location.replace("/talk?error=auth_failed");
       return;
     }
     localStorage.setItem("accessToken", token);
-    window.location.replace("/characters");
+    window.location.replace("/talk");
   }, []);
   return (
     <main className="p-8">

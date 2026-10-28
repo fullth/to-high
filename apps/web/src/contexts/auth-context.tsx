@@ -1,7 +1,7 @@
 "use client";
 
 import { createOAuthLoginUrl } from "@/lib/oauth";
-import { getMe, User } from "@/lib/api";
+import { getMe, revokeAuthSession, User } from "@/lib/api";
 import {
   createContext,
   ReactNode,
@@ -60,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const storedToken = localStorage.getItem("accessToken");
+    if (storedToken) void revokeAuthSession(storedToken).catch(() => undefined);
     localStorage.removeItem("accessToken");
     setToken(null);
     setUser(null);

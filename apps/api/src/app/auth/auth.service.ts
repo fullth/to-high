@@ -1,8 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserDocument } from '../../database/user.schema';
 import { UserRepository } from '../../persistence/user/user.repository';
 import { NotificationService } from '../../common/notification.service';
+import { AuthSessionRepository } from '../../persistence/auth-session/auth-session.repository';
+
+const AUTH_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface GoogleUserDto {
   email: string;
@@ -24,6 +27,7 @@ export class AuthService {
     private userRepository: UserRepository,
     private jwtService: JwtService,
     private notificationService: NotificationService,
+    @Optional() private authSessionRepository?: AuthSessionRepository,
   ) {}
 
   async validateGoogleUser(dto: GoogleUserDto): Promise<UserDocument> {
@@ -79,9 +83,29 @@ export class AuthService {
     return user;
   }
 
-  generateToken(user: UserDocument): string {
-    const payload = { sub: user._id, email: user.email };
+  async generateToken(
+    user: UserDocument,
+    provider: 'google' | 'kakao' = 'google',
+  ): Promise<string> {
+    const expiresAt = new Date(Date.now() + AUTH_SESSION_TTL_MS);
+    const session = this.authSessionRepository
+      ? await this.authSessionRepository.create(
+          user._id.toString(),
+          provider,
+          expiresAt,
+        )
+      : null;
+    const payload = {
+      sub: user._id,
+      email: user.email,
+      ...(session && { sid: session._id.toString() }),
+    };
     return this.jwtService.sign(payload);
+  }
+
+  async revokeSession(userId: string, sessionId?: string): Promise<void> {
+    if (sessionId && this.authSessionRepository)
+      await this.authSessionRepository.revoke(sessionId, userId);
   }
 
   async findById(id: string): Promise<UserDocument | null> {

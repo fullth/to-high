@@ -522,7 +522,7 @@ function TalkContent() {
                 disabled={busy}
                 onClick={() => setInputOpen((open) => !open)}
               >
-                {inputOpen ? "선택지로 돌아가기" : "다른 마음이 있어요"}
+                {inputOpen ? "선택지로 돌아가기" : "제가 직접 입력할게요"}
               </button>
               <form
                 id="talk-composer"

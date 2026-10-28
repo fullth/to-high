@@ -67,7 +67,7 @@ for (const scenario of cases) {
       `/auth/callback${scenario.query ? "?" : "#"}token=offline-jwt&state=${scenario.state}`,
     );
     await expect(page).toHaveURL(
-      `/characters${successful ? "" : "?error=auth_failed"}`,
+      `/talk${successful ? "" : "?error=auth_failed"}`,
     );
     expect(claims).toBe(0);
     expect(
@@ -79,7 +79,7 @@ for (const scenario of cases) {
     if (successful) {
       // A consumed request cannot install another token when its callback is replayed.
       await page.goto(`/auth/callback#token=replayed-jwt&state=${state}`);
-      await expect(page).toHaveURL("/characters?error=auth_failed");
+      await expect(page).toHaveURL("/talk?error=auth_failed");
       expect(
         await page.evaluate(() => localStorage.getItem("accessToken")),
       ).toBe("offline-jwt");
@@ -143,7 +143,7 @@ test("login helper creates the state that its callback must consume", async ({
   await page.goto(
     `${origin}/auth/callback#token=button-flow-jwt&state=${sentState}`,
   );
-  await expect(page).toHaveURL("/characters");
+  await expect(page).toHaveURL("/talk");
   expect(await page.evaluate(() => localStorage.getItem("accessToken"))).toBe(
     "button-flow-jwt",
   );

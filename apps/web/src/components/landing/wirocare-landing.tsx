@@ -49,7 +49,7 @@ const ArrowIcon = ({
 );
 
 export function WirocareLanding() {
-  const { token, login } = useAuth();
+  const { token, isLoading: authLoading, login } = useAuth();
   const [leviReady, setLeviReady] = useState(false);
   return (
     <div className="wirocare-landing">
@@ -64,7 +64,7 @@ export function WirocareLanding() {
             </FullPageLink>
           </div>
           <nav className="nav-actions">
-            {!token && (
+            {!authLoading && !token && (
               <button className="btn btn-ghost btn-sm" onClick={login}>
                 로그인
               </button>
