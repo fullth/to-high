@@ -337,6 +337,44 @@
     padding: 0 14px;
   }
 }
+@media (max-width: 640px) and (max-height: 740px) {
+  .ch-ephemeral .ch-messages {
+    padding: 10px 14px;
+    gap: 12px;
+  }
+  .ch-ephemeral .ch-levi-presence {
+    margin-top: 8px;
+  }
+  .ch-ephemeral .ch-dock {
+    padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+  }
+  .ch-ephemeral .ch-dock-panel {
+    padding: 10px;
+    border-radius: 18px;
+  }
+  .ch-ephemeral .ch-choice-guide {
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .ch-ephemeral .ch-options {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .ch-ephemeral .ch-option {
+    min-height: 44px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .ch-ephemeral .ch-composer-hint {
+    margin-top: 3px;
+  }
+  .ch-ephemeral .ch-talk-footer {
+    padding: 6px 12px max(6px, env(safe-area-inset-bottom));
+  }
+  .ch-ephemeral .ch-talk-footer .ch-privacy-details {
+    margin-top: 2px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .ch-ephemeral .ch-typing i,
   .ch-ephemeral .ch-row {
