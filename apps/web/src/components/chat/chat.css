@@ -86,6 +86,7 @@
   background: var(--glass);
   backdrop-filter: blur(14px);
 }
+.ch-header-actions { display: inline-flex; align-items: center; gap: 4px; }
 .ch-header.thin { padding: 14px 22px; }
 .ch-logo { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: var(--ink); }
 .ch-logo-mark {

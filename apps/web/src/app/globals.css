@@ -105,6 +105,39 @@
   --sidebar-ring: #2e9b6d;
 }
 
+/* Keep the route fallback centered before the talk-specific stylesheet arrives. */
+.conversation-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #faf8f3;
+  color: #213128;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+}
+
+.conversation-loading-card {
+  box-sizing: border-box;
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 42px 28px 36px;
+  border: 1px solid #e5e9e0;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.82);
+  text-align: center;
+}
+
+.conversation-loading-card img {
+  display: block;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 12px;
+  object-fit: contain;
+}
+
 .dark {
   --background: #faf8f3;
   --card: #ffffff;
@@ -204,6 +237,312 @@
 .animate-fade-in-up {
   animation: fadeInUp 0.5s ease-out forwards;
   opacity: 0;
+}
+
+.account-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.account-session { position: relative; }
+
+.account-menu {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.account-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 3px 8px 3px 4px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.account-trigger:hover,
+.account-trigger[aria-expanded="true"] {
+  border-color: var(--border);
+  background: var(--card);
+}
+
+.account-trigger-name {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-trigger-chevron {
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.login-provider-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(33, 49, 40, 0.36);
+  backdrop-filter: blur(4px);
+}
+
+.login-provider-modal {
+  position: relative;
+  width: min(100%, 380px);
+  padding: 30px 26px 24px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: 0 24px 60px rgba(40, 84, 62, 0.2);
+  text-align: center;
+}
+
+.login-provider-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.login-provider-close:hover { background: var(--muted); }
+
+.login-provider-mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  margin: 0 auto 14px;
+  padding: 3px;
+  border-radius: 18px;
+  background: var(--accent);
+}
+
+.login-provider-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.login-provider-modal h2 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.login-provider-modal > p {
+  margin: 8px 0 20px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.login-provider-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.login-provider-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-provider-button:hover { background: var(--accent); border-color: var(--primary); }
+.login-provider-button svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.login-provider-button.kakao { color: #191919; background: #fee500; border-color: #fee500; }
+.login-provider-button.kakao:hover { background: #fdd800; border-color: #fdd800; }
+
+.login-provider-later {
+  width: 100%;
+  margin-top: 8px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.login-provider-later:hover { color: var(--foreground); }
+
+.account-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  width: 240px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: 0 14px 34px rgba(40, 84, 62, 0.14);
+}
+
+.account-popover-title,
+.account-popover-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 2px 4px 8px;
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.account-popover-title {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.account-popover-identity span {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-provider,
+.account-popover-action {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.account-provider + .account-provider,
+.account-popover-action { margin-top: 6px; }
+
+.account-provider:hover,
+.account-popover-action:hover {
+  border-color: var(--primary);
+  background: var(--accent);
+}
+
+.account-provider-kakao { color: #5f571e; }
+
+.account-popover-action { color: var(--destructive); }
+
+.account-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--foreground);
+}
+
+.account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.account-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 180px;
+  line-height: 1.15;
+}
+
+.account-copy strong,
+.account-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-copy strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.account-copy span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.account-login,
+.account-logout {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.account-login:hover,
+.account-logout:hover {
+  border-color: var(--primary);
+  background: var(--accent);
+}
+
+@media (max-width: 560px) {
+  .account-copy { display: none; }
+  .account-identity { gap: 0; }
+  .account-trigger-name { display: none; }
+  .account-trigger { padding-right: 5px; }
+  .account-popover { right: -4px; }
 }
 
 .stagger-1 {

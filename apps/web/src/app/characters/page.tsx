@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FullPageLink } from "@/components/full-page-link";
+import { AccountControls } from "@/components/account-controls";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { CHARACTER_MEMORY_AVAILABLE } from "@/lib/product-features";
@@ -89,7 +90,10 @@ function CharactersContent() {
     <main className="mx-auto max-w-2xl p-6 space-y-6">
       <nav className="flex flex-wrap items-center justify-between gap-3">
         <FullPageLink href="/">위로</FullPageLink>
-        <Link href="/talk">바로 상담하기</Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <AccountControls variant="landing" />
+          <Link href="/talk">바로 상담하기</Link>
+        </div>
       </nav>
       <h1 className="text-2xl font-semibold">나만의 레비</h1>
       <p className="text-muted-foreground">

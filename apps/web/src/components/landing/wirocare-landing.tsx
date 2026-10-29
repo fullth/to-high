@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { FullPageLink } from "@/components/full-page-link";
-import { useAuth } from "@/contexts/auth-context";
+import { AccountControls } from "@/components/account-controls";
 import "./landing.css";
 
 function LeviPose({ inviting = false }: { inviting?: boolean }) {
@@ -49,7 +49,6 @@ const ArrowIcon = ({
 );
 
 export function WirocareLanding() {
-  const { token, isLoading: authLoading, login } = useAuth();
   const [leviReady, setLeviReady] = useState(false);
   return (
     <div className="wirocare-landing">
@@ -64,11 +63,7 @@ export function WirocareLanding() {
             </FullPageLink>
           </div>
           <nav className="nav-actions">
-            {!authLoading && !token && (
-              <button className="btn btn-ghost btn-sm" onClick={login}>
-                로그인
-              </button>
-            )}
+            <AccountControls variant="landing" />
             <FullPageLink className="btn btn-soft btn-sm" href="/talk">
               대화 시작 <ArrowIcon size={12} />
             </FullPageLink>

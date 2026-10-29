@@ -19,6 +19,8 @@ import {
 import type { CounselorType } from "@/lib/api";
 import { CHARACTER_MEMORY_AVAILABLE } from "@/lib/product-features";
 import { ChatInfoSidebar } from "@/components/chat/chat-info-sidebar";
+import { AccountControls } from "@/components/account-controls";
+import { ConversationLoading } from "@/components/talk/conversation-loading";
 import "@/components/chat/chat.css";
 import "@/components/talk/talk-chat.css";
 import {
@@ -59,7 +61,6 @@ function TalkContent() {
   const [messages, setMessages] = useState<TalkMessage[]>([]);
   const [options, setOptions] = useState<string[]>(initialOptions);
   const [input, setInput] = useState("");
-  const [inputOpen, setInputOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [arrival, setArrival] = useState(false);
   const inputElement = useRef<HTMLTextAreaElement>(null);
@@ -75,7 +76,6 @@ function TalkContent() {
       restoreInputFocus.current = false;
       // Touch devices should only open the keyboard when the user taps the input.
       if (
-        inputOpen &&
         window.matchMedia(
           "(min-width: 768px) and (hover: hover) and (pointer: fine)",
         ).matches &&
@@ -83,7 +83,7 @@ function TalkContent() {
       )
         inputElement.current?.focus({ preventScroll: true });
     }
-  }, [busy, inputOpen]);
+  }, [busy]);
   const [ended, setEnded] = useState(false);
   const [error, setError] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -110,7 +110,6 @@ function TalkContent() {
     setOptions([]);
     setMessages([]);
     setInput("");
-    setInputOpen(false);
     setError("");
     setErrorCode(null);
     setStreaming(false);
@@ -291,7 +290,6 @@ function TalkContent() {
       setArrival(true);
       setOptions(result.options || ["더 이야기할게요", "정리해주세요"]);
       setMessages(transcript.current);
-      setInputOpen(false);
     } catch (error) {
       if (!controller.signal.aborted && current === version.current.value) {
         history.current = next.slice(0, -1);
@@ -333,9 +331,12 @@ function TalkContent() {
             <span className="ch-logo-mark" aria-hidden="true" />
             위로
           </FullPageLink>
-          <button className="ch-ghostbtn" onClick={clear}>
-            상담 종료 후 원문 지우기
-          </button>
+          <div className="ch-header-actions">
+            <button className="ch-ghostbtn" onClick={clear}>
+              상담 종료 후 원문 지우기
+            </button>
+            <AccountControls variant="chat" />
+          </div>
         </header>
         <CharacterPresence
           name={aiName}
@@ -494,92 +495,83 @@ function TalkContent() {
         <div className="ch-dock">
           {!ended && (
             <>
-              <p className="ch-choice-guide">
-                지금 마음과 가까운 답을 골라주세요
-              </p>
-              <div aria-label="답변 선택지" className="ch-options">
-                {options.map((option) => (
-                  <button
-                    key={option}
-                    className="ch-option"
+              <section className="ch-dock-panel" aria-label="상담 입력">
+                <p className="ch-choice-guide">
+                  지금 마음과 가까운 답을 골라주세요
+                </p>
+                <div aria-label="답변 선택지" className="ch-options">
+                  {options.map((option) => (
+                    <button
+                      key={option}
+                      className="ch-option"
+                      disabled={
+                        busy ||
+                        authLoading ||
+                        !characterReady ||
+                        (!!characterId && !token)
+                      }
+                      onClick={() => void sendText(option)}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                <form
+                  id="talk-composer"
+                  className="ch-input-row"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void sendText(input);
+                  }}
+                >
+                  <label htmlFor="talk-input" className="sr-only">
+                    전하고 싶은 마음
+                  </label>
+                  <textarea
+                    id="talk-input"
+                    ref={inputElement}
+                    className="ch-input"
+                    placeholder="제가 직접 입력할게요"
+                    maxLength={500}
+                    rows={1}
+                    value={input}
                     disabled={
                       busy ||
                       authLoading ||
                       !characterReady ||
                       (!!characterId && !token)
                     }
-                    onClick={() => void sendText(option)}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="ch-composer-toggle"
-                aria-expanded={inputOpen}
-                aria-controls="talk-composer"
-                disabled={busy}
-                onClick={() => setInputOpen((open) => !open)}
-              >
-                {inputOpen ? "선택지로 돌아가기" : "제가 직접 입력할게요"}
-              </button>
-              <form
-                id="talk-composer"
-                hidden={!inputOpen}
-                className="ch-input-row"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void sendText(input);
-                }}
-              >
-                <label htmlFor="talk-input" className="sr-only">
-                  전하고 싶은 마음
-                </label>
-                <textarea
-                  id="talk-input"
-                  ref={inputElement}
-                  className="ch-input"
-                  placeholder="편하게 이야기해 주세요"
-                  maxLength={500}
-                  rows={1}
-                  value={input}
-                  disabled={
-                    busy ||
-                    authLoading ||
-                    !characterReady ||
-                    (!!characterId && !token)
-                  }
-                  onChange={(event) => setInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" &&
-                      !event.shiftKey &&
-                      !event.nativeEvent.isComposing
-                    ) {
-                      event.preventDefault();
-                      if (!busy) void sendText(input);
+                    onChange={(event) => setInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "Enter" &&
+                        !event.shiftKey &&
+                        !event.nativeEvent.isComposing
+                      ) {
+                        event.preventDefault();
+                        if (!busy) void sendText(input);
+                      }
+                    }}
+                  />
+                  <button
+                    className="ch-send"
+                    disabled={
+                      busy ||
+                      !characterReady ||
+                      !input.trim() ||
+                      authLoading ||
+                      (!!characterId && !token)
                     }
-                  }}
-                />
-                <button
-                  className="ch-send"
-                  disabled={
-                    busy ||
-                    !characterReady ||
-                    !input.trim() ||
-                    authLoading ||
-                    (!!characterId && !token)
-                  }
-                >
-                  보내기
-                </button>
-              </form>
-              <p className="ch-composer-hint" hidden={!inputOpen}>
-                {input.length}/500자
-              </p>
+                  >
+                    보내기
+                  </button>
+                </form>
+                <p className="ch-composer-hint">{input.length}/500자</p>
+              </section>
             </>
           )}
+        </div>
+        <footer className="ch-talk-footer">
           <p className="ch-talk-disclaimer">
             AI와의 대화이며 전문적인 진단이나 치료를 대신하지 않아요.
           </p>
@@ -593,7 +585,7 @@ function TalkContent() {
               원문과 요약이 사라져요. 새로고침해도 원문을 다시 불러올 수 없어요.
             </p>
           </details>
-        </div>
+        </footer>
       </div>
     </main>
   );
@@ -601,7 +593,7 @@ function TalkContent() {
 
 export default function TalkPage() {
   return (
-    <Suspense fallback={<p>불러오는 중...</p>}>
+    <Suspense fallback={<ConversationLoading />}>
       <TalkContent />
     </Suspense>
   );
