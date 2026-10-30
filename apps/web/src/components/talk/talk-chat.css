@@ -208,6 +208,21 @@
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.62);
 }
+@media (min-width: 641px) {
+  .ch-ephemeral .ch-dock-panel {
+    padding-bottom: 6px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    border-bottom: 0;
+  }
+  .ch-ephemeral .ch-direct-input-panel {
+    margin-top: -1px;
+    padding: 0 16px 12px;
+    border-top: 0;
+    border-radius: 0 0 24px 24px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+}
 
 .ch-talk-footer { display: none; }
 .ch-ephemeral .ch-info-sidebar {
