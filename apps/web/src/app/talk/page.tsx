@@ -37,10 +37,11 @@ const styles: Array<[CounselorType, string]> = [
   ["listening", "경청"],
 ];
 const initialOptions = [
+  "그냥 이야기하고 싶어요",
+  "무슨 감정인지 모르겠어요",
   "일 때문에 힘들어요",
   "관계가 어려워요",
   "마음이 불안해요",
-  "말로 표현하기 어려워요",
   "정리해주세요",
 ];
 function TalkContent() {
@@ -516,14 +517,16 @@ function TalkContent() {
                     </button>
                   ))}
                 </div>
-                <form
-                  id="talk-composer"
-                  className="ch-input-row"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void sendText(input);
-                  }}
-                >
+              </section>
+              <form
+                id="talk-composer"
+                className="ch-direct-input-panel"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void sendText(input);
+                }}
+              >
+                <div className="ch-input-row">
                   <label htmlFor="talk-input" className="sr-only">
                     전하고 싶은 마음
                   </label>
@@ -565,9 +568,9 @@ function TalkContent() {
                   >
                     보내기
                   </button>
-                </form>
+                </div>
                 <p className="ch-composer-hint">{input.length}/500자</p>
-              </section>
+              </form>
             </>
           )}
         </div>

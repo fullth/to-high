@@ -200,6 +200,14 @@
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 8px 24px rgba(40, 84, 62, 0.06);
 }
+.ch-ephemeral .ch-direct-input-panel {
+  width: min(100%, 720px);
+  margin: 10px auto 0;
+  padding: 10px 12px 7px;
+  border: 1px solid rgba(205, 223, 210, 0.9);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.62);
+}
 
 .ch-talk-footer { display: none; }
 .ch-ephemeral .ch-info-sidebar {
@@ -307,6 +315,11 @@
     padding: 14px;
     border-radius: 20px;
   }
+  .ch-ephemeral .ch-direct-input-panel {
+    margin-top: 8px;
+    padding: 8px 10px 5px;
+    border-radius: 18px;
+  }
   .ch-ephemeral .ch-talk-footer {
     display: block;
     flex-shrink: 0;
@@ -352,6 +365,11 @@
     padding: 10px;
     border-radius: 18px;
   }
+  .ch-ephemeral .ch-direct-input-panel {
+    margin-top: 6px;
+    padding: 6px 8px 4px;
+    border-radius: 16px;
+  }
   .ch-ephemeral .ch-choice-guide {
     margin-bottom: 8px;
     font-size: 13px;
@@ -373,6 +391,11 @@
   }
   .ch-ephemeral .ch-talk-footer .ch-privacy-details {
     margin-top: 2px;
+  }
+  .ch-ephemeral .ch-option {
+    min-width: 0;
+    min-height: 44px;
+    white-space: normal;
   }
 }
 @media (prefers-reduced-motion: reduce) {
