@@ -241,7 +241,7 @@ function SubscribeContent() {
         )}
 
         {subscription?.isGrandfathered && (
-          <div className="mb-8 p-6 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-2xl">
+          <div className="mb-8 p-6 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-2xl">
             <h2 className="text-xl font-bold mb-2">레거시 사용자</h2>
             <p className="text-slate-300">무제한으로 이용할 수 있어요.</p>
           </div>
@@ -256,8 +256,8 @@ function SubscribeContent() {
         </div>
 
         {/* 준비중 안내 */}
-        <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-center">
-          <p className="text-amber-400 font-medium text-lg mb-2">
+        <div className="mb-8 p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-center">
+          <p className="text-emerald-400 font-medium text-lg mb-2">
             서비스 준비 중
           </p>
           <p className="text-slate-400 text-sm">

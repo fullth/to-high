@@ -1,6 +1,7 @@
 import { WirocareLanding } from "@/components/landing/wirocare-landing";
 import { ChannelTalk } from "@/components/channel-talk";
 import { CoffeeSupport } from "@/components/coffee-support";
+import { HomeAnalytics } from "@/components/home-analytics";
 import type { Viewport } from "next";
 
 export const viewport: Viewport = {
@@ -12,6 +13,7 @@ export const viewport: Viewport = {
 export default function HomePage() {
   return (
     <>
+      <HomeAnalytics />
       <WirocareLanding />
       <ChannelTalk />
       <CoffeeSupport />

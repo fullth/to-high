@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { getBudgetStatus, topupBudget, type BudgetStatus } from "@/lib/api";
+import "./budget.css";
 
 type Pending = { amount: number; id: string };
 const formatWon = (milliWon: number) =>
@@ -107,29 +108,40 @@ export default function BudgetAdminPage() {
     }
   }
 
-  if (isLoading) return <main className="p-8">확인 중이에요.</main>;
+  if (isLoading) return <main className="budget-page"><div className="budget-content"><p className="budget-card">확인 중이에요.</p></div></main>;
   if (!token)
     return (
-      <main className="p-8">
+      <main className="budget-page"><div className="budget-content budget-card">
         <p>관리자 로그인이 필요해요.</p>
         {error && <p role="alert">{error}</p>}
         <button
           onClick={() => startLogin(login)}
-          className="mt-4 rounded bg-slate-900 px-4 py-2 text-white"
+          className="budget-button mt-4"
         >
           Google 로그인
         </button>
-      </main>
+      </div></main>
     );
   return (
-    <main className="mx-auto max-w-xl space-y-6 p-6">
-      <h1 className="text-2xl font-bold">AI 이용 예산</h1>
+    <main className="budget-page"><div className="budget-content space-y-6">
+      <h1 className="text-2xl font-bold">서비스 운영 현황</h1>
+      <section className="budget-card space-y-2" aria-label="오늘 대화 이용량">
+        <h2 className="font-semibold">오늘 대화 이용량</h2>
+        {status?.todayUsage ? <>
+          <p>로그인 이용 계정 <strong>{status.todayUsage.signedInAccounts.toLocaleString("ko-KR")}개</strong></p>
+          <p>비로그인 접속망 <strong>{status.todayUsage.guestNetworks.toLocaleString("ko-KR")}개</strong></p>
+          <p>한도에 집계된 대화 요청 <strong>{status.todayUsage.countedTurns.toLocaleString("ko-KR")}회</strong></p>
+        </> : <p>확인 중</p>}
+        <p className="text-sm text-slate-600">한국 시간 오늘 기준이며 계정과 접속망 수는 집계 기능 적용 이후부터 표시돼요. 같은 접속망의 여러 사람은 하나로 집계되고, 한 사람이 로그인 전후로 이용하면 각각 집계될 수 있어요.</p>
+      </section>
+      <h2 className="text-xl font-bold">AI 이용 예산</h2>
       <p>
         잔액이 있으면 다음 주로 이월됩니다. 월요일에 확정된 잔액이 0원이고 처리
         중인 금액이 없으면 1만 원을 충전합니다.
       </p>
+      <p className="text-sm text-slate-600">예산 차감액은 요청 시 계산한 보수적인 추정치이며 실제 API 청구액과 다릅니다.</p>
       {status && (
-        <section className="rounded border p-4 space-y-2">
+        <section className="budget-card space-y-2">
           <p>
             사용 가능한 잔액:{" "}
             <strong>{formatWon(status.balanceMilliWon)}</strong>
@@ -160,7 +172,7 @@ export default function BudgetAdminPage() {
           </label>
           <input
             id="budget-amount"
-            className="w-full rounded border p-2"
+            className="budget-input"
             inputMode="numeric"
             type="number"
             min="1"
@@ -172,7 +184,7 @@ export default function BudgetAdminPage() {
           />
           <button
             disabled={busy}
-            className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
+            className="budget-button"
           >
             {busy ? "확인 중" : pending ? "충전 결과 다시 확인" : "예산 충전"}
           </button>
@@ -203,6 +215,6 @@ export default function BudgetAdminPage() {
           )}
         </section>
       )}
-    </main>
+    </div></main>
   );
 }

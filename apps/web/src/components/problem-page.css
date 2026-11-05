@@ -1,0 +1,46 @@
+.problem-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: #f5fbf7;
+  color: #213128;
+  font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+}
+.problem-card {
+  width: min(100%, 440px);
+  text-align: center;
+}
+.problem-levi {
+  display: block;
+  width: min(68vw, 280px);
+  height: auto;
+  margin: 0 auto 22px;
+}
+.problem-card h1 {
+  font-size: clamp(24px, 5vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.problem-card p {
+  margin: 14px auto 28px;
+  color: #4c5b53;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+.problem-home {
+  display: inline-flex;
+  justify-content: center;
+  border-radius: 14px;
+  background: #2e9b6d;
+  color: #fff;
+  padding: 14px 28px;
+  font-weight: 700;
+}
+.problem-home:hover {
+  background: #34ac79;
+}
+.problem-home:focus-visible {
+  outline: 3px solid #2e9b6d;
+  outline-offset: 4px;
+}

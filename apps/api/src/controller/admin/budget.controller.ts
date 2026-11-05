@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { z } from 'zod';
 import { BudgetWalletRepository } from '../../common/budget-wallet.repository';
+import { UsageOverviewService } from '../../common/usage-overview.service';
 import { chargeBudget } from '../../common/budget-wallet';
 import { ZodValidationPipe } from '../../common/zod-validation.pipe';
 
@@ -29,6 +30,7 @@ export class BudgetController {
   constructor(
     private readonly wallets: BudgetWalletRepository,
     private readonly config: ConfigService,
+    private readonly usage: UsageOverviewService,
   ) {}
 
   private authorize(request: RequestUser): string {
@@ -51,6 +53,7 @@ export class BudgetController {
     if (!wallet) throw new Error('Budget unavailable');
     return {
       balanceMilliWon: wallet.balance,
+      todayUsage: await this.usage.todayUsage(),
       reservedMilliWon: Object.values(wallet.reservations).reduce(
         (sum, amount) => sum + amount,
         0,

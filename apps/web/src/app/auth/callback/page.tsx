@@ -8,7 +8,7 @@ function CallbackContent() {
     initialized.current = true;
     const token = consumeOAuthResult(window.location.hash);
     window.history.replaceState(null, "", "/auth/callback");
-    let destination = "/characters";
+    let destination = "/talk";
     try {
       if (sessionStorage.getItem("authReturnTo") === "budget")
         destination = "/admin/budget";
@@ -21,7 +21,7 @@ function CallbackContent() {
     for (const key of Object.keys(localStorage))
       if (key.startsWith("guestSession:")) localStorage.removeItem(key);
     if (!token) {
-      window.location.replace("/characters?error=auth_failed");
+      window.location.replace("/problem");
       return;
     }
     localStorage.setItem("accessToken", token);

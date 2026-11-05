@@ -46,24 +46,11 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
-/*
- * 심리학 기반 색상 팔레트 - "To High; 위로"
- *
- * 색상 심리학 원칙:
- * - 세이지 그린: 치유, 안정, 자연과의 연결 (심리 상담에서 가장 권장되는 색상)
- * - 웜 베이지/크림: 따뜻함, 포용, 안전한 공간
- * - 소프트 테라코타: 대지의 따뜻함, 그라운딩
- * - 채도를 낮춘 색상: 시각적 자극 최소화, 편안함 유도
- *
- * 참고: 색채심리학(Color Psychology), 환경심리학(Environmental Psychology)
- */
+/* 현재 서비스의 민트와 세이지 색상 */
 :root {
   --radius: 16px;
 
-  /* 라이트 세이지 — 회복 그린 + 새벽 햇살 */
-
-  /* 배경: 따뜻한 크림 */
-  --background: #faf8f3;
+  --background: #f5fbf7;
   --foreground: #213128;
 
   /* 카드: 흰 면 + 명확한 구분 */
@@ -95,7 +82,7 @@
   --ring: #2e9b6d;
 
   /* 사이드바 */
-  --sidebar: #f3f5ee;
+  --sidebar: #eaf4ed;
   --sidebar-foreground: #213128;
   --sidebar-primary: #2e9b6d;
   --sidebar-primary-foreground: #ffffff;
@@ -106,7 +93,7 @@
 }
 
 .dark {
-  --background: #faf8f3;
+  --background: #f5fbf7;
   --card: #ffffff;
   --border: #e5e9e0;
 }

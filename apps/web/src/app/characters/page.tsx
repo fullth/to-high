@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FullPageLink } from "@/components/full-page-link";
+import { ProblemPage } from "@/components/problem-page";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { CHARACTER_MEMORY_AVAILABLE } from "@/lib/product-features";
@@ -350,13 +351,7 @@ function CharactersContent() {
 
 export default function CharactersPage() {
   if (!CHARACTER_MEMORY_AVAILABLE) {
-    return (
-      <main className="max-w-xl mx-auto p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">이 기능은 준비 중이에요</h1>
-        <p>지금은 레비와 바로 대화할 수 있어요.</p>
-        <Link className="underline" href="/talk">레비와 이야기하기</Link>
-      </main>
-    );
+    return <ProblemPage />;
   }
   return <CharactersContent />;
 }

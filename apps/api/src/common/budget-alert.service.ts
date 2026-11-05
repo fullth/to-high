@@ -3,6 +3,7 @@ import {
   Logger,
   OnModuleDestroy,
   OnModuleInit,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectConnection } from '@nestjs/mongoose';
@@ -13,7 +14,7 @@ import { BudgetWalletRepository } from './budget-wallet.repository';
 
 type Alert = {
   _id: string;
-  kind: 'low' | 'blocked' | 'extension';
+  kind: 'low' | 'blocked' | 'extension' | 'problem';
   state: 'pending' | 'sent' | 'cancelled';
   cycle: number;
   leaseUntil?: Date;
@@ -66,13 +67,68 @@ export class BudgetAlertService implements OnModuleInit, OnModuleDestroy {
   }
 
   async extension(day: string) {
-    await this.collection.updateOne(
-      { _id: `extension-${day}` },
-      { $setOnInsert: { kind: 'extension', cycle: 0, state: 'pending', createdAt: new Date() } },
-      { upsert: true },
-    ).catch((error: unknown) => {
-      if (!(error && typeof error === 'object' && 'code' in error && error.code === 11000)) throw error;
-    });
+    await this.collection
+      .updateOne(
+        { _id: `extension-${day}` },
+        {
+          $setOnInsert: {
+            kind: 'extension',
+            cycle: 0,
+            state: 'pending',
+            createdAt: new Date(),
+          },
+        },
+        { upsert: true },
+      )
+      .catch((error: unknown) => {
+        if (
+          !(
+            error &&
+            typeof error === 'object' &&
+            'code' in error &&
+            error.code === 11000
+          )
+        )
+          throw error;
+      });
+  }
+
+  async reportProblem() {
+    if (
+      !this.config.get<string>('GMAIL_USER') ||
+      !this.config.get<string>('GMAIL_APP_PASSWORD') ||
+      !this.config.get<string>('BUDGET_ALERT_RECIPIENT')
+    )
+      throw new ServiceUnavailableException();
+    const hour = new Date().toISOString().slice(0, 13);
+    await this.collection
+      .updateOne(
+        { _id: `problem-${hour}` },
+        {
+          $setOnInsert: {
+            kind: 'problem',
+            cycle: 0,
+            state: 'pending',
+            createdAt: new Date(),
+          },
+        },
+        { upsert: true },
+      )
+      .catch((error: unknown) => {
+        if (
+          !(
+            error &&
+            typeof error === 'object' &&
+            'code' in error &&
+            error.code === 11000
+          )
+        )
+          throw error;
+      });
+    const report = await this.collection.findOne({ _id: `problem-${hour}` });
+    if (report?.state === 'sent') return 'sent' as const;
+    if (report?.state === 'pending') return 'pending' as const;
+    throw new ServiceUnavailableException();
   }
 
   async tick() {
@@ -104,7 +160,9 @@ export class BudgetAlertService implements OnModuleInit, OnModuleDestroy {
       const current = await this.wallets.transition((state) => state);
       if (
         !current ||
-        (alert.kind !== 'extension' && alert.cycle !== (current.alertCycle ?? 0)) ||
+        (alert.kind !== 'extension' &&
+          alert.kind !== 'problem' &&
+          alert.cycle !== (current.alertCycle ?? 0)) ||
         (alert.kind === 'low' && current.balance > 2_000_000)
       ) {
         await this.collection.updateOne(
@@ -129,17 +187,21 @@ export class BudgetAlertService implements OnModuleInit, OnModuleDestroy {
             from: user,
             to: recipient,
             subject:
-              alert.kind === 'extension'
-                ? '[위로] 대화 이용 한도 연장 요청'
-                : alert.kind === 'low'
-                ? '[위로] AI 예산 잔액 알림'
-                : '[위로] AI 예산 부족 알림',
+              alert.kind === 'problem'
+                ? '[위로] 서비스 문제 알림'
+                : alert.kind === 'extension'
+                  ? '[위로] 대화 이용 한도 연장 요청'
+                  : alert.kind === 'low'
+                    ? '[위로] AI 예산 잔액 알림'
+                    : '[위로] AI 예산 부족 알림',
             text:
-              alert.kind === 'extension'
-                ? '오늘 대화 이용 한도에 도달한 사용자가 있습니다. 운영 상황과 이용 한도를 확인해 주세요.'
-                : alert.kind === 'low'
-                ? '사용 가능한 AI 예산이 2,000원 이하입니다. 관리자 화면에서 잔액을 확인해 주세요.'
-                : 'AI 예산이 부족해 요청을 처리하지 못했습니다. 관리자 화면에서 잔액을 확인해 주세요.',
+              alert.kind === 'problem'
+                ? '서비스 이용 중 문제 화면이 표시되었습니다. 로그인과 서비스 상태를 확인해 주세요.'
+                : alert.kind === 'extension'
+                  ? '오늘 대화 이용 한도에 도달한 사용자가 있습니다. 운영 상황과 이용 한도를 확인해 주세요.'
+                  : alert.kind === 'low'
+                    ? '사용 가능한 AI 예산이 2,000원 이하입니다. 관리자 화면에서 잔액을 확인해 주세요.'
+                    : 'AI 예산이 부족해 요청을 처리하지 못했습니다. 관리자 화면에서 잔액을 확인해 주세요.',
           });
         await this.collection.updateOne(
           { _id: alert._id, leaseId, state: 'pending' },

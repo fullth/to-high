@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BudgetController } from './budget.controller';
 import { BudgetWalletRepository } from '../../common/budget-wallet.repository';
+import { UsageOverviewService } from '../../common/usage-overview.service';
 import type { BudgetWallet } from '../../common/budget-wallet';
 
 describe('budget administration', () => {
@@ -27,6 +28,7 @@ describe('budget administration', () => {
     controller = new BudgetController(
       repository as unknown as BudgetWalletRepository,
       { get: () => 'administrator' } as unknown as ConfigService,
+      { todayUsage: async () => ({ countedTurns: 0, signedInAccounts: 0, guestNetworks: 0 }) } as unknown as UsageOverviewService,
     );
   });
   it('rejects an authenticated user who is not an administrator', async () => {

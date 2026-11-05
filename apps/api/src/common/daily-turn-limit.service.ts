@@ -41,7 +41,10 @@ export class DailyTurnLimitService implements OnModuleInit {
     const browserKey = userId ? null : createHmac('sha256', secret).update(`browser:${browser as string}`).digest('hex');
     const result = await collection.updateOne(
       { _id: day as never, $and: conditions },
-      { $inc: Object.fromEntries(keys.map((field) => [field, 1])) },
+      {
+        $inc: Object.fromEntries(keys.map((field) => [field, 1])),
+        $set: { [`identities.${userId ? 'user' : 'ip'}.${keys[0].slice('counts.'.length)}`]: true },
+      },
       { writeConcern: { w: 'majority' } },
     );
     if (!result.matchedCount) {

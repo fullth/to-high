@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { FullPageLink } from "@/components/full-page-link";
 import {
   getAdminDashboard,
   getAdminUsers,
@@ -92,8 +93,8 @@ export default function AdminPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!token) {
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Isolate home support SDKs from this document.
-      window.location.assign("/");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Load the budget login in a fresh document.
+      window.location.assign("/admin/budget");
       return;
     }
     loadDashboard();
@@ -273,6 +274,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">관리자 대시보드</h1>
+        <FullPageLink href="/admin/budget" className="inline-block mb-6 text-emerald-300 underline">AI 이용 예산 관리</FullPageLink>
 
         {/* 탭 네비게이션 */}
         <div className="flex gap-2 mb-6 border-b border-gray-700 pb-4">
@@ -328,7 +330,7 @@ export default function AdminPage() {
                     {users.map((user) => {
                       const isPotentialCustomer = user.sessionCount >= 3 && !user.isSubscribed && !user.isGrandfathered;
                       return (
-                      <tr key={user.id} className={`hover:bg-gray-750 ${isPotentialCustomer ? "bg-amber-900/20" : ""}`}>
+                      <tr key={user.id} className={`hover:bg-gray-750 ${isPotentialCustomer ? "bg-emerald-900/20" : ""}`}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             {user.picture && (
@@ -337,7 +339,7 @@ export default function AdminPage() {
                             )}
                             <span className="font-medium">{user.name || "-"}</span>
                             {isPotentialCustomer && (
-                              <span className="bg-amber-500 text-black px-2 py-0.5 rounded text-xs font-bold">
+                              <span className="bg-emerald-500 text-black px-2 py-0.5 rounded text-xs font-bold">
                                 예비고객
                               </span>
                             )}
@@ -346,7 +348,7 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-gray-300 text-sm">{user.email}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`px-2 py-1 rounded text-sm font-medium ${
-                            isPotentialCustomer ? "bg-amber-500 text-black" : "bg-blue-600 text-white"
+                            isPotentialCustomer ? "bg-emerald-500 text-black" : "bg-blue-600 text-white"
                           }`}>
                             {user.sessionCount}
                           </span>

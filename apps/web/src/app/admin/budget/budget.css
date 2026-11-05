@@ -1,0 +1,46 @@
+.budget-page {
+  min-height: 100dvh;
+  padding: 40px 20px;
+  background: #f5fbf7;
+  color: #213128;
+  font-family: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+}
+
+.budget-content {
+  width: min(100%, 560px);
+  margin: 0 auto;
+}
+
+.budget-card {
+  padding: 24px;
+  border: 1px solid #dfebe3;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.budget-button {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: #2e9b6d;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.budget-button:hover { background: #25865d; }
+.budget-button:disabled { opacity: .5; cursor: not-allowed; }
+.budget-button:focus-visible, .budget-input:focus-visible {
+  outline: 3px solid #8ad2ae;
+  outline-offset: 2px;
+}
+
+.budget-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cddfd2;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 16px;
+}

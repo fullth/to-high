@@ -7,6 +7,7 @@ import request from 'supertest';
 import { BudgetController } from './budget.controller';
 import { JwtStrategy } from '../../app/auth/strategy/jwt.strategy';
 import { BudgetWalletRepository } from '../../common/budget-wallet.repository';
+import { UsageOverviewService } from '../../common/usage-overview.service';
 import type { BudgetWallet } from '../../common/budget-wallet';
 
 describe('budget HTTP authorization', () => {
@@ -37,6 +38,7 @@ describe('budget HTTP authorization', () => {
         JwtStrategy,
         { provide: ConfigService, useValue: config },
         { provide: BudgetWalletRepository, useValue: repository },
+        { provide: UsageOverviewService, useValue: { todayUsage: async () => ({ countedTurns: 7, signedInAccounts: 2, guestNetworks: 1 }) } },
       ],
     }).compile();
     app = module.createNestApplication();
@@ -69,7 +71,8 @@ describe('budget HTTP authorization', () => {
         'Authorization',
         `Bearer ${jwt.sign({ sub: 'admin-id', email: 'admin@example.invalid' })}`,
       )
-      .expect(200);
+      .expect(200)
+      .expect(({ body }) => { expect(body.todayUsage).toEqual({ countedTurns: 7, signedInAccounts: 2, guestNetworks: 1 }); });
   });
   it('validates input and safely handles a repeated topup', async () => {
     const token = jwt.sign({ sub: 'admin-id', email: 'admin@example.invalid' });

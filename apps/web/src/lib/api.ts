@@ -7,6 +7,7 @@ interface FetchOptions extends RequestInit {
 
 export type BudgetStatus = {
   balanceMilliWon: number;
+  todayUsage?: { countedTurns: number; signedInAccounts: number; guestNetworks: number };
   reservedMilliWon: number;
   evaluatedWeek: string;
   notificationReady: boolean;

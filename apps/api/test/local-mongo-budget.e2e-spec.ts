@@ -42,24 +42,56 @@ run('shared budget wallet in isolated MongoDB', () => {
   });
   it('limits guest browsers permanently and user accounts by Korea calendar day', async () => {
     const extension = jest.fn().mockResolvedValue(undefined);
-    const service = new DailyTurnLimitService(connection, { get: () => 'synthetic-secret' } as never, { extension } as never);
+    const service = new DailyTurnLimitService(
+      connection,
+      { get: () => 'synthetic-secret' } as never,
+      { extension } as never,
+    );
     await service.onModuleInit();
     const at = new Date('2026-11-04T14:59:00Z');
     const browser = 'a'.repeat(32);
-    const outcomes = await Promise.allSettled(Array.from({ length: 8 }, () => service.consume(undefined, '192.0.2.1', browser, at)));
-    expect(outcomes.filter((item) => item.status === 'fulfilled')).toHaveLength(5);
-    const beforeBlocked = await connection.db!.collection('guest_browser_limits').countDocuments();
-    await expect(service.consume(undefined, '192.0.2.1', 'b'.repeat(32), at)).rejects.toThrow();
-    expect(await connection.db!.collection('guest_browser_limits').countDocuments()).toBe(beforeBlocked);
-    await expect(service.consume(undefined, '192.0.2.2', browser, at)).rejects.toThrow();
-    const loggedIn = await Promise.allSettled(Array.from({ length: 22 }, () => service.consume('synthetic-user', '192.0.2.1', undefined, at)));
-    expect(loggedIn.filter((item) => item.status === 'fulfilled')).toHaveLength(20);
+    const outcomes = await Promise.allSettled(
+      Array.from({ length: 8 }, () =>
+        service.consume(undefined, '192.0.2.1', browser, at),
+      ),
+    );
+    expect(outcomes.filter((item) => item.status === 'fulfilled')).toHaveLength(
+      5,
+    );
+    const beforeBlocked = await connection
+      .db!.collection('guest_browser_limits')
+      .countDocuments();
+    await expect(
+      service.consume(undefined, '192.0.2.1', 'b'.repeat(32), at),
+    ).rejects.toThrow();
+    expect(
+      await connection.db!.collection('guest_browser_limits').countDocuments(),
+    ).toBe(beforeBlocked);
+    await expect(
+      service.consume(undefined, '192.0.2.2', browser, at),
+    ).rejects.toThrow();
+    const loggedIn = await Promise.allSettled(
+      Array.from({ length: 22 }, () =>
+        service.consume('synthetic-user', '192.0.2.1', undefined, at),
+      ),
+    );
+    expect(loggedIn.filter((item) => item.status === 'fulfilled')).toHaveLength(
+      20,
+    );
     const nextDay = new Date('2026-11-04T15:00:00Z');
-    await expect(service.consume(undefined, '192.0.2.1', browser, nextDay)).rejects.toThrow();
-    await expect(service.consume(undefined, '192.0.2.1', 'b'.repeat(32), nextDay)).resolves.toBeUndefined();
-    await expect(service.consume('synthetic-user', '192.0.2.1', undefined, nextDay)).resolves.toBeUndefined();
+    await expect(
+      service.consume(undefined, '192.0.2.1', browser, nextDay),
+    ).rejects.toThrow();
+    await expect(
+      service.consume(undefined, '192.0.2.1', 'b'.repeat(32), nextDay),
+    ).resolves.toBeUndefined();
+    await expect(
+      service.consume('synthetic-user', '192.0.2.1', undefined, nextDay),
+    ).resolves.toBeUndefined();
     expect(extension).toHaveBeenCalled();
-    const stored = JSON.stringify(await connection.db!.collection('daily_turn_limits').find({}).toArray());
+    const stored = JSON.stringify(
+      await connection.db!.collection('daily_turn_limits').find({}).toArray(),
+    );
     expect(stored).not.toContain('192.0.2.1');
     expect(stored).not.toContain('synthetic-user');
     expect(stored).not.toContain(browser);
@@ -140,12 +172,21 @@ run('shared budget wallet in isolated MongoDB', () => {
         .findOne({ _id: 'blocked-0' } as never);
       expect(retried?.state).toBe('sent');
       expect(sendMail).toHaveBeenCalledTimes(3);
-      await Promise.all(workers.map((worker) => worker.extension('2026-11-04')));
+      await Promise.all(
+        workers.map((worker) => worker.extension('2026-11-04')),
+      );
       await workers[0].tick();
-      const extension = await connection.db!.collection('ai_budget_alert_outbox').findOne({ _id: 'extension-2026-11-04' } as never);
+      const extension = await connection
+        .db!.collection('ai_budget_alert_outbox')
+        .findOne({ _id: 'extension-2026-11-04' } as never);
       expect(extension?.state).toBe('sent');
       expect(sendMail).toHaveBeenCalledTimes(4);
       expect(sendMail.mock.calls[3][0].subject).toContain('연장 요청');
+      await Promise.all(workers.map((worker) => worker.reportProblem()));
+      await workers[0].tick();
+      expect(sendMail).toHaveBeenCalledTimes(5);
+      expect(sendMail.mock.calls[4][0].subject).toContain('서비스 문제 알림');
+      await expect(workers[0].reportProblem()).resolves.toBe('sent');
     } finally {
       jest.mocked(nodemailer.createTransport).mockReset();
     }

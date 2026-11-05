@@ -1,7 +1,7 @@
 /* 위로 (To High) chat — light sage theme (랜딩 single-open-light와 동일 팔레트) */
 .ch-frame, .ch-shell {
-  --page: #faf8f3;
-  --page-2: #f3f5ee;
+  --page: #f5fbf7;
+  --page-2: #eaf4ed;
   --soft: #eef3ec;
   --card: #ffffff;
   --card-2: #f6f8f4;
@@ -21,11 +21,11 @@
   --brand-soft: #d8eddf;
   --brand-ink: #ffffff;
 
-  --accent: #ef9f5b;
+  --accent: #2e9b6d;
   --rose: #d98d8d;
   --rose-tint: #f7e7e7;
 
-  --grad: linear-gradient(135deg, #2e9b6d, #46b083 45%, #ef9f5b);
+  --grad: linear-gradient(135deg, #2e9b6d, #46b083 45%, #a8dfc2);
 
   --shadow-sm: 0 4px 14px rgba(40,84,62,0.08);
   --shadow-md: 0 8px 22px rgba(40,84,62,0.10);
@@ -698,7 +698,7 @@
 .ch-sb-userbtn[aria-expanded="true"] { background: var(--card); }
 .ch-sb-avatar {
   width: 32px; height: 32px; border-radius: 50%;
-  background: var(--grad, linear-gradient(135deg, #2e9b6d, #46b083 45%, #ef9f5b));
+  background: var(--grad, linear-gradient(135deg, #2e9b6d, #46b083 45%, #a8dfc2));
   color: #ffffff; font-weight: 700; font-size: 13px;
   display: inline-flex; align-items: center; justify-content: center;
   flex-shrink: 0;
@@ -760,7 +760,7 @@
   letter-spacing: 0.02em;
 }
 .ch-pop-badge.pro {
-  background: var(--grad, linear-gradient(135deg, #2e9b6d, #46b083 45%, #ef9f5b));
+  background: var(--grad, linear-gradient(135deg, #2e9b6d, #46b083 45%, #a8dfc2));
   color: #ffffff;
 }
 
