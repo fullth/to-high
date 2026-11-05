@@ -102,6 +102,16 @@ describe('OpenAIAgent 프롬프트 경계', () => {
   const getMessage = (request: CompletionRequest, role: string): string =>
     request.messages.find((message) => message.role === role)?.content ?? '';
 
+  it('요청받은 상담 제목을 짧게 만들고 대화 내용을 데이터 경계에 넣는다', async () => {
+    createCompletion.mockResolvedValue({ choices: [{ message: { content: '  일과 관계에 관한 고민  ' } }] });
+    await expect(agent.generateSavedSessionTitle([`사용자: ${INJECTION_TEXT}`])).resolves.toBe('일과 관계에 관한 고민');
+    const request = getRequest(0);
+    expect(request.model).toBe(PROMPT_CONFIG.MODELS.UTILITY);
+    expect(request.max_completion_tokens).toBe(80);
+    expect(getMessage(request, 'user')).toContain('<counseling_context>');
+    expect(getMessage(request, 'user')).not.toContain(INJECTION_TEXT);
+  });
+
   it('완성 답변의 선택지만 반환하고 두 번째 상담문과 강제 조언 버튼을 추가하지 않는다', async () => {
     createCompletion.mockResolvedValue({
       choices: [

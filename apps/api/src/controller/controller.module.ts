@@ -19,6 +19,8 @@ import { isServiceEnabled } from '../common/service-visibility';
 import { BudgetModule } from '../common/budget.module';
 import { BudgetController } from './admin/budget.controller';
 import { ProblemController } from './problem/problem.controller';
+import { SavedSessionsModule } from '../app/saved-sessions/saved-sessions.module';
+import { SavedSessionsController } from './saved-sessions/saved-sessions.controller';
 
 const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
 
@@ -26,6 +28,7 @@ const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
   imports: [
     AuthModule,
     BudgetModule,
+    SavedSessionsModule,
     PersistenceModule,
     EphemeralModule,
     CharacterModule,
@@ -43,6 +46,7 @@ const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
     AdminController,
     BudgetController,
     ProblemController,
+    SavedSessionsController,
     InquiryController,
     ...(paymentServiceEnabled ? [PaymentController] : []),
   ],

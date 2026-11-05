@@ -14,6 +14,19 @@ export type ResponseMode =
   | "direction"
   | "similar";
 export type TalkMessage = { role: "user" | "assistant"; content: string };
+export type SavedSession = { id: string; title: string; createdAt: string };
+export function listSavedSessions(token: string) {
+  return request<{ sessions: SavedSession[] }>("/saved-sessions", token);
+}
+export function saveSession(token: string, id: string, messages: TalkMessage[]) {
+  return request<{ id: string; title: string }>("/saved-sessions", token, { method: "POST", body: JSON.stringify({ id, messages }) });
+}
+export function getSavedSession(token: string, id: string) {
+  return request<SavedSession & { messages: TalkMessage[] }>(`/saved-sessions/${id}`, token);
+}
+export function deleteSavedSession(token: string, id: string) {
+  return request<{ deleted: boolean }>(`/saved-sessions/${id}`, token, { method: "DELETE" });
+}
 export type CharacterMemory = { id: string; kind: string; text: string };
 export type Character = {
   id: string;

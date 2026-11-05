@@ -12,6 +12,7 @@ import { OpenAIAgent } from '../src/client/openai/openai.agent';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { DailyTurnLimitService } from '../src/common/daily-turn-limit.service';
+import { SavedSessionsService } from '../src/app/saved-sessions/saved-sessions.service';
 jest.mock('nodemailer', () => ({ createTransport: jest.fn() }));
 
 const run = process.env.TO_HIGH_ISOLATED_DB === '1' ? describe : describe.skip;
@@ -28,6 +29,22 @@ run('shared budget wallet in isolated MongoDB', () => {
         serverSelectionTimeoutMS: 5000,
       })
       .asPromise();
+  });
+  it('keeps explicitly saved conversations isolated by account and supports deletion', async () => {
+    const agent = { generateSavedSessionTitle: jest.fn().mockResolvedValue('일과 관계 고민') };
+    const sessions = new SavedSessionsService(connection, agent as never);
+    const id = 'c'.repeat(32);
+    const messages = [{ role: 'user' as const, content: '합성 테스트 대화' }];
+    await Promise.all(Array.from({ length: 5 }, () => sessions.save('owner-a', { id, messages })));
+    expect(await sessions.save('owner-a', { id, messages })).toEqual({ id, title: '일과 관계 고민' });
+    expect(agent.generateSavedSessionTitle).toHaveBeenCalledTimes(1);
+    expect((await sessions.list('owner-b')).sessions).toEqual([]);
+    await expect(sessions.get('owner-b', id)).rejects.toThrow();
+    await expect(sessions.delete('owner-b', id)).rejects.toThrow();
+    expect((await sessions.get('owner-a', id)).messages).toEqual(messages);
+    expect(JSON.stringify(await sessions.list('owner-a'))).not.toContain('합성 테스트 대화');
+    await sessions.delete('owner-a', id);
+    await expect(sessions.get('owner-a', id)).rejects.toThrow();
   });
   afterAll(async () => {
     if (connection) {

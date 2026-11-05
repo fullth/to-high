@@ -182,10 +182,10 @@ export function WirocareLanding() {
               </div>
               <div className="feature">
                 <LeviPose />
-                <h4>대화는 저장하지 않아요</h4>
+                <h4>원할 때만 대화를 저장해요</h4>
                 <p>
-                  대화는 이 화면에만 남아요. 새로고침하거나 화면을 떠나면
-                  사라져요.
+                  저장하지 않은 대화는 화면을 떠나면 사라져요. 원하는 대화는
+                  로그인 후 저장하고 다시 볼 수 있어요.
                 </p>
               </div>
             </div>
@@ -227,7 +227,7 @@ export function WirocareLanding() {
           </div>
           <p className="privacy-note">
             답변을 위해 대화는 서버와 AI 제공자가 처리해요. 서비스
-            데이터베이스에는 상담 원문을 저장하지 않으며 제공자 측 보관은 해당
+            사용자가 저장을 선택한 상담은 계정에 보관하며 제공자 측 보관은 해당
             정책과 설정에 따라요.
           </p>
           <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-4)" }}>

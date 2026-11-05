@@ -116,6 +116,27 @@
 }
 .ch-ephemeral .ch-info-sidebar {
   background: rgba(234, 244, 237, 0.65);
+  min-height: 0;
+  overflow-y: auto;
+}
+.ch-ephemeral .ch-saved-list { display: grid; gap: 10px; min-width: 0; }
+.ch-ephemeral .ch-saved-list h2 { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.ch-ephemeral .ch-saved-empty { font-size: 12px; line-height: 1.5; color: var(--ink-3); }
+.ch-ephemeral .ch-saved-items { display: grid; gap: 4px; max-height: 180px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+.ch-ephemeral .ch-saved-item { display: flex; align-items: center; min-width: 0; border: 1px solid transparent; border-radius: 12px; }
+.ch-ephemeral .ch-saved-item:hover, .ch-ephemeral .ch-saved-item:focus-within { background: rgba(255, 255, 255, .72); border-color: var(--line); }
+.ch-ephemeral .ch-saved-open { flex: 1; min-width: 0; min-height: 40px; overflow: hidden; padding: 9px 4px 9px 10px; border: 0; background: transparent; color: var(--ink-2); font-size: 13px; line-height: 1.4; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.ch-ephemeral .ch-saved-delete { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 40px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--ink-3); cursor: pointer; }
+.ch-ephemeral .ch-saved-delete:hover { color: #a33333; background: #f8eded; }
+.ch-ephemeral .ch-saved-open:focus-visible, .ch-ephemeral .ch-saved-delete:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+@media (max-height: 760px) and (min-width: 861px) {
+  .ch-ephemeral .ch-info-sidebar { gap: 18px; padding-top: 24px; padding-bottom: 24px; }
+  .ch-ephemeral .ch-saved-items { max-height: 130px; }
+}
+.ch-ephemeral .ch-saved-mobile-toggle, .ch-ephemeral .ch-saved-mobile { display: none; }
+@media (max-width: 860px) {
+  .ch-ephemeral .ch-saved-mobile-toggle { display: block; }
+  .ch-ephemeral .ch-saved-mobile { display: grid; padding: 12px 20px; background: #eaf4ed; }
 }
 .ch-ephemeral .ch-logo-mark {
   background: url("/characters/levi.png") center / contain no-repeat;
