@@ -7,6 +7,7 @@ import { OptionalJwtAuthGuard } from '../../common/optional-jwt.guard';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { CharacterService } from '../../app/character/character.service';
 import { PrivacyExceptionFilter } from '../../common/privacy-exception.filter';
+import { DailyTurnLimitService } from '../../common/daily-turn-limit.service';
 
 // Real Nest/Express HTTP transport, synthetic model responses, no DB or paid calls.
 describe('ephemeral HTTP streaming transport', () => {
@@ -30,6 +31,7 @@ describe('ephemeral HTTP streaming transport', () => {
       controllers: [EphemeralController],
       providers: [
         { provide: EphemeralService, useValue: service },
+        { provide: DailyTurnLimitService, useValue: { consume: async () => {} } },
         {
           provide: EphemeralBudgetService,
           useValue: { acquireOwner: () => release },

@@ -3,6 +3,8 @@ export const CHAT_ERROR_COPY = {
   TIMEOUT: "레비가 답변하는데 시간이 걸리고 있어요. 잠시 후 다시 시도해주세요.",
   RATE_LIMITED:
     "레비가 채워둔 지갑이 다시 얇아졌어요,, 조금 뒤에 다시 찾아주세요.",
+  DAILY_GUEST_LIMIT: "무료 대화 한도에 도달했어요. 로그인하면 새 대화를 시작할 수 있어요.",
+  DAILY_USER_LIMIT: "오늘의 대화 20회를 모두 사용했어요. 관리자에게 이용 한도 연장 요청을 접수했어요. 확인 후 다시 찾아주세요.",
   UNAVAILABLE: "레비와의 연결에 문제가 생겼습니다. 잠시 후 다시 시도해주세요.",
   INTERRUPTED: "레비의 응답이 끊어졌어요, 다시 시도해볼까요?",
   SUMMARY_FAILED:

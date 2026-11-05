@@ -7,6 +7,7 @@ const names = new Set([
   'levi.chat.first_token',
   'levi.chat.summaries',
   'levi.ai.tokens',
+  'levi.ai.calls',
   'levi.chat.rejected',
   'levi.chat.options',
 ]);
@@ -23,8 +24,19 @@ const values: Record<string, readonly string[]> = {
     'INTERRUPTED',
     'cancelled',
   ],
-  operation: ['reply', 'options', 'summary'],
-  token_type: ['input', 'output'],
+  operation: [
+    'reply',
+    'options',
+    'question',
+    'summary',
+    'empathy',
+    'feedback',
+    'profile',
+    'import',
+  ],
+  model: ['gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-6.1-terra', 'gpt-6-luna'],
+  usage_status: ['reported', 'missing', 'failed', 'cancelled'],
+  token_type: ['input', 'output', 'cached_input'],
   option_result: [
     'generated',
     'invalid_output',
@@ -74,17 +86,44 @@ export function recordChatRequest(
     });
 }
 
+export type ModelOperation =
+  | 'reply'
+  | 'options'
+  | 'question'
+  | 'summary'
+  | 'empathy'
+  | 'feedback'
+  | 'profile'
+  | 'import';
+type ModelUsage = {
+  prompt_tokens: number;
+  completion_tokens: number;
+  prompt_tokens_details?: { cached_tokens?: number };
+};
+
 export function recordModelUsage(
-  operation: 'reply' | 'options' | 'summary',
-  usage?: { prompt_tokens: number; completion_tokens: number } | null,
+  operation: ModelOperation,
+  model: string,
+  status: 'reported' | 'missing' | 'failed' | 'cancelled',
+  usage?: ModelUsage | null,
 ) {
+  const attributes = {
+    operation,
+    model,
+    usage_status: usage ? 'reported' : status,
+  };
+  Sentry.metrics.count('levi.ai.calls', 1, { attributes });
   if (!usage) return;
-  Sentry.metrics.count('levi.ai.tokens', usage.prompt_tokens, {
-    attributes: { operation, token_type: 'input' },
-  });
-  Sentry.metrics.count('levi.ai.tokens', usage.completion_tokens, {
-    attributes: { operation, token_type: 'output' },
-  });
+  for (const [token_type, value] of Object.entries({
+    input: usage.prompt_tokens,
+    output: usage.completion_tokens,
+    cached_input: usage.prompt_tokens_details?.cached_tokens,
+  })) {
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0)
+      Sentry.metrics.count('levi.ai.tokens', value, {
+        attributes: { operation, model, token_type },
+      });
+  }
 }
 
 export function recordSummary() {

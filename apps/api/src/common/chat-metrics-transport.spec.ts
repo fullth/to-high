@@ -96,4 +96,33 @@ describe('final Sentry transport boundary', () => {
     expect(output).toContain('invalid_output');
     expect(output).not.toContain('private-summary');
   });
+  it('preserves model and usage status through the transport', () => {
+    const input = [
+      {},
+      [
+        [
+          { type: 'trace_metric' },
+          {
+            items: [
+              {
+                timestamp: 100,
+                name: 'levi.ai.calls',
+                type: 'counter',
+                value: 1,
+                attributes: {
+                  model: { type: 'string', value: 'gpt-6.1-terra' },
+                  usage_status: { type: 'string', value: 'cancelled' },
+                  text: { type: 'string', value: 'private' },
+                },
+              },
+            ],
+          },
+        ],
+      ],
+    ] as unknown as Envelope;
+    const output = JSON.stringify(filterMetricsEnvelope(input));
+    expect(output).toContain('gpt-6.1-terra');
+    expect(output).toContain('cancelled');
+    expect(output).not.toContain('private');
+  });
 });

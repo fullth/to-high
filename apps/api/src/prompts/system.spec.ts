@@ -15,8 +15,8 @@ import {
 describe('상담 시스템 프롬프트 안전 경계', () => {
   it('최종 상담은 Terra, 보조 생성은 Luna로 분리한다', () => {
     expect(PROMPT_CONFIG.MODELS).toEqual({
-      COUNSELING: 'gpt-5.6-terra',
-      UTILITY: 'gpt-5.6-luna',
+      COUNSELING: 'gpt-6.1-terra',
+      UTILITY: 'gpt-6-luna',
     });
     expect(PROMPT_CONFIG.REASONING_EFFORT).toEqual({
       COUNSELING: 'medium',

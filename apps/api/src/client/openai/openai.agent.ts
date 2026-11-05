@@ -1,10 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   recordModelUsage,
   recordOptionsResult,
 } from '../../common/chat-metrics';
 import OpenAI from 'openai';
+import type { ModelOperation } from '../../common/chat-metrics';
+import { ModelBudgetService } from '../../common/model-budget.service';
 import { z } from 'zod';
 import {
   CATEGORY_CONTEXTS,
@@ -45,7 +51,10 @@ export class OpenAIAgent {
     return this.hasApiKey;
   }
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @Optional() private readonly budget?: ModelBudgetService,
+  ) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     this.hasApiKey = !!apiKey && apiKey.length > 0;
     this.openai = new OpenAI({
@@ -53,6 +62,66 @@ export class OpenAIAgent {
       timeout: 30_000,
       maxRetries: 0,
     });
+  }
+
+  private async completion(
+    operation: ModelOperation,
+    params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+    options?: { signal?: AbortSignal },
+  ) {
+    if (!this.budget)
+      throw new ServiceUnavailableException('예산 설정이 필요합니다.');
+    await this.budget.reserve(params);
+    let usage: OpenAI.Completions.CompletionUsage | null | undefined;
+    try {
+      const response = await this.openai.chat.completions.create(
+        params,
+        options,
+      );
+      usage = response.usage;
+      recordModelUsage(operation, params.model, 'missing', usage);
+      return response;
+    } catch (error) {
+      recordModelUsage(
+        operation,
+        params.model,
+        options?.signal?.aborted ? 'cancelled' : 'failed',
+      );
+      throw error;
+    }
+  }
+
+  private async *completionStream(
+    operation: ModelOperation,
+    params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming,
+    options?: { signal?: AbortSignal },
+  ) {
+    if (!this.budget)
+      throw new ServiceUnavailableException('예산 설정이 필요합니다.');
+    await this.budget.reserve(params);
+    let usage: OpenAI.Completions.CompletionUsage | null | undefined;
+    let status: 'missing' | 'failed' | 'cancelled' = 'missing';
+    let completed = false;
+    try {
+      const stream = await this.openai.chat.completions.create(
+        {
+          ...params,
+          stream_options: { ...params.stream_options, include_usage: true },
+        },
+        options,
+      );
+      for await (const chunk of stream) {
+        if (chunk.usage) usage = chunk.usage;
+        yield chunk;
+      }
+      completed = true;
+    } catch (error) {
+      status = options?.signal?.aborted ? 'cancelled' : 'failed';
+      throw error;
+    } finally {
+      if (!completed && status === 'missing') status = 'cancelled';
+      recordModelUsage(operation, params.model, status, usage);
+    }
   }
 
   // 의미없는 짧은 입력 패턴
@@ -176,7 +245,8 @@ ${wrapUntrustedPromptData(
 현재 단계: ${currentStep}
 사용자의 마지막 선택/입력에 공감하면서 다음 질문과 선택지를 생성해주세요.`;
 
-    const response = await this.openai.chat.completions.create(
+    const response = await this.completion(
+      'options',
       {
         store: false,
         model: PROMPT_CONFIG.MODELS.UTILITY,
@@ -330,7 +400,7 @@ ${wrapUntrustedPromptData(
 
     // question 스트리밍 생성
     let fullQuestion = '';
-    const stream = await this.openai.chat.completions.create({
+    const stream = await this.completionStream('question', {
       store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
@@ -377,7 +447,7 @@ ${wrapUntrustedPromptData('generated_question', question)}
 
 위 질문에 답할 수 있는 8개의 선택지를 **모두 부드러운 존댓말(~요체)로** 생성하세요.`;
 
-    const optionsResponse = await this.openai.chat.completions.create({
+    const optionsResponse = await this.completion('options', {
       store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
@@ -450,7 +520,8 @@ ${wrapUntrustedPromptData(
 
 ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응답을 해주세요.'}`;
 
-    const response = await this.openai.chat.completions.create(
+    const response = await this.completion(
+      'reply',
       {
         store: false,
         model: PROMPT_CONFIG.MODELS.COUNSELING,
@@ -464,8 +535,6 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       },
       { signal },
     );
-
-    recordModelUsage('reply', response.usage);
     return response.choices[0].message.content || '';
   }
 
@@ -478,7 +547,8 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     if (!this.hasApiKey) {
       return ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
     }
-    const response = await this.openai.chat.completions.create(
+    const response = await this.completion(
+      'options',
       {
         store: false,
         model: PROMPT_CONFIG.MODELS.UTILITY,
@@ -501,7 +571,6 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       },
       { signal },
     );
-    recordModelUsage('options', response.usage);
     let options: unknown;
     try {
       const output: unknown = JSON.parse(
@@ -562,7 +631,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       return keywords || '오늘 이야기를 마쳤어요.';
     }
 
-    const response = await this.openai.chat.completions.create({
+    const response = await this.completion('summary', {
       store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
@@ -609,7 +678,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       ];
     }
 
-    const response = await this.openai.chat.completions.create({
+    const response = await this.completion('empathy', {
       store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
@@ -661,7 +730,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
 
     const counselorPrompt = COUNSELOR_TYPE_PROMPTS[counselorType];
 
-    const response = await this.openai.chat.completions.create({
+    const response = await this.completion('feedback', {
       store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
@@ -720,7 +789,7 @@ ${wrapUntrustedPromptData('selected_option', selectedOption)}
       return `지금까지 "${filtered.slice(-3).join('", "')}" 라고 말씀해주셨어요. 말하기 어려우시면 괜찮아요. 천천히 해도 돼요.`;
     }
 
-    const response = await this.openai.chat.completions.create({
+    const response = await this.completion('summary', {
       store: false,
       model: PROMPT_CONFIG.MODELS.UTILITY,
       reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
@@ -779,7 +848,8 @@ ${wrapUntrustedPromptData(
 
 ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응답을 해주세요.'}`;
 
-    const stream = await this.openai.chat.completions.create(
+    const stream = await this.completionStream(
+      'reply',
       {
         store: false,
         model: PROMPT_CONFIG.MODELS.COUNSELING,
@@ -798,7 +868,6 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
 
     for await (const chunk of stream) {
       if (signal?.aborted) throw new Error('cancelled');
-      recordModelUsage('reply', chunk.usage);
       const content = chunk.choices[0]?.delta?.content;
       if (content) {
         yield content;
@@ -827,7 +896,8 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       ? `${wrapUntrustedPromptData('existing_summary', existingSummary)}\n\n추가된 대화:\n${counselingContext}\n\n기존 요약에 추가된 대화 내용을 통합하여 새로운 요약을 작성하세요.`
       : `대화 내용:\n${counselingContext}`;
 
-    const response = await this.openai.chat.completions.create(
+    const response = await this.completion(
+      'summary',
       {
         store: false,
         model: PROMPT_CONFIG.MODELS.UTILITY,
@@ -840,8 +910,6 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       },
       { signal },
     );
-
-    recordModelUsage('summary', response.usage);
     const summary = response.choices[0].message.content?.trim();
     if (signal && !summary) throw new Error('empty-summary');
     return summary || existingSummary;
@@ -860,7 +928,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     }
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const response = await this.completion('profile', {
         store: false,
         model: PROMPT_CONFIG.MODELS.UTILITY,
         reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
@@ -908,7 +976,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     }
 
     try {
-      const response = await this.openai.chat.completions.create({
+      const response = await this.completion('import', {
         store: false,
         model: PROMPT_CONFIG.MODELS.UTILITY,
         reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,

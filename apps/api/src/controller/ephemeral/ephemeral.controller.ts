@@ -9,6 +9,7 @@ import { chatErrorCode } from '../../common/chat-failure';
 import { recordChatRequest } from '../../common/chat-metrics';
 import { EphemeralRequestSchema } from './ephemeral.request';
 import type { EphemeralRequest } from './ephemeral.request';
+import { DailyTurnLimitService } from '../../common/daily-turn-limit.service';
 
 type AuthRequest = Request & {
   user?: { userId?: string };
@@ -20,6 +21,7 @@ export class EphemeralController {
   constructor(
     private readonly service: EphemeralService,
     private readonly budget: EphemeralBudgetService,
+    private readonly turns: DailyTurnLimitService,
   ) {}
 
   @Post('respond')
@@ -46,6 +48,12 @@ export class EphemeralController {
         request.user?.userId,
         request.ip || request.socket.remoteAddress || 'unknown',
       );
+      await this.turns.consume(
+        request.user?.userId,
+        request.ip || request.socket.remoteAddress || 'unknown',
+        request.headers?.['x-browser-id'],
+      );
+      if (controller.signal.aborted) return;
       if (streaming) {
         response.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
         response.setHeader('X-Accel-Buffering', 'no');

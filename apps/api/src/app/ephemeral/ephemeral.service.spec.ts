@@ -17,6 +17,11 @@ const modes = [
   'similar',
 ] as const;
 
+const modelBudgetMock = {
+  reserve: async () => ({ id: 'test' }),
+  settle: async () => {},
+};
+
 describe('ephemeral counseling without persistence', () => {
   const generateResponse = jest.fn();
   const getContext = jest.fn();
@@ -51,9 +56,12 @@ describe('ephemeral counseling without persistence', () => {
   it.each(modes)(
     'honors %s mode even without a provider API key',
     async (mode) => {
-      const offline = new OpenAIAgent({
-        get: jest.fn().mockReturnValue(undefined),
-      } as unknown as ConfigService);
+      const offline = new OpenAIAgent(
+        {
+          get: jest.fn().mockReturnValue(undefined),
+        } as unknown as ConfigService,
+        modelBudgetMock as never,
+      );
       for (const style of ['T', 'F', 'reaction', 'listening'] as const) {
         expect(
           await offline.generateResponse([], mode, '고민이 있어요', style),
@@ -238,9 +246,12 @@ describe('ephemeral counseling without persistence', () => {
           },
         ],
       });
-    const agent = new OpenAIAgent({
-      get: jest.fn().mockReturnValue('local-mock-only'),
-    } as unknown as ConfigService);
+    const agent = new OpenAIAgent(
+      {
+        get: jest.fn().mockReturnValue('local-mock-only'),
+      } as unknown as ConfigService,
+      modelBudgetMock as never,
+    );
     (
       agent as unknown as {
         openai: { chat: { completions: { create: jest.Mock } } };
@@ -339,9 +350,12 @@ describe('ephemeral counseling without persistence', () => {
             },
           ],
         });
-      const agent = new OpenAIAgent({
-        get: jest.fn().mockReturnValue('local-mock-only'),
-      } as unknown as ConfigService);
+      const agent = new OpenAIAgent(
+        {
+          get: jest.fn().mockReturnValue('local-mock-only'),
+        } as unknown as ConfigService,
+        modelBudgetMock as never,
+      );
       (
         agent as unknown as {
           openai: { chat: { completions: { create: jest.Mock } } };
@@ -381,9 +395,12 @@ describe('ephemeral counseling without persistence', () => {
   it.each(['listen', 'comfort'] as const)(
     'allows %s to omit a bridging question',
     async (mode) => {
-      const agent = new OpenAIAgent({
-        get: jest.fn().mockReturnValue('local-mock-only'),
-      } as unknown as ConfigService);
+      const agent = new OpenAIAgent(
+        {
+          get: jest.fn().mockReturnValue('local-mock-only'),
+        } as unknown as ConfigService,
+        modelBudgetMock as never,
+      );
       const mockCompletion = jest
         .fn()
         .mockResolvedValueOnce({

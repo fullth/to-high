@@ -18,6 +18,17 @@ export default function PrivacyPage() {
         </p>
       </section>
       <section className="space-y-3">
+        <h2 className="text-lg font-semibold">대화 이용 한도</h2>
+        <p>
+          비로그인 대화의 이용 횟수를 확인하기 위해 브라우저 저장소에 무작위
+          식별자를 보관해요. 서버에는 IP 주소와 이 식별자 또는 로그인 계정의
+          정보를 원문 대신 식별하기 어려운 값으로 변환해 횟수를 보관해요.
+          IP와 계정의 일별 횟수는 약 3일이 지나면 삭제되고, 비로그인 브라우저의
+          체험 횟수는 중복 체험 제한을 위해 계속 보관해요. 같은 인터넷 연결을 쓰는 사람은
+          비로그인 한도를 함께 사용할 수 있어요.
+        </p>
+      </section>
+      <section className="space-y-3">
         <h2 className="text-lg font-semibold">문의와 후원</h2>
         <p>
           홈페이지의 문의는 채널톡에서 별도로 처리해요. AI 상담 대화를 문의에

@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatMessageContent } from "@/components/chat/chat-message-content";
+import { TurnLimitDialog } from "@/components/talk/turn-limit-dialog";
 import Image from "next/image";
 import { FullPageLink } from "@/components/full-page-link";
 import { useSearchParams } from "next/navigation";
@@ -324,6 +325,14 @@ function TalkContent() {
             : "idle";
   return (
     <main className="ch-frame ch-frame-split ch-ephemeral">
+      {(errorCode === "DAILY_GUEST_LIMIT" || errorCode === "DAILY_USER_LIMIT") && (
+        <TurnLimitDialog
+          message={error}
+          guest={errorCode === "DAILY_GUEST_LIMIT"}
+          onClose={() => { setError(""); setErrorCode(null); }}
+          onLogin={() => { clear(); login(); }}
+        />
+      )}
       <ChatInfoSidebar
         activeStep={ended ? "closing" : messages.length ? "sharing" : "start"}
       />
@@ -456,7 +465,7 @@ function TalkContent() {
                   </div>
                 )}
               </div>
-              {error && (
+              {error && errorCode !== "DAILY_GUEST_LIMIT" && errorCode !== "DAILY_USER_LIMIT" && (
                 <section role="alert" className="ch-talk-error">
                   <p>{error}</p>
                   {(errorCode === "SUMMARY_FAILED" ||

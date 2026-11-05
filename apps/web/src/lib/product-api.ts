@@ -98,6 +98,14 @@ export async function respondEphemeral(
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   let text = "";
   try {
+    let browserId: string | undefined;
+    if (!token) {
+      browserId = localStorage.getItem("dailyTurnBrowserId") || undefined;
+      if (!browserId || !/^[a-f0-9]{32}$/.test(browserId)) {
+        browserId = crypto.randomUUID().replaceAll("-", "");
+        localStorage.setItem("dailyTurnBrowserId", browserId);
+      }
+    }
     const response = await fetch(`${API_URL}/ephemeral/respond`, {
       method: "POST",
       cache: "no-store",
@@ -105,6 +113,7 @@ export async function respondEphemeral(
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
+        ...(browserId ? { "X-Browser-Id": browserId } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({

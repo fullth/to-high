@@ -38,7 +38,7 @@ test.beforeEach(async ({ page }) => {
     response.setHeader("Access-Control-Allow-Origin", "*");
     if (request.method === "OPTIONS") {
       response.writeHead(204, {
-        "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization",
+        "Access-Control-Allow-Headers": "Content-Type, Accept, Authorization, X-Browser-Id",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
       });
       response.end();

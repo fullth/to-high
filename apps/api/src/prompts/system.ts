@@ -8,8 +8,8 @@ export const PROMPT_CONFIG = {
   RESPONSE_LENGTH:
     '짧은 입력에는 1~3문장, 설명이 필요할 때만 250자 안팎. 최소 글자 수를 채우려고 늘리지 마세요.',
   MODELS: {
-    COUNSELING: 'gpt-5.6-terra' as const,
-    UTILITY: 'gpt-5.6-luna' as const,
+    COUNSELING: 'gpt-6.1-terra' as const,
+    UTILITY: 'gpt-6-luna' as const,
   },
   REASONING_EFFORT: {
     COUNSELING: 'medium' as const,

@@ -3,6 +3,8 @@ import { HttpException } from '@nestjs/common';
 export const CHAT_ERROR_CODES = [
   'TIMEOUT',
   'RATE_LIMITED',
+  'DAILY_GUEST_LIMIT',
+  'DAILY_USER_LIMIT',
   'BUSY',
   'UNAVAILABLE',
   'AUTH_REQUIRED',

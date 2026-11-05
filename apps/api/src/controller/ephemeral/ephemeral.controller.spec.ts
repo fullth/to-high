@@ -16,6 +16,7 @@ describe('ephemeral request lifecycle', () => {
     const controller = new EphemeralController(
       { respond } as unknown as EphemeralService,
       { acquireOwner } as unknown as EphemeralBudgetService,
+      { consume: jest.fn().mockResolvedValue(undefined) } as never,
     );
     const response = Object.assign(new EventEmitter(), {
       setHeader: jest.fn(),

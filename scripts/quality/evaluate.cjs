@@ -109,6 +109,12 @@ async function main() {
   const { OpenAIAgent } = require(
     path.join(repo, "apps/api/src/client/openai/openai.agent.ts"),
   );
+  const { ModelBudgetService } = require(
+    path.join(repo, "apps/api/src/common/model-budget.service.ts"),
+  );
+  const { DEFAULT_REFILL_MILLI_WON, koreaWeekStart } = require(
+    path.join(repo, "apps/api/src/common/weekly-budget-calculation.ts"),
+  );
   const { EphemeralService } = require(
     path.join(repo, "apps/api/src/app/ephemeral/ephemeral.service.ts"),
   );
@@ -123,7 +129,28 @@ async function main() {
     ...scenario,
     parsed: EphemeralRequestSchema.parse(scenario.request),
   }));
-  const agent = new OpenAIAgent(new ConfigService({ OPENAI_API_KEY: key }));
+  // The opt-in evaluator has a separate in-process budget and never opens a service database.
+  let wallet = {
+    version: 0,
+    balance: DEFAULT_REFILL_MILLI_WON,
+    reservations: {},
+    evaluatedWeek: koreaWeekStart(new Date()).toISOString(),
+  };
+  const localWallet = {
+    async read() {
+      return wallet;
+    },
+    async transition(change) {
+      const next = change(wallet);
+      if (next) wallet = next;
+      return next;
+    },
+  };
+  const config = new ConfigService({ OPENAI_API_KEY: key });
+  const budget = new ModelBudgetService(localWallet, config, {
+    async blocked() {},
+  });
+  const agent = new OpenAIAgent(config, budget);
   const service = new EphemeralService(agent, {
     getContext() {
       throw new Error("Synthetic fixtures do not load character data");

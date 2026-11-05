@@ -15,6 +15,8 @@ node scripts/quality/evaluate.cjs --run --label=after
 
 API 소스의 `EphemeralRequestSchema`, `EphemeralService`, `OpenAIAgent`를 그대로 사용합니다. 모델·reasoning 설정은 `PROMPT_CONFIG`를 따르며 별도 모델로 대체하지 않습니다. 프로바이더의 30초 제한, 재시도 0회, `store: false`를 유지합니다. 모델 호출이 실패하면 대체 문구를 실제 생성 품질로 평가하지 않고 실행을 중단합니다.
 
+평가 스크립트는 서비스 DB에 연결하지 않고 별도의 프로세스 메모리 예산을 사용합니다. 따라서 서비스의 공유 잔액을 차감하지 않으며 공급자 프로젝트의 실제 비용 한도와 별도로 확인해야 합니다.
+
 결과는 Git에서 제외된 `_workspace/quality/<label>-<timestamp>.json`에 저장합니다. 합성 입력, 실제 생성 본문·선택지, 호출별 사용량, 모델, 커밋·수정 상태와 소스 해시를 기록합니다. 터미널에는 원문 대신 진행 상황과 구조 지표만 출력합니다.
 
 변경 전 `--label=before`, 변경 후 `--label=after`로 같은 fixtures를 실행하고 두 결과의 입력·모델·소스 정보를 함께 확인하세요. 이전 버전이 `conversation`을 지원하지 않는다면 mode를 생략한 5사례는 그 버전의 기본 모드로 실행되므로, 명시모드 3사례와 기본 흐름 비교를 구분해서 보고해야 합니다.

@@ -27,6 +27,8 @@ export function filterMetricsEnvelope(envelope: Envelope): Envelope | null {
       for (const key of [
         'outcome',
         'operation',
+        'model',
+        'usage_status',
         'token_type',
         'option_result',
       ]) {

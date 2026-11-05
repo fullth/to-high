@@ -16,12 +16,15 @@ import { AdminController } from './admin/admin.controller';
 import { PaymentController } from './payment/payment.controller';
 import { InquiryController } from './inquiry/inquiry.controller';
 import { isServiceEnabled } from '../common/service-visibility';
+import { BudgetModule } from '../common/budget.module';
+import { BudgetController } from './admin/budget.controller';
 
 const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
 
 @Module({
   imports: [
     AuthModule,
+    BudgetModule,
     PersistenceModule,
     EphemeralModule,
     CharacterModule,
@@ -37,6 +40,7 @@ const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
     ChatController,
     HealthController,
     AdminController,
+    BudgetController,
     InquiryController,
     ...(paymentServiceEnabled ? [PaymentController] : []),
   ],

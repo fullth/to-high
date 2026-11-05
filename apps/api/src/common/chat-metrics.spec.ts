@@ -66,4 +66,28 @@ describe('chat metric privacy boundary', () => {
       }),
     ).toBeNull();
   });
+  it('keeps model and cache usage dimensions while stripping personal data', () => {
+    expect(
+      filterChatMetric({
+        name: 'levi.ai.tokens',
+        type: 'counter',
+        value: 128,
+        attributes: {
+          model: 'gpt-6-luna',
+          operation: 'summary',
+          token_type: 'cached_input',
+          user_id: 'private',
+        },
+      }),
+    ).toEqual({
+      name: 'levi.ai.tokens',
+      type: 'counter',
+      value: 128,
+      attributes: {
+        model: 'gpt-6-luna',
+        operation: 'summary',
+        token_type: 'cached_input',
+      },
+    });
+  });
 });

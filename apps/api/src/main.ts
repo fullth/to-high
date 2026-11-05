@@ -46,6 +46,7 @@ async function bootstrap() {
       'Authorization',
       'Accept',
       'X-Guest-Token',
+      'X-Browser-Id',
     ],
   });
 
