@@ -5,12 +5,12 @@ export default function PrivacyPage() {
       <FullPageLink href="/">위로</FullPageLink>
       <h1 className="text-2xl font-semibold">개인정보와 대화 처리 안내</h1>
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">저장하지 않는 상담 원문</h2>
+        <h2 className="text-lg font-semibold">상담 원문과 선택 저장</h2>
         <p>
-          새 상담의 원문은 현재 브라우저 화면의 메모리에서만 유지해요. 서비스
-          데이터베이스에는 원문이나 상담 요약을 저장하지 않아요. 새로고침하거나
-          상담을 종료하거나 페이지를 이동하면 이 화면의 원문이 사라지고, 다시 불러올 수
-          없어요.
+          상담은 기본적으로 브라우저 화면의 메모리에서만 유지해요. 저장하지 않고
+          화면을 떠나면 대화가 사라져요. 상담 종료 시 직접 저장을 선택하면 대화 원문과
+          대화 주제를 요약한 제목을 로그인 계정에 저장하며, 저장된 상담 목록에서 삭제할 수 있어요.
+          로그인 전 저장을 선택하면 로그인 중 이 브라우저 탭의 임시 저장소에 대화를 보관해요.
         </p>
         <p>
           답변을 만들 때는 현재 대화가 서비스 서버와 AI 제공자에게 전달돼
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
         <p>
           설정 화면에서 승인한 기억을 수정하거나 삭제하거나 캐릭터와 그 기억을 함께
           삭제할 수 있어요. 로그인 상태 유지를 위한 토큰은 브라우저 저장소에
-          보관해요. 상담 원문은 이 저장소에 보관하지 않아요.
+          보관해요. 상담 원문은 직접 저장을 선택한 경우에만 계정에 보관해요.
         </p>
       </section>
       <section className="space-y-3">

@@ -1,4 +1,4 @@
-import { openComposer } from "./chat-helpers";
+import { endConversation, openComposer } from "./chat-helpers";
 import { expect, test, type Page } from "@playwright/test";
 import { createServer, type Server, type ServerResponse } from "node:http";
 import { CHAT_ERROR_COPY } from "../src/lib/chat-errors";
@@ -215,7 +215,7 @@ test("summary keeps a long conversation going while the visible transcript stays
   expect(bodies[16].messages).toEqual([
     { role: "user", content: "새로고침 후" },
   ]);
-  await page.getByRole("button", { name: "상담 종료 후 원문 지우기" }).click();
+  await endConversation(page);
   await page.getByRole("button", { name: "새 상담 시작", exact: true }).click();
   await send(page, "처음부터");
   await expect(page.getByText("합성 답변 18", { exact: true })).toBeVisible();
@@ -382,7 +382,7 @@ test("ending an active stream clears raw text and summary without late resurrect
   await page.goto("/talk");
   await send(page, "지울 원문");
   await expect(page.getByText("늦은 대화 일부", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "상담 종료 후 원문 지우기" }).click();
+  await endConversation(page);
   if (!active!.destroyed) finish(active!, "늦은 완성 답변");
   await expect(page.getByText("지울 원문", { exact: true })).toHaveCount(0);
   await expect(page.getByText("늦은 완성 답변", { exact: true })).toHaveCount(

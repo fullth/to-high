@@ -1,23 +1,23 @@
 import Image from "next/image";
 import { FullPageLink } from "@/components/full-page-link";
+import type { SavedSession } from "@/lib/product-api";
+import { SavedSessionList } from "@/components/talk/saved-session-list";
 
 type ChatStep = "start" | "sharing" | "closing";
 
 interface ChatInfoSidebarProps {
   // 현재 대화 단계 — 진행 상황 표시에 사용.
   activeStep: ChatStep;
+  sessions?: SavedSession[];
+  loggedIn?: boolean;
+  error?: string;
+  onOpenSession?: (id: string) => void;
+  onDeleteSession?: (id: string) => void;
 }
 
-const STEPS: { key: ChatStep; title: string; hint: string }[] = [
-  { key: "start", title: "이야기 시작", hint: "마음을 열어봐요" },
-  { key: "sharing", title: "마음 나누기", hint: "지금 이야기하고 있어요" },
-  { key: "closing", title: "함께 정리하기", hint: "잠시 후에" },
-];
-
 // 상담 화면 좌측 정보 사이드바(데스크톱 전용).
-// 로고·상담사 상태·진행 단계·안심 문구를 담아 넓은 화면의 허전함을 채운다.
-export function ChatInfoSidebar({ activeStep }: ChatInfoSidebarProps) {
-  const activeIndex = STEPS.findIndex((s) => s.key === activeStep);
+// 로고, 상담사 상태, 저장된 상담과 안내 문구를 표시한다.
+export function ChatInfoSidebar({ activeStep, sessions = [], loggedIn = false, error = "", onOpenSession, onDeleteSession }: ChatInfoSidebarProps) {
 
   return (
     <aside className="ch-info-sidebar" aria-label="상담 정보">
@@ -57,38 +57,18 @@ export function ChatInfoSidebar({ activeStep }: ChatInfoSidebarProps) {
         </span>
       </div>
 
-      <div className="ch-info-steps">
-        <span className="ch-info-steps-label">진행 상황</span>
-        <ol>
-          {STEPS.map((step, idx) => {
-            const state =
-              idx < activeIndex
-                ? "done"
-                : idx === activeIndex
-                  ? "active"
-                  : "todo";
-            return (
-              <li key={step.key} className={`ch-info-step ${state}`}>
-                <span className="ch-info-step-mark" aria-hidden="true">
-                  {state === "done" ? "✓" : ""}
-                </span>
-                <span className="ch-info-step-text">
-                  <b>{step.title}</b>
-                  <em>{step.hint}</em>
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      </div>
+      <section className="ch-saved-list" aria-label="저장된 상담">
+        <h2>저장된 상담</h2>
+        <SavedSessionList sessions={sessions} loggedIn={loggedIn} error={error} onOpen={(id) => onOpenSession?.(id)} onDelete={(id) => onDeleteSession?.(id)} />
+      </section>
 
       <div className="ch-info-guest">
         <p className="ch-info-guest-note">
           <span className="ch-info-privacy-dot" aria-hidden="true" />
-          대화는 이 화면에만 남아요.
+          대화는 선택할 때만 저장돼요.
         </p>
         <p className="ch-info-guest-sub">
-          새로고침하거나 화면을 떠나면 사라져요. AI와의 대화이며 전문적인
+          저장하지 않은 대화는 화면을 떠나면 사라져요. AI와의 대화이며 전문적인
           진단이나 치료를 대신하지 않아요.
         </p>
       </div>

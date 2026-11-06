@@ -4,6 +4,7 @@ export default defineConfig({
   testDir: "./e2e",
   testMatch: [
     "auth-callback.browser.spec.ts",
+    "saved-sessions.browser.spec.ts",
     "product-mvp.browser.spec.ts",
     "home-support.browser.spec.ts",
   ],

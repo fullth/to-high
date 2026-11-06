@@ -2,6 +2,8 @@
 
 import { ChatMessageContent } from "@/components/chat/chat-message-content";
 import { TurnLimitDialog } from "@/components/talk/turn-limit-dialog";
+import { ConfirmSavedAction, EndConversationDialog } from "@/components/talk/end-conversation-dialog";
+import { SavedSessionList } from "@/components/talk/saved-session-list";
 import Image from "next/image";
 import { FullPageLink } from "@/components/full-page-link";
 import { useSearchParams } from "next/navigation";
@@ -10,6 +12,11 @@ import { useAuth } from "@/contexts/auth-context";
 import {
   respondEphemeral,
   getCharacter,
+  listSavedSessions,
+  saveSession,
+  getSavedSession,
+  deleteSavedSession,
+  type SavedSession,
   type Character,
   type TalkMessage,
 } from "@/lib/product-api";
@@ -42,6 +49,13 @@ const initialOptions = [
   "말로 표현하기 어려워요",
   "정리해주세요",
 ];
+const pendingSaveKey = "pendingExplicitConversationSave";
+function recentContext(messages: TalkMessage[]): TalkMessage[] {
+  const recent = messages.slice(-18);
+  while (recent.length > 2 && recent.reduce((sum, item) => sum + item.content.length, 0) > 9000) recent.splice(0, 2);
+  if (recent[0]?.role === "assistant") recent.shift();
+  return recent;
+}
 function TalkContent() {
   const { token, isLoading: authLoading, login, logout } = useAuth();
   const params = useSearchParams();
@@ -86,6 +100,14 @@ function TalkContent() {
     }
   }, [busy, inputOpen]);
   const [ended, setEnded] = useState(false);
+  const [endDialog, setEndDialog] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
+  const [savedListError, setSavedListError] = useState("");
+  const [mobileSessions, setMobileSessions] = useState(false);
+  const [savedAction, setSavedAction] = useState<{ type: "open" | "delete"; id: string } | null>(null);
+  const saveOperation = useRef<string | null>(null);
   const [error, setError] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [errorCode, setErrorCode] = useState<ChatErrorCode | null>(null);
@@ -99,6 +121,19 @@ function TalkContent() {
   const request = useRef<AbortController | null>(null);
   const version = useRef({ value: 0 });
   const target = useRef({ characterId, token });
+  const savedFetchVersion = useRef(0);
+  const refreshSaved = useCallback(async () => {
+    const current = ++savedFetchVersion.current;
+    if (!token) { setSavedSessions([]); setSavedListError(""); return; }
+    try {
+      const result = await listSavedSessions(token);
+      if (!Array.isArray(result.sessions)) throw new Error("Invalid saved sessions");
+      if (current === savedFetchVersion.current && target.current.token === token) { setSavedSessions(result.sessions); setSavedListError(""); }
+    } catch {
+      if (current === savedFetchVersion.current && target.current.token === token) setSavedListError("저장된 상담을 불러오지 못했어요.");
+    }
+  }, [token]);
+  useEffect(() => { void refreshSaved(); }, [refreshSaved]);
   const clear = useCallback(() => {
     setArrival(false);
     restoreInputFocus.current = false;
@@ -108,6 +143,7 @@ function TalkContent() {
     history.current = [];
     summary.current = "";
     transcript.current = [];
+    saveOperation.current = null;
     setOptions([]);
     setMessages([]);
     setInput("");
@@ -153,6 +189,87 @@ function TalkContent() {
     transcript.current = [];
     if (hadConversation) queueMicrotask(clear);
   }, [characterId, token, clear]);
+  useEffect(() => {
+    if (authLoading || !token) return;
+    let pending: { id: string; messages: TalkMessage[]; createdAt: number } | null = null;
+    try {
+      const raw = sessionStorage.getItem(pendingSaveKey);
+      if (!raw) return;
+      pending = JSON.parse(raw);
+      if (!pending || !/^[a-f0-9]{32}$/.test(pending.id) || !Array.isArray(pending.messages) || !Number.isFinite(pending.createdAt) || Date.now() - pending.createdAt > 600_000) {
+        sessionStorage.removeItem(pendingSaveKey);
+        return;
+      }
+    } catch { return; }
+    const saved = pending;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      transcript.current = saved.messages;
+      saveOperation.current = saved.id;
+      history.current = recentContext(saved.messages);
+      setMessages(saved.messages);
+      setEnded(false);
+      setEndDialog(true);
+      setSaveError("로그인이 완료됐어요. 저장하기를 눌러 이 계정에 대화를 저장해 주세요.");
+    });
+    return () => { active = false; };
+  }, [authLoading, token]);
+
+  const saveConversation = async () => {
+    if (!transcript.current.length || busy || saveBusy) return;
+    setSaveError("");
+    if (!token) {
+      try {
+        sessionStorage.setItem(pendingSaveKey, JSON.stringify({ id: crypto.randomUUID().replaceAll("-", ""), messages: transcript.current, createdAt: Date.now() }));
+        login();
+      } catch { setSaveError("로그인 중 대화를 임시 보관하지 못했어요. 다시 시도해 주세요."); }
+      return;
+    }
+    setSaveBusy(true);
+    const current = version.current.value;
+    try {
+      let id = saveOperation.current || crypto.randomUUID().replaceAll("-", "");
+      const raw = sessionStorage.getItem(pendingSaveKey);
+      if (raw) {
+        const pending = JSON.parse(raw);
+        if (/^[a-f0-9]{32}$/.test(pending.id)) id = pending.id;
+      }
+      saveOperation.current = id;
+      await saveSession(token, id, transcript.current);
+      if (current !== version.current.value || target.current.token !== token) return;
+      sessionStorage.removeItem(pendingSaveKey);
+      setEndDialog(false);
+      clear();
+      await refreshSaved();
+    } catch { if (current === version.current.value && target.current.token === token) setSaveError("대화를 저장하지 못했어요. 다시 시도해 주세요."); }
+    finally { setSaveBusy(false); }
+  };
+
+  const openSaved = async (id: string, confirmed = false) => {
+    if (!token || busy || saveBusy) return;
+    if (transcript.current.length && !confirmed) { setSavedAction({ type: "open", id }); return; }
+    const current = ++version.current.value;
+    try {
+      const saved = await getSavedSession(token, id);
+      if (current !== version.current.value || target.current.token !== token) return;
+      transcript.current = saved.messages;
+      history.current = recentContext(saved.messages);
+      saveOperation.current = null;
+      summary.current = "";
+      setMessages(saved.messages);
+      setEnded(false);
+      setOptions(["더 이야기할게요", "정리해주세요"]);
+      setMobileSessions(false);
+      setError("");
+    } catch { if (current === version.current.value && target.current.token === token) setError("저장된 상담을 불러오지 못했어요."); }
+  };
+  const removeSaved = async (id: string, confirmed = false) => {
+    if (!token) return;
+    if (!confirmed) { setSavedAction({ type: "delete", id }); return; }
+    try { await deleteSavedSession(token, id); await refreshSaved(); }
+    catch { setError("저장된 상담을 삭제하지 못했어요."); }
+  };
   useEffect(() => {
     if (!characterId || !token) return;
     if (!/^[a-f\d]{24}$/i.test(characterId)) {
@@ -325,6 +442,8 @@ function TalkContent() {
             : "idle";
   return (
     <main className="ch-frame ch-frame-split ch-ephemeral">
+      {endDialog && <EndConversationDialog hasMessages={messages.length > 0 && !busy} loggedIn={!!token} busy={saveBusy} error={saveError} onClose={() => { try { sessionStorage.removeItem(pendingSaveKey); } catch {} setEndDialog(false); }} onDelete={() => { try { sessionStorage.removeItem(pendingSaveKey); } catch {} setEndDialog(false); clear(); }} onSave={() => void saveConversation()} />}
+      {savedAction && <ConfirmSavedAction message={savedAction.type === "open" ? "현재 대화를 저장하지 않았다면 사라져요. 저장된 상담을 열까요?" : "저장된 상담을 삭제할까요?"} onClose={() => setSavedAction(null)} onConfirm={() => { const action = savedAction; setSavedAction(null); if (action.type === "open") void openSaved(action.id, true); else void removeSaved(action.id, true); }} />}
       {(errorCode === "DAILY_GUEST_LIMIT" || errorCode === "DAILY_USER_LIMIT") && (
         <TurnLimitDialog
           message={error}
@@ -335,6 +454,7 @@ function TalkContent() {
       )}
       <ChatInfoSidebar
         activeStep={ended ? "closing" : messages.length ? "sharing" : "start"}
+        sessions={savedSessions} loggedIn={!!token} error={savedListError} onOpenSession={(id) => void openSaved(id)} onDeleteSession={(id) => void removeSaved(id)}
       />
       <div className="ch-inner">
         <header className="ch-header">
@@ -342,10 +462,12 @@ function TalkContent() {
             <span className="ch-logo-mark" aria-hidden="true" />
             위로
           </FullPageLink>
-          <button className="ch-ghostbtn" onClick={clear}>
-            상담 종료 후 원문 지우기
+          <button className="ch-saved-mobile-toggle ch-ghostbtn" onClick={() => setMobileSessions(!mobileSessions)} aria-expanded={mobileSessions}>저장된 상담</button>
+          <button className="ch-ghostbtn" onClick={() => { setSaveError(""); setEndDialog(true); }}>
+            상담 종료
           </button>
         </header>
+        {mobileSessions && <section className="ch-saved-mobile ch-saved-list" aria-label="저장된 상담"><SavedSessionList sessions={savedSessions} loggedIn={!!token} error={savedListError} onOpen={(id) => void openSaved(id)} onDelete={(id) => void removeSaved(id)} /></section>}
         <CharacterPresence
           name={aiName}
           state={presenceState}
@@ -531,7 +653,7 @@ function TalkContent() {
                 disabled={busy}
                 onClick={() => setInputOpen((open) => !open)}
               >
-                {inputOpen ? "선택지로 돌아가기" : "다른 마음이 있어요"}
+                {inputOpen ? "선택지로 돌아가기" : "직접 입력할게요"}
               </button>
               <form
                 id="talk-composer"
@@ -593,13 +715,14 @@ function TalkContent() {
             AI와의 대화이며 전문적인 진단이나 치료를 대신하지 않아요.
           </p>
           <details className="ch-privacy-details">
-            <summary>대화는 이 화면에만 남아요. 이용 안내</summary>
+            <summary>대화 저장과 이용 안내</summary>
             <p>
-              대화 원문과 대화를 이어가기 위한 요약은 현재 브라우저 화면의
-              메모리에서만 유지하고 서비스 데이터베이스에 저장하지 않아요.
+              저장을 선택하지 않은 대화 원문과 대화를 이어가기 위한 요약은
+              브라우저 화면의 메모리에서만 유지해요. 직접 저장을 선택하면
+              대화 원문과 요약한 제목이 계정에 저장돼요.
               답변을 위해 서버와 AI 제공자가 처리하며, 제공자 측 보관은 해당
-              정책과 설정의 적용을 받아요. 종료하거나 페이지를 떠나면 이 화면의
-              원문과 요약이 사라져요. 새로고침해도 원문을 다시 불러올 수 없어요.
+              정책과 설정의 적용을 받아요. 저장하지 않고 페이지를 떠나면 이 화면의
+              원문과 요약이 사라져요.
             </p>
           </details>
         </div>

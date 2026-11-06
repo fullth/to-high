@@ -1,4 +1,4 @@
-import { openComposer } from "./chat-helpers";
+import { endConversation, openComposer } from "./chat-helpers";
 import { expect, test, type Page } from "@playwright/test";
 const id = "507f1f77bcf86cd799439011";
 async function offline(page: Page, loggedIn = false) {
@@ -101,7 +101,7 @@ test("end aborts pending response and cannot resurrect original text", async ({
   await page.goto("/talk");
   await send(page, "지워야 하는 원문");
   await expect(page.getByRole("status")).toContainText("답변을 준비");
-  await page.getByRole("button", { name: "상담 종료 후 원문 지우기" }).click();
+  await endConversation(page);
   release();
   await expect(
     page.getByText("상담을 마쳤어요. 이 화면의 대화 원문과 입력을 지웠어요.", {
@@ -386,7 +386,7 @@ test("pending request disables choices and duplicate input while end still clear
     }),
   ).toBeDisabled();
   expect(requests).toBe(1);
-  await page.getByRole("button", { name: "상담 종료 후 원문 지우기" }).click();
+  await endConversation(page);
   release();
   await expect(page.getByText("늦은 모드 답변", { exact: true })).toHaveCount(
     0,
@@ -919,7 +919,7 @@ test("character state feedback preserves keyboard focus and reduced-motion seman
   await expect(presence).toHaveAttribute("data-character-state", "error");
   await expect(input).toBeFocused();
   await expect(input).toHaveValue("실패 입력");
-  await page.getByRole("button", { name: "상담 종료 후 원문 지우기" }).click();
+  await endConversation(page);
   await expect(presence).toHaveAttribute("data-character-state", "ended");
   await expect(page.locator("article")).toHaveCount(0);
   await page.waitForTimeout(1900);
@@ -1033,9 +1033,7 @@ test("Levi expression assets switch without layout jumps and use finite motion",
     await page.waitForTimeout(1900);
     await expect(presence).toHaveAttribute("data-character-state", "idle");
     await expect(presence).toHaveAttribute("data-character-visual", "idle");
-    await page
-      .getByRole("button", { name: "상담 종료 후 원문 지우기" })
-      .click();
+    await endConversation(page);
     await check("idle", "levi.png", false);
     await page.waitForTimeout(1900);
     await expect(presence).toHaveAttribute("data-character-state", "ended");
