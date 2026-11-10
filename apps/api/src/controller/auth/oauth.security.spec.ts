@@ -6,6 +6,7 @@ import passport from 'passport';
 import request from 'supertest';
 import { AuthController } from './auth.controller';
 import { AuthService } from '../../app/auth/auth.service';
+import { PrivacyExceptionFilter } from '../../common/privacy-exception.filter';
 
 // Synthetic provider: no IdP, SMTP, database or production keys are used.
 describe('OAuth request binding over HTTP', () => {
@@ -45,6 +46,7 @@ describe('OAuth request binding over HTTP', () => {
       ],
     }).compile();
     app = module.createNestApplication();
+    app.useGlobalFilters(new PrivacyExceptionFilter('https://web.example.test'));
     await app.init();
     await app.listen(0, '127.0.0.1');
   });
@@ -83,20 +85,25 @@ describe('OAuth request binding over HTTP', () => {
           `/auth/${provider}/callback?code=dummy&state=${state}`,
         );
         if (cookie) req.set('Cookie', cookie);
-        await req.expect(401);
+        const res = await req.expect(provider === 'google' ? 302 : 401);
+        if (provider === 'google') {
+          expect(res.headers.location).toBe('https://web.example.test/problem');
+          expect(res.headers['referrer-policy']).toBe('no-referrer');
+          expect(res.headers['cache-control']).toBe('no-store');
+        }
       }
       await request(app.getHttpServer())
         .get(`/auth/${provider}/callback?code=dummy`)
-        .expect(401);
+        .expect(provider === 'google' ? 302 : 401);
       await request(app.getHttpServer())
         .get(`/auth/${provider}/callback/?code=dummy&state=${state}`)
-        .expect(401);
+        .expect(provider === 'google' ? 302 : 401);
       await request(app.getHttpServer())
         .get(
           `/auth/${provider}/callback?code=dummy&state=${state}&state=${state}`,
         )
         .set('Cookie', `oauth_${provider}_state=${state}`)
-        .expect(401);
+        .expect(provider === 'google' ? 302 : 401);
       expect(exchanges).not.toHaveBeenCalled();
       expect(sign).not.toHaveBeenCalled();
     });
