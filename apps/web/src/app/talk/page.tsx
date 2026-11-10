@@ -714,6 +714,9 @@ function TalkContent() {
           <p className="ch-talk-disclaimer">
             AI와의 대화이며 전문적인 진단이나 치료를 대신하지 않아요.
           </p>
+          <p className="ch-talk-disclaimer">
+            이름, 연락처, 주소나 건강 정보처럼 민감한 내용은 입력하지 않아도 돼요. <a className="ch-help-link" href="/help-now" target="_blank" rel="noopener noreferrer">지금 도움 받기</a>
+          </p>
           <details className="ch-privacy-details">
             <summary>대화 저장과 이용 안내</summary>
             <p>
@@ -724,6 +727,7 @@ function TalkContent() {
               정책과 설정의 적용을 받아요. 저장하지 않고 페이지를 떠나면 이 화면의
               원문과 요약이 사라져요.
             </p>
+            <a className="ch-help-link" href="/privacy" target="_blank" rel="noopener noreferrer">개인정보 처리 안내 자세히 보기</a>
           </details>
         </div>
       </div>

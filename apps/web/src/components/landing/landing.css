@@ -334,6 +334,13 @@
   word-break: keep-all;
   overflow-wrap: break-word;
 }
+.hero-ai-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .hero p.hero-meta {
   display: inline-flex;
   align-items: center;

@@ -112,6 +112,7 @@ export function WirocareLanding() {
                 <h1>레비에게 마음을 털어놔보세요</h1>
                 <p className="lede">
                   내 상황을 이해하는 AI 상담사 &apos;<strong className="levi-name">레비</strong>&apos;
+                  <span className="hero-ai-note">레비는 AI 에이전트이며, 의료인이 아닙니다. 의료 상담이 필요한 경우 의료 전문가와 상담해 주세요.</span>
                 </p>
                 <div className="hero-cta">
                   <FullPageLink className="btn btn-primary btn-chat" href="/talk">
@@ -190,7 +191,7 @@ export function WirocareLanding() {
               </div>
             </div>
             <p className="levi-disclaimer">
-              레비는 AI 상담 캐릭터로, 진단·치료나 사람 상담사를 대신하지 않아요.
+              레비는 AI 상담 캐릭터로, 진단이나 치료 또는 사람 상담사를 대신하지 않아요.
             </p>
           </div>
         </section>
@@ -223,6 +224,7 @@ export function WirocareLanding() {
             </FullPageLink>
             <div className="foot-links">
               <FullPageLink href="/privacy">개인정보 처리 안내</FullPageLink>
+              <FullPageLink href="/help-now">긴급 도움 안내</FullPageLink>
             </div>
           </div>
           <p className="privacy-note">
@@ -231,8 +233,7 @@ export function WirocareLanding() {
             정책과 설정에 따라요.
           </p>
           <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-4)" }}>
-            © 2026 위로. 이 서비스는 의료기기가 아니며, 정신건강 진단이나 치료를
-            대체하지 않습니다.
+            © 2026 위로. 이 서비스는 정신건강 진단이나 치료를 대체하지 않습니다.
           </div>
         </div>
       </footer>

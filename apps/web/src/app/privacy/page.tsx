@@ -1,10 +1,23 @@
 import { FullPageLink } from "@/components/full-page-link";
+import "./privacy.css";
+
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto max-w-2xl p-6 space-y-6">
-      <FullPageLink href="/">위로</FullPageLink>
-      <h1 className="text-2xl font-semibold">개인정보와 대화 처리 안내</h1>
-      <section className="space-y-3">
+    <main className="privacy-page">
+      <div className="privacy-content">
+      <FullPageLink className="privacy-brand" href="/">위로 <span>TO HIGH</span></FullPageLink>
+      <header className="privacy-intro">
+        <p className="privacy-kicker">개인정보 안내</p>
+        <h1>개인정보와 대화 처리 안내</h1>
+        <p>대화가 어떻게 처리되고, 선택한 저장 내용이 어디에 보관되는지 알려드려요.</p>
+      </header>
+      <nav className="privacy-nav" aria-label="안내 항목">
+        <a href="#conversation">대화와 저장</a>
+        <a href="#usage">이용 한도</a>
+        <a href="#providers">AI 제공자</a>
+        <a href="#deletion">삭제 범위</a>
+      </nav>
+      <section id="conversation" className="space-y-3">
         <h2 className="text-lg font-semibold">상담 원문과 선택 저장</h2>
         <p>
           상담은 기본적으로 브라우저 화면의 메모리에서만 유지해요. 저장하지 않고
@@ -17,7 +30,7 @@ export default function PrivacyPage() {
           처리돼요. 따라서 컴퓨터 안에서만 처리되는 서비스는 아니에요.
         </p>
       </section>
-      <section className="space-y-3">
+      <section id="usage" className="space-y-3">
         <h2 className="text-lg font-semibold">대화 이용 한도</h2>
         <p>
           비로그인 대화의 이용 횟수를 확인하기 위해 브라우저 저장소에 무작위
@@ -28,7 +41,7 @@ export default function PrivacyPage() {
           비로그인 한도를 함께 사용할 수 있어요.
         </p>
       </section>
-      <section className="space-y-3">
+      <section id="analytics" className="space-y-3">
         <h2 className="text-lg font-semibold">홈 방문 통계</h2>
         <p>
           홈 화면의 방문 현황을 확인하기 위해 Google Analytics를 사용해요.
@@ -37,14 +50,14 @@ export default function PrivacyPage() {
           구분하기 위해 브라우저에 식별자를 저장할 수 있어요.
         </p>
       </section>
-      <section className="space-y-3">
+      <section id="contact" className="space-y-3">
         <h2 className="text-lg font-semibold">문의와 후원</h2>
         <p>
           홈페이지의 문의는 채널톡에서 별도로 처리해요. AI 상담 대화를 문의에
           자동으로 전달하지 않아요. 커피 후원은 카카오페이로 연결돼요.
         </p>
       </section>
-      <section className="space-y-3">
+      <section id="account" className="space-y-3">
         <h2 className="text-lg font-semibold">직접 승인한 기억과 로그인</h2>
         <p>
           캐릭터 기능에는 로그인 계정 정보와 캐릭터 이름과 대화 스타일, 직접
@@ -58,7 +71,7 @@ export default function PrivacyPage() {
           보관해요. 상담 원문은 직접 저장을 선택한 경우에만 계정에 보관해요.
         </p>
       </section>
-      <section className="space-y-3">
+      <section id="providers" className="space-y-3">
         <h2 className="text-lg font-semibold">AI 제공자 측 처리</h2>
         <p>
           API 요청에 저장 비활성화를 적용해도 제공자의 모든 로그 보관이 없어지는
@@ -75,7 +88,7 @@ export default function PrivacyPage() {
           OpenAI API 데이터 처리 조건 확인
         </a>
       </section>
-      <section className="space-y-3">
+      <section id="deletion" className="space-y-3">
         <h2 className="text-lg font-semibold">기존 데이터와 삭제 범위</h2>
         <p>
           이전 제품에서 저장된 상담 데이터는 이번 변경에서 임의로 삭제하지
@@ -88,10 +101,11 @@ export default function PrivacyPage() {
           확인이 필요하며, 모든 사본의 즉시 삭제를 보장하는 안내는 하지 않아요.
         </p>
       </section>
-      <p className="text-sm text-muted-foreground">
+      <p className="privacy-footer">
         민감한 개인정보를 입력할 필요는 없어요. AI 대화는 전문적인 진단이나 치료를
         대신하지 않아요.
       </p>
+      </div>
     </main>
   );
 }
