@@ -11,6 +11,10 @@ import { recordRejected } from './chat-metrics';
 /** Do not log arbitrary errors, provider messages or request data. */
 @Catch()
 export class PrivacyExceptionFilter implements ExceptionFilter {
+  constructor(
+    private readonly frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001',
+  ) {}
+
   catch(exception: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
     const status =
@@ -18,7 +22,17 @@ export class PrivacyExceptionFilter implements ExceptionFilter {
     // Guard rejections happen before the chat controller can start its timer.
     const request = host
       .switchToHttp()
-      .getRequest<{ path?: string; chatMetricsRecorded?: boolean }>();
+      .getRequest<{ path?: string; method?: string; chatMetricsRecorded?: boolean }>();
+    if (
+      request?.method === 'GET' &&
+      request.path?.replace(/\/+$/, '') === '/auth/google/callback' &&
+      !response.headersSent
+    ) {
+      response.setHeader('Cache-Control', 'no-store');
+      response.setHeader('Referrer-Policy', 'no-referrer');
+      response.redirect(new URL('/problem', this.frontendUrl).toString());
+      return;
+    }
     if (request?.path === '/ephemeral/respond' && !request.chatMetricsRecorded)
       recordRejected(chatErrorCode(exception));
     const messages: Record<number, string> = {

@@ -1,13 +1,7 @@
 import { SERVICE_DESCRIPTION, SERVICE_TITLE, SITE_URL } from "@/lib/site-content";
 import { AuthProvider } from "@/contexts/auth-context";
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -92,7 +86,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={`${geistSans.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
