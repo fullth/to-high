@@ -9,6 +9,7 @@ import { InjectConnection } from '@nestjs/mongoose';
 import { randomUUID } from 'node:crypto';
 import { Connection } from 'mongoose';
 import * as nodemailer from 'nodemailer';
+import { createIncidentMail } from './incident-mail';
 
 export const INCIDENT_TYPES = [
   'api_failure',
@@ -201,6 +202,11 @@ export class IncidentService implements OnModuleInit, OnModuleDestroy {
       }
       if (user && password && recipient && !pending.emailDone) {
         try {
+          const mail = createIncidentMail({
+            kind: pending.kind,
+            createdAt: pending.createdAt,
+            issueUrl,
+          });
           await nodemailer
             .createTransport({
               service: 'gmail',
@@ -212,8 +218,7 @@ export class IncidentService implements OnModuleInit, OnModuleDestroy {
             .sendMail({
               from: user,
               to: recipient,
-              subject: '[위로] 서비스 오류 알림',
-              text: `오류 유형: ${pending.kind}\n발생 시간대: ${pending.hour}:00 UTC\n${issueUrl ? `이슈: ${issueUrl}` : 'GitHub 이슈 생성 상태를 확인해 주세요.'}`,
+              ...mail,
             });
           await this.collection.updateOne(safeFilter, {
             $set: { emailDone: true },
