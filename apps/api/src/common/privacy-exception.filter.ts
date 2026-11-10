@@ -7,22 +7,30 @@ import {
 import type { Response } from 'express';
 import { chatErrorCode } from './chat-failure';
 import { recordRejected } from './chat-metrics';
+import type { IncidentService } from './incident.service';
 
 /** Do not log arbitrary errors, provider messages or request data. */
 @Catch()
 export class PrivacyExceptionFilter implements ExceptionFilter {
   constructor(
-    private readonly frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001',
+    private readonly frontendUrl = process.env.FRONTEND_URL ||
+      'http://localhost:3001',
+    private readonly incidents?: IncidentService,
   ) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
     const status =
       exception instanceof HttpException ? exception.getStatus() : 500;
+    if (status >= 500) void this.incidents?.report('api_failure');
     // Guard rejections happen before the chat controller can start its timer.
     const request = host
       .switchToHttp()
-      .getRequest<{ path?: string; method?: string; chatMetricsRecorded?: boolean }>();
+      .getRequest<{
+        path?: string;
+        method?: string;
+        chatMetricsRecorded?: boolean;
+      }>();
     if (
       request?.method === 'GET' &&
       request.path?.replace(/\/+$/, '') === '/auth/google/callback' &&

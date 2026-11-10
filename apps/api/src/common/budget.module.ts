@@ -4,6 +4,7 @@ import { ModelBudgetService } from './model-budget.service';
 import { BudgetAlertService } from './budget-alert.service';
 import { DailyTurnLimitService } from './daily-turn-limit.service';
 import { UsageOverviewService } from './usage-overview.service';
+import { IncidentService } from './incident.service';
 
 @Module({
   providers: [
@@ -12,6 +13,7 @@ import { UsageOverviewService } from './usage-overview.service';
     BudgetAlertService,
     DailyTurnLimitService,
     UsageOverviewService,
+    IncidentService,
   ],
   exports: [
     BudgetWalletRepository,
@@ -19,6 +21,7 @@ import { UsageOverviewService } from './usage-overview.service';
     DailyTurnLimitService,
     BudgetAlertService,
     UsageOverviewService,
+    IncidentService,
   ],
 })
 export class BudgetModule {}

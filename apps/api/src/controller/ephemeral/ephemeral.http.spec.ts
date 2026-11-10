@@ -8,6 +8,7 @@ import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { CharacterService } from '../../app/character/character.service';
 import { PrivacyExceptionFilter } from '../../common/privacy-exception.filter';
 import { DailyTurnLimitService } from '../../common/daily-turn-limit.service';
+import { IncidentService } from '../../common/incident.service';
 
 // Real Nest/Express HTTP transport, synthetic model responses, no DB or paid calls.
 describe('ephemeral HTTP streaming transport', () => {
@@ -17,6 +18,7 @@ describe('ephemeral HTTP streaming transport', () => {
   const generateResponse = jest.fn();
   const generateReplyOptions = jest.fn();
   const release = jest.fn();
+  const reportIncident = jest.fn().mockResolvedValue(undefined);
   beforeAll(async () => {
     const service = new EphemeralService(
       {
@@ -31,7 +33,11 @@ describe('ephemeral HTTP streaming transport', () => {
       controllers: [EphemeralController],
       providers: [
         { provide: EphemeralService, useValue: service },
-        { provide: DailyTurnLimitService, useValue: { consume: async () => {} } },
+        {
+          provide: DailyTurnLimitService,
+          useValue: { consume: async () => {} },
+        },
+        { provide: IncidentService, useValue: { report: reportIncident } },
         {
           provide: EphemeralBudgetService,
           useValue: { acquireOwner: () => release },
@@ -145,5 +151,16 @@ describe('ephemeral HTTP streaming transport', () => {
     expect(generateResponse).toHaveBeenCalledTimes(1);
     expect(generateResponseStream).not.toHaveBeenCalled();
     expect(release).toHaveBeenCalledTimes(1);
+  });
+  it('reports a stream failure without forwarding provider content', async () => {
+    generateResponseStream.mockImplementation(async function* () {
+      yield '합성 답변';
+      throw new Error('private provider text');
+    });
+    const response = await send();
+    const body = await response.text();
+    expect(body).toContain('"type":"error"');
+    expect(body).not.toContain('private provider text');
+    expect(reportIncident).toHaveBeenCalledWith('chat_unavailable');
   });
 });

@@ -3,6 +3,28 @@ import type { ArgumentsHost } from '@nestjs/common';
 import { PrivacyExceptionFilter } from './privacy-exception.filter';
 
 describe('privacy exception boundary', () => {
+  it('reports server errors without exposing the original exception', () => {
+    const report = jest.fn().mockResolvedValue(undefined);
+    const response = {
+      headersSent: false,
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    const host = {
+      switchToHttp: () => ({
+        getResponse: () => response,
+        getRequest: () => ({ path: '/saved-sessions', method: 'GET' }),
+      }),
+    } as unknown as ArgumentsHost;
+    new PrivacyExceptionFilter(undefined, { report } as never).catch(
+      new Error('private content'),
+      host,
+    );
+    expect(report).toHaveBeenCalledWith('api_failure');
+    expect(JSON.stringify(response.json.mock.calls)).not.toContain(
+      'private content',
+    );
+  });
   it.each([
     new Error('private-counseling-marker'),
     new HttpException({ message: 'private-counseling-marker' }, 400),

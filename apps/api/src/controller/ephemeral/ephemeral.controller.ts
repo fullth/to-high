@@ -1,4 +1,12 @@
-import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Optional,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { EphemeralBudgetService } from '../../common/ephemeral-budget.service';
 import { EphemeralService } from '../../app/ephemeral/ephemeral.service';
@@ -10,6 +18,7 @@ import { recordChatRequest } from '../../common/chat-metrics';
 import { EphemeralRequestSchema } from './ephemeral.request';
 import type { EphemeralRequest } from './ephemeral.request';
 import { DailyTurnLimitService } from '../../common/daily-turn-limit.service';
+import { IncidentService } from '../../common/incident.service';
 
 type AuthRequest = Request & {
   user?: { userId?: string };
@@ -22,6 +31,7 @@ export class EphemeralController {
     private readonly service: EphemeralService,
     private readonly budget: EphemeralBudgetService,
     private readonly turns: DailyTurnLimitService,
+    @Optional() private readonly incidents?: IncidentService,
   ) {}
 
   @Post('respond')
@@ -84,6 +94,15 @@ export class EphemeralController {
     } catch (error) {
       outcome = chatErrorCode(error);
       if (streaming && response.headersSent && !controller.signal.aborted) {
+        const kind =
+          outcome === 'TIMEOUT'
+            ? 'chat_timeout'
+            : outcome === 'SUMMARY_FAILED'
+              ? 'chat_summary_failure'
+              : outcome === 'UNAVAILABLE'
+                ? 'chat_unavailable'
+                : null;
+        if (kind) void this.incidents?.report(kind);
         response.write(
           `data: ${JSON.stringify({ type: 'error', code: outcome })}\n\n`,
         );
