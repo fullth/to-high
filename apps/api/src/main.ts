@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { json } from 'express';
 import { AppModule } from './app.module';
+import { IncidentService } from './common/incident.service';
 
 async function bootstrap() {
   // bodyParser 비활성화하고 직접 설정
@@ -27,7 +28,9 @@ async function bootstrap() {
   // 보안 헤더 설정 (Helmet)
   app.use(helmet());
 
-  app.useGlobalFilters(new PrivacyExceptionFilter());
+  app.useGlobalFilters(
+    new PrivacyExceptionFilter(undefined, app.get(IncidentService)),
+  );
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
