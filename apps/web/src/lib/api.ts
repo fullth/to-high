@@ -1,3 +1,5 @@
+import { parseBudgetStatus } from "./budget";
+export type { BudgetStatus } from "./budget";
 import { createOAuthLoginUrl } from "./oauth";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -5,22 +7,13 @@ interface FetchOptions extends RequestInit {
   token?: string;
 }
 
-export type BudgetStatus = {
-  balanceMilliWon: number;
-  todayUsage?: { countedTurns: number; signedInAccounts: number; guestNetworks: number };
-  reservedMilliWon: number;
-  evaluatedWeek: string;
-  notificationReady: boolean;
-  credits: { amountMilliWon: number; at: string; kind: "initial" | "automatic" | "manual" }[];
-};
-
-export function getBudgetStatus(token: string) {
-  return fetchApi<BudgetStatus>('/admin/budget', { token, cache: 'no-store' });
+export async function getBudgetStatus(token: string) {
+  return parseBudgetStatus(await fetchApi<unknown>('/admin/budget', { token, cache: 'no-store' }));
 }
 
-export function topupBudget(token: string, amountWon: number, operationId: string) {
+export function topupBudget(token: string, operationId: string) {
   return fetchApi<{ balanceMilliWon: number }>('/admin/budget/topups', {
-    method: 'POST', token, body: JSON.stringify({ amountWon, operationId }),
+    method: 'POST', token, body: JSON.stringify({ amountWon: 10_000, operationId }),
   });
 }
 

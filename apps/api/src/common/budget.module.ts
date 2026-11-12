@@ -5,9 +5,11 @@ import { BudgetAlertService } from './budget-alert.service';
 import { DailyTurnLimitService } from './daily-turn-limit.service';
 import { UsageOverviewService } from './usage-overview.service';
 import { IncidentService } from './incident.service';
+import { BudgetAdminService } from '../app/admin/budget-admin.service';
 
 @Module({
   providers: [
+    BudgetAdminService,
     BudgetWalletRepository,
     ModelBudgetService,
     BudgetAlertService,
@@ -16,6 +18,7 @@ import { IncidentService } from './incident.service';
     IncidentService,
   ],
   exports: [
+    BudgetAdminService,
     BudgetWalletRepository,
     ModelBudgetService,
     DailyTurnLimitService,

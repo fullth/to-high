@@ -13,11 +13,12 @@ export default function BudgetAdminPage() {
   const { token, user, isLoading, login } = useAuth();
   const pendingKey = user?.userId ? `budgetTopupPending:${user.userId}` : null;
   const [status, setStatus] = useState<BudgetStatus | null>(null);
-  const [amount, setAmount] = useState("10000");
   const [pending, setPending] = useState<Pending | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
+  const currentToken = useRef(token);
+  useEffect(() => { currentToken.current = token; }, [token]);
 
   function startLogin(provider: () => void) {
     try {
@@ -30,18 +31,24 @@ export default function BudgetAdminPage() {
   }
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!token || !user?.userId) return;
     try {
-      setStatus(await getBudgetStatus(token));
+      const next = await getBudgetStatus(token);
+      if (currentToken.current !== token) return;
+      setStatus(next);
       setError("");
     } catch {
+      if (currentToken.current !== token) return;
+      setStatus(null);
       setError(
         "예산 정보를 불러오지 못했어요. 관리자 권한과 연결 상태를 확인해 주세요.",
       );
     }
-  }, [token]);
+  }, [token, user?.userId]);
 
   useEffect(() => {
+    setStatus(null);
+    setPending(null);
     if (!pendingKey) return;
     try {
       const raw = sessionStorage.getItem(pendingKey);
@@ -50,11 +57,9 @@ export default function BudgetAdminPage() {
         if (
           /^[a-f0-9]{32}$/.test(saved.id) &&
           Number.isSafeInteger(saved.amount) &&
-          saved.amount > 0 &&
-          saved.amount <= 1_000_000
+          saved.amount === 10_000
         ) {
-          setPending(saved);
-          setAmount(String(saved.amount));
+          setPending({ amount: 10_000, id: saved.id });
         }
       }
     } catch {
@@ -70,23 +75,15 @@ export default function BudgetAdminPage() {
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!token || !pendingKey || submitting.current) return;
-    const won = Number(amount);
-    if (!Number.isSafeInteger(won) || won < 1 || won > 1_000_000) {
-      setError("충전 금액을 1원에서 1,000,000원 사이로 입력해 주세요.");
-      return;
-    }
+    if (!status) return;
     const operation = pending ?? {
-      amount: won,
+      amount: 10_000,
       id: crypto.randomUUID().replaceAll("-", ""),
     };
-    if (operation.amount !== won) {
-      setError("이전 충전의 결과를 먼저 확인해 주세요.");
-      return;
-    }
     try {
       sessionStorage.setItem(pendingKey, JSON.stringify(operation));
     } catch {
-      setError("충전 요청을 안전하게 저장할 수 없어 진행하지 않았어요.");
+      setError("승인 요청을 안전하게 저장할 수 없어 진행하지 않았어요.");
       return;
     }
     submitting.current = true;
@@ -94,16 +91,18 @@ export default function BudgetAdminPage() {
     setBusy(true);
     setError("");
     try {
-      await topupBudget(token, operation.amount, operation.id);
+      await topupBudget(token, operation.id);
       sessionStorage.removeItem(pendingKey);
+      if (currentToken.current !== token) return;
       setPending(null);
       await load();
     } catch {
+      if (currentToken.current !== token) return;
       setError(
-        "충전 결과를 확인하지 못했어요. 같은 금액으로 다시 확인해 주세요.",
+        "승인 결과를 확인하지 못했어요. 관리자 권한과 연결 상태를 확인한 뒤 같은 요청으로 다시 확인해 주세요.",
       );
     } finally {
-      submitting.current = false;
+        submitting.current = false;
       setBusy(false);
     }
   }
@@ -134,25 +133,18 @@ export default function BudgetAdminPage() {
         </> : <p>확인 중</p>}
         <p className="text-sm text-slate-600">한국 시간 오늘 기준이며 계정과 접속망 수는 집계 기능 적용 이후부터 표시돼요. 같은 접속망의 여러 사람은 하나로 집계되고, 한 사람이 로그인 전후로 이용하면 각각 집계될 수 있어요.</p>
       </section>
-      <h2 className="text-xl font-bold">AI 이용 예산</h2>
-      <p>
-        잔액이 있으면 다음 주로 이월됩니다. 월요일에 확정된 잔액이 0원이고 처리
-        중인 금액이 없으면 1만 원을 충전합니다.
-      </p>
-      <p className="text-sm text-slate-600">예산 차감액은 요청 시 계산한 보수적인 추정치이며 실제 API 청구액과 다릅니다.</p>
+      <h2 className="text-xl font-bold">AI 비용 관리</h2>
+      <p>자동으로 한도를 늘리지 않습니다. 운영자 계정에서 승인할 때마다 운영 한도가 10,000원 증가합니다.</p>
+      <p className="text-sm text-slate-600">사용 비용은 모델이 보고한 토큰, 적용 단가와 환율로 계산하며 제공자의 최종 청구액과 다를 수 있습니다.</p>
       {status && (
-        <section className="budget-card space-y-2">
-          <p>
-            사용 가능한 잔액:{" "}
-            <strong>{formatWon(status.balanceMilliWon)}</strong>
-          </p>
+        <section className="budget-card space-y-2" aria-label="AI 운영 예산">
+          <p>총 운영 한도: <strong>{formatWon(status.accounting.carryoverMilliWon + status.accounting.approvedMilliWon)}</strong></p>
+          <p>사용량 기준 계산액: {formatWon(status.accounting.settledMilliWon)}</p>
           <p>처리 중 / 확인 필요 금액: {formatWon(status.reservedMilliWon)}</p>
-          {status.reservedMilliWon > 0 && (
-            <p className="text-sm text-slate-600">
-              이전 방식으로 남은 금액입니다. 사용량 확인이 필요하며 자동 충전이
-              보류될 수 있습니다.
-            </p>
-          )}
+          <p>추가 사용 가능액: <strong>{formatWon(Math.max(0, status.balanceMilliWon))}</strong></p>
+          {status.balanceMilliWon < 0 && <p role="alert">예약액을 초과한 사용 비용: {formatWon(-status.balanceMilliWon)}. 추가 모델 호출은 중단됩니다.</p>}
+          <p className="text-sm text-slate-600">정산 시작: {new Date(status.accounting.startedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}. 기존 이월 예산 {formatWon(status.accounting.carryoverMilliWon)}을 포함하며, 이전 사용 비용은 재계산하지 않습니다.</p>
+          {status.reservedMilliWon > 0 && <p className="text-sm text-slate-600">사용량이 확인되지 않은 호출은 예약금을 유지합니다.</p>}
         </section>
       )}
       {status && !status.notificationReady && (
@@ -167,32 +159,19 @@ export default function BudgetAdminPage() {
       )}
       {status && (
         <form onSubmit={submit} className="space-y-3">
-          <label htmlFor="budget-amount" className="block">
-            충전 금액
-          </label>
-          <input
-            id="budget-amount"
-            className="budget-input"
-            inputMode="numeric"
-            type="number"
-            min="1"
-            max="1000000"
-            step="1"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            disabled={busy || !!pending}
-          />
-          <button
-            disabled={busy}
-            className="budget-button"
-          >
-            {busy ? "확인 중" : pending ? "충전 결과 다시 확인" : "예산 충전"}
+          {pending ? <p>이전 승인 요청의 결과를 다시 확인합니다. 동일한 요청은 중복 반영하지 않습니다.</p> : <>
+            <p>이번 승인으로 운영 한도에 <strong>10,000원</strong>을 추가합니다.</p>
+            <p>승인 후 총 운영 한도: <strong>{formatWon(status.accounting.carryoverMilliWon + status.accounting.approvedMilliWon + 10_000_000)}</strong></p>
+          </>}
+          <p className="text-sm text-slate-600">운영자 계정에서만 승인할 수 있으며, 한도 증가는 결제가 아닙니다.</p>
+          <button disabled={busy} className="budget-button">
+            {busy ? "확인 중" : pending ? "같은 승인 요청 다시 확인" : "한도 10,000원 추가 승인"}
           </button>
         </form>
       )}
       {status && (
         <section>
-          <h2 className="font-semibold">최근 충전 내역</h2>
+          <h2 className="font-semibold">최근 한도 증가 내역</h2>
           {status.credits.length ? (
             <ul className="mt-2 space-y-1">
               {status.credits.map((item, index) => (
@@ -206,12 +185,12 @@ export default function BudgetAdminPage() {
                     : item.kind === "automatic"
                       ? "자동"
                       : "수동"}{" "}
-                  충전 / {formatWon(item.amountMilliWon)}
+                  증가 / {formatWon(item.amountMilliWon)} / {item.actor}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-2">충전 내역이 없어요.</p>
+            <p className="mt-2">승인 내역이 없어요.</p>
           )}
         </section>
       )}

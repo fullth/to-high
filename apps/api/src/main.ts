@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import { json } from 'express';
 import { AppModule } from './app.module';
 import { IncidentService } from './common/incident.service';
+import { browserOrigins, browserOriginBoundary } from './common/browser-origin';
 
 async function bootstrap() {
   // bodyParser 비활성화하고 직접 설정
@@ -22,6 +23,10 @@ async function bootstrap() {
     }
   ).set('trust proxy', 1);
 
+  const production = process.env.NODE_ENV === 'production';
+  const allowedOrigins = browserOrigins(process.env.FRONTEND_URL, production);
+  app.use(browserOriginBoundary(allowedOrigins, production));
+
   // 개별 DTO 상한보다 먼저 비정상적으로 큰 요청 본문을 차단한다.
   app.use(json({ limit: '64kb' }));
 
@@ -35,11 +40,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   // CORS 설정 - 프로덕션과 개발 환경 분리
-  const devOrigins = ['http://localhost:3001', 'http://localhost:3002'];
-  const allowedOrigins = process.env.FRONTEND_URL
-    ? [process.env.FRONTEND_URL, ...devOrigins]
-    : devOrigins;
-
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,

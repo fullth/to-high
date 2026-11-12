@@ -32,10 +32,24 @@ describe('model budget boundary', () => {
       { blocked: async () => {} } as never,
     );
   });
-  it('charges the estimate before dispatch without leaving a reservation', async () => {
-    await service.reserve(request);
-    expect(wallet.reservations).toEqual({});
+  it('reserves before dispatch and settles cache-aware reported usage once', async () => {
+    const reservation = await service.reserve(request);
+    expect(wallet.reservations[reservation.id]).toBeGreaterThan(0);
     expect(wallet.balance).toBeLessThan(10_000_000);
+    const usage = { prompt_tokens: 200, completion_tokens: 20, prompt_tokens_details: { cached_tokens: 128 } };
+    await service.settle(reservation, usage);
+    expect(wallet.reservations).toEqual({});
+    expect(wallet.balance).toBe(10_000_000 - 268);
+    await service.settle(reservation, usage);
+    expect(wallet.balance).toBe(10_000_000 - 268);
+  });
+  it('retains uncertain reservations for missing or invalid usage', async () => {
+    const reservation = await service.reserve(request);
+    const balance = wallet.balance;
+    await service.settle(reservation, null);
+    await service.settle(reservation, { prompt_tokens: 1, completion_tokens: -1 });
+    expect(wallet.balance).toBe(balance);
+    expect(wallet.reservations[reservation.id]).toBeGreaterThan(0);
   });
   it('refuses unknown models and insufficient funds before dispatch', async () => {
     await expect(

@@ -109,7 +109,10 @@ export function WirocareLanding() {
                 />
               </div>
               <div className="hero-copy">
-                <h1>레비에게 마음을 털어놔보세요</h1>
+                <h1>
+                  <span>레비에게 마음을</span>{" "}
+                  <span>털어놔보세요</span>
+                </h1>
                 <p className="lede">
                   내 상황을 이해하는 AI 상담사 &apos;<strong className="levi-name">레비</strong>&apos;
                   <span className="hero-ai-note">레비는 AI 에이전트이며, 의료인이 아닙니다. 의료 상담이 필요한 경우 의료 전문가와 상담해 주세요.</span>

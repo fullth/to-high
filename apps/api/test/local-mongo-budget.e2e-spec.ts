@@ -118,6 +118,7 @@ run('shared budget wallet in isolated MongoDB', () => {
       new BudgetWalletRepository(connection),
       new BudgetWalletRepository(connection),
     ];
+    await repositories[0].transition((wallet) => chargeBudget(wallet, 10_000_000));
     const reserved = await Promise.all(
       Array.from({ length: 10 }, (_, i) =>
         repositories[i % 2].transition((wallet) =>

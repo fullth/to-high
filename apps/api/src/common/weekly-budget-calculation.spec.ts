@@ -1,15 +1,9 @@
 import {
   calculateUsageMilliWon,
   koreaWeekStart,
-  weeklyAutomaticRefillMilliWon,
 } from './weekly-budget-calculation';
 
 describe('weekly budget calculation', () => {
-  it('refills 10000 won only when the confirmed balance is zero', () => {
-    expect(weeklyAutomaticRefillMilliWon(0)).toBe(10_000_000);
-    expect(weeklyAutomaticRefillMilliWon(1)).toBe(0);
-    expect(() => weeklyAutomaticRefillMilliWon(-1)).toThrow();
-  });
   const price = {
     inputMicroUsd: 2,
     cachedInputMicroUsd: 0.2,

@@ -3,8 +3,8 @@ import * as metrics from '../../common/chat-metrics';
 import { OpenAIAgent } from './openai.agent';
 
 const modelBudgetMock = {
-  reserve: async () => ({ id: 'test' }),
-  settle: async () => {},
+  reserve: jest.fn(async () => ({ id: 'test' })),
+  settle: jest.fn(async () => {}),
 };
 
 describe('model usage accounting', () => {
@@ -18,6 +18,8 @@ describe('model usage accounting', () => {
   let record: jest.SpyInstance;
 
   beforeEach(() => {
+    modelBudgetMock.reserve.mockClear();
+    modelBudgetMock.settle.mockClear();
     agent = new OpenAIAgent(
       {
         get: () => 'test-key',
@@ -38,6 +40,7 @@ describe('model usage accounting', () => {
       choices: [{ message: { content: '괜찮아요' } }],
     });
     await agent.generateResponse([], 'comfort');
+    expect(modelBudgetMock.settle).toHaveBeenCalledWith({ id: 'test' }, usage);
     expect(record).toHaveBeenCalledWith(
       'reply',
       'gpt-6.1-terra',
@@ -55,6 +58,7 @@ describe('model usage accounting', () => {
     const stream = agent.generateResponseStream([], 'comfort');
     await stream.next();
     await stream.return();
+    expect(modelBudgetMock.settle).toHaveBeenCalledWith({ id: 'test' }, undefined);
     expect(create.mock.calls[0][0].stream_options.include_usage).toBe(true);
     expect(record).toHaveBeenCalledWith(
       'reply',
