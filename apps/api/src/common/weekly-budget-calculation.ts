@@ -1,12 +1,5 @@
 /** Costs are kept in milli-won to avoid rounding each model call down to zero. */
-export const DEFAULT_REFILL_MILLI_WON = 10_000_000;
-
-/** Called once per newly observed week using the confirmed wallet balance. */
-export function weeklyAutomaticRefillMilliWon(balanceMilliWon: number): number {
-  if (!Number.isSafeInteger(balanceMilliWon) || balanceMilliWon < 0)
-    throw new Error('Invalid wallet balance');
-  return balanceMilliWon === 0 ? DEFAULT_REFILL_MILLI_WON : 0;
-}
+export const BUDGET_APPROVAL_MILLI_WON = 10_000_000;
 
 export type ModelPrice = {
   inputMicroUsd: number;

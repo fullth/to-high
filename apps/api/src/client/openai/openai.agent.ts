@@ -71,7 +71,7 @@ export class OpenAIAgent {
   ) {
     if (!this.budget)
       throw new ServiceUnavailableException('예산 설정이 필요합니다.');
-    await this.budget.reserve(params);
+    const reservation = await this.budget.reserve(params);
     let usage: OpenAI.Completions.CompletionUsage | null | undefined;
     try {
       const response = await this.openai.chat.completions.create(
@@ -88,6 +88,8 @@ export class OpenAIAgent {
         options?.signal?.aborted ? 'cancelled' : 'failed',
       );
       throw error;
+    } finally {
+      await this.budget.settle(reservation, usage);
     }
   }
 
@@ -98,7 +100,7 @@ export class OpenAIAgent {
   ) {
     if (!this.budget)
       throw new ServiceUnavailableException('예산 설정이 필요합니다.');
-    await this.budget.reserve(params);
+    const reservation = await this.budget.reserve(params);
     let usage: OpenAI.Completions.CompletionUsage | null | undefined;
     let status: 'missing' | 'failed' | 'cancelled' = 'missing';
     let completed = false;
@@ -121,6 +123,7 @@ export class OpenAIAgent {
     } finally {
       if (!completed && status === 'missing') status = 'cancelled';
       recordModelUsage(operation, params.model, status, usage);
+      await this.budget.settle(reservation, usage);
     }
   }
 

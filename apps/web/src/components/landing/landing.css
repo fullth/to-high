@@ -193,12 +193,16 @@
 .btn-sm { height: 38px; padding: 0 14px; font-size: 13.5px; }
 .btn-lg { height: 52px; padding: 0 24px; font-size: 15.5px; border-radius: 999px; }
 .btn-chat {
-  height: 56px;
-  padding: 0 22px;
+  min-height: 56px;
+  height: auto;
+  padding: 12px 22px;
   gap: 12px;
   border-radius: 16px;
   font-size: 16px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
+.btn-chat span { min-width: 0; }
 .btn-chat svg { flex: none; }
 .btn-chat .arrow { margin-left: 8px; }
 .btn-block { width: 100%; }
@@ -255,7 +259,7 @@
   18%, 54% { transform: rotate(-9deg); }
   36%, 72%, 88% { transform: rotate(0deg); }
 }
-.hero-copy { position: relative; z-index: 1; max-width: none; }
+.hero-copy { position: relative; z-index: 1; max-width: none; min-width: 0; }
 .hero .hero-copy .lede { color: #000; }
 .wirocare-landing .levi-name {
   color: color-mix(in srgb, var(--brand) 25%, var(--ink));
@@ -316,7 +320,7 @@
   max-width: 880px;
   text-wrap: balance;
   word-break: keep-all;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 .hero h1 .accent {
   background: var(--grad);
@@ -332,7 +336,7 @@
   line-height: 1.65;
   text-wrap: pretty;
   word-break: keep-all;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 .hero-ai-note {
   display: block;
@@ -438,6 +442,7 @@
 @media (max-width: 640px) {
   .hero { padding: 40px 0; }
   .hero h1 { margin-top: 16px; font-size: 32px; }
+  .hero h1 > span { display: block; }
   .hero p.lede { font-size: 14.5px; margin-bottom: 24px; }
   .hero-cta { flex-direction: column; align-items: stretch; }
   .hero-cta .btn { width: 100%; }
@@ -718,6 +723,7 @@
   object-fit: contain;
 }
 .final .conversation-greeting {
+  min-width: 0;
   margin: 0;
   padding: 18px 22px;
   background: var(--card);

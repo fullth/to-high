@@ -8,18 +8,20 @@ import { BudgetController } from './budget.controller';
 import { JwtStrategy } from '../../app/auth/strategy/jwt.strategy';
 import { BudgetWalletRepository } from '../../common/budget-wallet.repository';
 import { UsageOverviewService } from '../../common/usage-overview.service';
+import { BudgetAdminService } from '../../app/admin/budget-admin.service';
 import type { BudgetWallet } from '../../common/budget-wallet';
 
 describe('budget HTTP authorization', () => {
   let app: INestApplication;
   let jwt: JwtService;
   let wallet: BudgetWallet;
+  let allowedOwners = 'admin-id';
   beforeAll(async () => {
     const config = {
       get: (key: string) =>
         ({
           JWT_SECRET: 'test-secret',
-          TO_HIGH_BUDGET_ADMIN_USER_IDS: 'admin-id',
+          TO_HIGH_BUDGET_ADMIN_USER_IDS: allowedOwners,
         })[key],
     };
     const repository = {
@@ -36,6 +38,7 @@ describe('budget HTTP authorization', () => {
       controllers: [BudgetController],
       providers: [
         JwtStrategy,
+        BudgetAdminService,
         { provide: ConfigService, useValue: config },
         { provide: BudgetWalletRepository, useValue: repository },
         { provide: UsageOverviewService, useValue: { todayUsage: async () => ({ countedTurns: 7, signedInAccounts: 2, guestNetworks: 1 }) } },
@@ -46,11 +49,13 @@ describe('budget HTTP authorization', () => {
     await app.init();
   });
   beforeEach(() => {
+    allowedOwners = 'admin-id';
     wallet = {
       version: 0,
       balance: 0,
       reservations: {},
       evaluatedWeek: '2026-11-01T15:00:00.000Z',
+      accounting: { startedAt: '2026-11-12T00:00:00Z', carryoverMilliWon: 0, approvedMilliWon: 0, settledMilliWon: 0 },
     };
   });
   afterAll(async () => {
@@ -81,6 +86,13 @@ describe('budget HTTP authorization', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ amountWon: -1, operationId: 'a'.repeat(32) })
       .expect(400);
+    for (const amountWon of [1, 9999, 20000])
+      await request(app.getHttpServer()).post('/admin/budget/topups')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ amountWon, operationId: 'a'.repeat(32) }).expect(400);
+    await request(app.getHttpServer()).post('/admin/budget/topups')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ amountWon: 10000 }).expect(400);
     for (let i = 0; i < 2; i++)
       await request(app.getHttpServer())
         .post('/admin/budget/topups')
@@ -88,5 +100,15 @@ describe('budget HTTP authorization', () => {
         .send({ amountWon: 10000, operationId: 'a'.repeat(32) })
         .expect(201);
     expect(wallet.balance).toBe(10_000_000);
+  });
+  it('disables both viewing and approval unless exactly one owner is configured', async () => {
+    const token = jwt.sign({ sub: 'admin-id', email: 'admin@example.invalid' });
+    for (const owners of ['', 'admin-id,other-id']) {
+      allowedOwners = owners;
+      await request(app.getHttpServer()).get('/admin/budget').set('Authorization', `Bearer ${token}`).expect(403);
+      await request(app.getHttpServer()).post('/admin/budget/topups').set('Authorization', `Bearer ${token}`)
+        .send({ amountWon: 10000, operationId: 'a'.repeat(32) }).expect(403);
+    }
+    expect(wallet.balance).toBe(0);
   });
 });

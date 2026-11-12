@@ -2,11 +2,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import type { BudgetWallet } from './budget-wallet';
-import { evaluateWeeklyRefill } from './budget-wallet';
-import {
-  DEFAULT_REFILL_MILLI_WON,
-  koreaWeekStart,
-} from './weekly-budget-calculation';
+import { koreaWeekStart } from './weekly-budget-calculation';
 
 type StoredWallet = BudgetWallet & { _id: 'weekly-wallet' };
 
@@ -33,10 +29,11 @@ export class BudgetWalletRepository {
         {
           $setOnInsert: {
             version: 0,
-            balance: DEFAULT_REFILL_MILLI_WON,
+            balance: 0,
             reservations: {},
             evaluatedWeek: week,
-            credits: { initial: { amount: DEFAULT_REFILL_MILLI_WON, actor: 'system', at: now.toISOString() } },
+            credits: {},
+            accounting: { startedAt: now.toISOString(), carryoverMilliWon: 0, approvedMilliWon: 0, settledMilliWon: 0 },
           },
         },
         { upsert: true, writeConcern: { w: 'majority' } },
@@ -66,16 +63,15 @@ export class BudgetWalletRepository {
     for (let attempt = 0; attempt < 20; attempt++) {
       const before = await this.read();
       const now = new Date();
-      const currentWeek = koreaWeekStart(now).toISOString();
-      const evaluated = evaluateWeeklyRefill(
-        before,
-        currentWeek,
-        now.toISOString(),
-      );
-      if (evaluated !== before) {
+      if (!before.accounting) {
+        // Old estimates cannot be reconstructed as actual usage. Track only from this point.
+        const carryover = before.balance + Object.values(before.reservations).reduce((sum, amount) => sum + amount, 0);
         await this.collection.updateOne(
           { _id: 'weekly-wallet', version: before.version },
-          { $set: evaluated },
+          { $set: { version: before.version + 1, accounting: {
+            startedAt: now.toISOString(), carryoverMilliWon: carryover,
+            approvedMilliWon: 0, settledMilliWon: 0,
+          } } },
           { writeConcern: { w: 'majority' } },
         );
         continue;

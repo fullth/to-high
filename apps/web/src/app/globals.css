@@ -104,6 +104,8 @@
   }
 
   body {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
     @apply bg-background text-foreground;
   }
 }

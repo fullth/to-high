@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { BudgetController } from './budget.controller';
 import { BudgetWalletRepository } from '../../common/budget-wallet.repository';
 import { UsageOverviewService } from '../../common/usage-overview.service';
+import { BudgetAdminService } from '../../app/admin/budget-admin.service';
 import type { BudgetWallet } from '../../common/budget-wallet';
 
 describe('budget administration', () => {
@@ -15,6 +16,7 @@ describe('budget administration', () => {
       balance: 0,
       reservations: {},
       evaluatedWeek: '2026-11-01T15:00:00.000Z',
+      accounting: { startedAt: '2026-11-12T00:00:00Z', carryoverMilliWon: 0, approvedMilliWon: 0, settledMilliWon: 0 },
     };
     const repository = {
       transition: async (
@@ -25,11 +27,11 @@ describe('budget administration', () => {
         return next;
       },
     };
-    controller = new BudgetController(
+    controller = new BudgetController(new BudgetAdminService(
       repository as unknown as BudgetWalletRepository,
       { get: () => 'administrator' } as unknown as ConfigService,
       { todayUsage: async () => ({ countedTurns: 0, signedInAccounts: 0, guestNetworks: 0 }) } as unknown as UsageOverviewService,
-    );
+    ));
   });
   it('rejects an authenticated user who is not an administrator', async () => {
     await expect(
@@ -38,19 +40,17 @@ describe('budget administration', () => {
     await expect(
       controller.topup(
         { user: { userId: 'other' } },
-        { amountWon: 10000, operationId: 'a'.repeat(32) },
+        { amountWon: 10000 as const, operationId: 'a'.repeat(32) },
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(wallet.balance).toBe(0);
   });
   it('does not double charge a retried request and rejects conflicting reuse', async () => {
-    const input = { amountWon: 10000, operationId: 'a'.repeat(32) };
+    const input = { amountWon: 10000 as const, operationId: 'a'.repeat(32) };
     await controller.topup(request, input);
     await controller.topup(request, input);
     expect(wallet.balance).toBe(10_000_000);
-    await expect(
-      controller.topup(request, { ...input, amountWon: 20000 }),
-    ).rejects.toThrow();
+    await expect(controller.topup({ user: { userId: 'other' } }, input)).rejects.toBeInstanceOf(ForbiddenException);
     expect(wallet.balance).toBe(10_000_000);
   });
 });
