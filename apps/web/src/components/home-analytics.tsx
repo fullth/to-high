@@ -16,14 +16,17 @@ function measuredHomeLocation(): string | null {
   if (!search) return `${origin}/`;
 
   const params = new URLSearchParams(search);
-  const entries = Object.entries(AD_CAMPAIGN);
+  const campaign = params.get("utm_campaign");
   if (
-    [...params].length !== entries.length ||
-    entries.some(([key, value]) => params.get(key) !== value)
+    [...params].length !== 3 ||
+    params.get("utm_source") !== AD_CAMPAIGN.utm_source ||
+    params.get("utm_medium") !== AD_CAMPAIGN.utm_medium ||
+    !campaign
   ) return null;
 
   const measuredUrl = new URL("/", origin);
-  for (const [key, value] of entries) measuredUrl.searchParams.set(key, value);
+  // Advertiser-set campaign names can contain personal information; send only approved values.
+  for (const [key, value] of Object.entries(AD_CAMPAIGN)) measuredUrl.searchParams.set(key, value);
   return measuredUrl.toString();
 }
 
