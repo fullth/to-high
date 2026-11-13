@@ -152,7 +152,7 @@ for (const width of [320, 360, 390, 430, 768, 1440]) {
       "/missing",
     ]) {
       await page.goto(path);
-      const fallback = ["/missing", "/diary", "/subscribe"].includes(path);
+      const fallback = ["/missing", "/diary", "/subscribe", "/help-now"].includes(path);
       if (fallback)
         await expect(
           page.getByRole("heading", { name: "404", exact: true }),
