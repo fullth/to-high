@@ -1,15 +1,62 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { MouseEvent } from "react";
 
 const MEASUREMENT_ID = "G-KWL1FM3MFW";
+const AD_CAMPAIGN = {
+  utm_source: "practicket",
+  utm_medium: "banner",
+  utm_campaign: "위로",
+};
+
+function measuredHomeLocation(): string | null {
+  const { origin, pathname, search, hash } = window.location;
+  if (pathname !== "/" || hash) return null;
+  if (!search) return `${origin}/`;
+
+  const params = new URLSearchParams(search);
+  const entries = Object.entries(AD_CAMPAIGN);
+  if (
+    [...params].length !== entries.length ||
+    entries.some(([key, value]) => params.get(key) !== value)
+  ) return null;
+
+  const measuredUrl = new URL("/", origin);
+  for (const [key, value] of entries) measuredUrl.searchParams.set(key, value);
+  return measuredUrl.toString();
+}
+
+export function trackTalkStart(event: MouseEvent<HTMLAnchorElement>) {
+  const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
+  if (!gtag) return;
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+    gtag("event", "talk_start_click");
+    return;
+  }
+
+  event.preventDefault();
+  let navigated = false;
+  const navigate = () => {
+    if (navigated) return;
+    navigated = true;
+    // Counseling uses a fresh document so home-only third-party scripts do not remain active.
+    window.location.assign(new URL("/talk", window.location.origin).toString());
+  };
+  window.setTimeout(navigate, 800);
+  gtag("event", "talk_start_click", {
+    event_callback: navigate,
+    event_timeout: 800,
+  });
+}
 
 export function HomeAnalytics() {
   const started = useRef(false);
   useEffect(() => {
-    if (started.current || window.location.pathname !== "/") return;
-    // Avoid exposing arbitrary query strings or fragments to third-party code.
-    if (window.location.search || window.location.hash) return;
+    if (started.current) return;
+    // Only the approved ad campaign may expose query values to analytics.
+    const location = measuredHomeLocation();
+    if (!location) return;
     started.current = true;
     const target = window as Window & { dataLayer?: IArguments[]; gtag?: (...args: unknown[]) => void };
     target.dataLayer = target.dataLayer || [];
@@ -18,7 +65,6 @@ export function HomeAnalytics() {
       // eslint-disable-next-line prefer-rest-params
       target.dataLayer?.push(arguments);
     };
-    const location = `${window.location.origin}/`;
     target.gtag("js", new Date());
     target.gtag("config", MEASUREMENT_ID, {
       send_page_view: false,

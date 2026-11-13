@@ -44,7 +44,8 @@ export default function PrivacyPage() {
       <section id="analytics" className="space-y-3">
         <h2 className="text-lg font-semibold">홈 방문 통계</h2>
         <p>
-          홈 화면의 방문 현황을 확인하기 위해 Google Analytics를 사용해요.
+          홈 화면의 방문과 상담 시작 버튼 클릭 현황을 측정할 때는 Google Analytics를 사용해요.
+          광고 방문은 광고 출처·형식·캠페인 정보를 함께 측정할 수 있어요.
           상담 화면과 로그인 처리 화면에는 이 측정 기능을 적용하지 않으며,
           상담 내용이나 로그인 정보를 통계로 보내지 않아요. Google은 방문을
           구분하기 위해 브라우저에 식별자를 저장할 수 있어요.
