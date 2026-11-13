@@ -715,7 +715,7 @@ function TalkContent() {
             AI와의 대화이며 전문적인 진단이나 치료를 대신하지 않아요.
           </p>
           <p className="ch-talk-disclaimer">
-            이름, 연락처, 주소나 건강 정보처럼 민감한 내용은 입력하지 않아도 돼요. <a className="ch-help-link" href="/help-now" target="_blank" rel="noopener noreferrer">지금 도움 받기</a>
+            이름, 연락처, 주소나 건강 정보처럼 민감한 내용은 입력하지 않아도 돼요.
           </p>
           <details className="ch-privacy-details">
             <summary>대화 저장과 이용 안내</summary>

@@ -228,7 +228,6 @@ export function WirocareLanding() {
             </FullPageLink>
             <div className="foot-links">
               <FullPageLink href="/privacy">개인정보 처리 안내</FullPageLink>
-              <FullPageLink href="/help-now">긴급 도움 안내</FullPageLink>
             </div>
           </div>
           <p className="privacy-note">
