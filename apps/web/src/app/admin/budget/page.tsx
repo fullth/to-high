@@ -3,11 +3,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { getBudgetStatus, topupBudget, type BudgetStatus } from "@/lib/api";
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  Coins,
+  ExternalLink,
+  MessageSquare,
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Badge,
+  EmptyState,
+  MetricCard,
+  Notice,
+  PageHeader,
+  PageShell,
+  Panel,
+  PanelHeader,
+} from "@/components/ui/page";
+import { formatCount, formatMilliWon as formatWon } from "@/lib/format";
 import "./budget.css";
+import { UsageHistoryPanel } from "./usage-history";
 
 type Pending = { amount: number; id: string };
-const formatWon = (milliWon: number) =>
-  `${(milliWon / 1000).toLocaleString("ko-KR", { maximumFractionDigits: 3 })}원`;
 
 export default function BudgetAdminPage() {
   const { token, user, isLoading, login } = useAuth();
@@ -16,15 +35,21 @@ export default function BudgetAdminPage() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const submitting = useRef(false);
   const currentToken = useRef(token);
-  useEffect(() => { currentToken.current = token; }, [token]);
+  useEffect(() => {
+    currentToken.current = token;
+  }, [token]);
 
   function startLogin(provider: () => void) {
     try {
       sessionStorage.setItem("authReturnTo", "budget");
     } catch {
-      setError("로그인 후 이 페이지로 돌아오려면 브라우저 저장 공간이 필요해요.");
+      setError(
+        "로그인 후 이 페이지로 돌아오려면 브라우저 저장 공간이 필요해요.",
+      );
       return;
     }
     provider();
@@ -32,10 +57,12 @@ export default function BudgetAdminPage() {
 
   const load = useCallback(async () => {
     if (!token || !user?.userId) return;
+    setRefreshing(true);
     try {
       const next = await getBudgetStatus(token);
       if (currentToken.current !== token) return;
       setStatus(next);
+      setUpdatedAt(new Date());
       setError("");
     } catch {
       if (currentToken.current !== token) return;
@@ -43,11 +70,14 @@ export default function BudgetAdminPage() {
       setError(
         "예산 정보를 불러오지 못했어요. 관리자 권한과 연결 상태를 확인해 주세요.",
       );
+    } finally {
+      if (currentToken.current === token) setRefreshing(false);
     }
   }, [token, user?.userId]);
 
   useEffect(() => {
     setStatus(null);
+    setUpdatedAt(null);
     setPending(null);
     if (!pendingKey) return;
     try {
@@ -102,98 +132,340 @@ export default function BudgetAdminPage() {
         "승인 결과를 확인하지 못했어요. 관리자 권한과 연결 상태를 확인한 뒤 같은 요청으로 다시 확인해 주세요.",
       );
     } finally {
-        submitting.current = false;
+      submitting.current = false;
       setBusy(false);
     }
   }
 
-  if (isLoading) return <main className="budget-page"><div className="budget-content"><p className="budget-card">확인 중이에요.</p></div></main>;
+  const today = status?.usageHistory?.days.find(
+    (d) => d.day === status.usageHistory?.to,
+  );
+  const totalBudget = status
+    ? status.accounting.carryoverMilliWon + status.accounting.approvedMilliWon
+    : 0;
+  const usedPercent =
+    status && totalBudget > 0
+      ? Math.min(100, (status.accounting.settledMilliWon / totalBudget) * 100)
+      : 0;
+  const reservedPercent =
+    status && totalBudget > 0
+      ? Math.min(
+          100 - usedPercent,
+          (status.reservedMilliWon / totalBudget) * 100,
+        )
+      : 0;
+  const header = (
+    <PageHeader
+      title="운영 현황"
+      description="상담 이용과 AI 예산을 한눈에 확인하세요."
+      actions={
+        token && (
+          <>
+            <Button variant="outline" asChild>
+              <a
+                href="https://analytics.google.com/analytics/web/#/a399568760p543674918/reports/intelligenthome"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                GA 보고서 <ExternalLink size={14} aria-hidden="true" />
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              disabled={refreshing}
+              aria-busy={refreshing}
+              onClick={() => void load()}
+            >
+              <RefreshCw size={14} aria-hidden="true" />
+              새로고침
+            </Button>
+          </>
+        )
+      }
+    />
+  );
+
+  if (isLoading)
+    return (
+      <PageShell>
+        {header}
+        <Panel className="ops-auth">
+          <EmptyState title="로그인 상태 확인 중">
+            잠시만 기다려 주세요.
+          </EmptyState>
+        </Panel>
+      </PageShell>
+    );
   if (!token)
     return (
-      <main className="budget-page"><div className="budget-content budget-card">
-        <p>관리자 로그인이 필요해요.</p>
-        {error && <p role="alert">{error}</p>}
-        <button
-          onClick={() => startLogin(login)}
-          className="budget-button mt-4"
-        >
-          Google 로그인
-        </button>
-      </div></main>
+      <PageShell>
+        {header}
+        <Panel className="ops-auth">
+          <PanelHeader
+            title="관리자 로그인"
+            description="운영자 계정으로 서비스 현황을 확인하세요."
+          />
+          <div className="ui-panel-body">
+            {error && <Notice tone="danger">{error}</Notice>}
+            <Button onClick={() => startLogin(login)}>Google 로그인</Button>
+          </div>
+        </Panel>
+      </PageShell>
     );
   return (
-    <main className="budget-page"><div className="budget-content space-y-6">
-      <h1 className="text-2xl font-bold">서비스 운영 현황</h1>
-      <section className="budget-card space-y-2" aria-label="오늘 대화 이용량">
-        <h2 className="font-semibold">오늘 대화 이용량</h2>
-        {status?.todayUsage ? <>
-          <p>로그인 이용 계정 <strong>{status.todayUsage.signedInAccounts.toLocaleString("ko-KR")}개</strong></p>
-          <p>비로그인 접속망 <strong>{status.todayUsage.guestNetworks.toLocaleString("ko-KR")}개</strong></p>
-          <p>한도에 집계된 대화 요청 <strong>{status.todayUsage.countedTurns.toLocaleString("ko-KR")}회</strong></p>
-        </> : <p>확인 중</p>}
-        <p className="text-sm text-slate-600">한국 시간 오늘 기준이며 계정과 접속망 수는 집계 기능 적용 이후부터 표시돼요. 같은 접속망의 여러 사람은 하나로 집계되고, 한 사람이 로그인 전후로 이용하면 각각 집계될 수 있어요.</p>
-      </section>
-      <h2 className="text-xl font-bold">AI 비용 관리</h2>
-      <p>자동으로 한도를 늘리지 않습니다. 운영자 계정에서 승인할 때마다 운영 한도가 10,000원 증가합니다.</p>
-      <p className="text-sm text-slate-600">사용 비용은 모델이 보고한 토큰, 적용 단가와 환율로 계산하며 제공자의 최종 청구액과 다를 수 있습니다.</p>
-      {status && (
-        <section className="budget-card space-y-2" aria-label="AI 운영 예산">
-          <p>총 운영 한도: <strong>{formatWon(status.accounting.carryoverMilliWon + status.accounting.approvedMilliWon)}</strong></p>
-          <p>사용량 기준 계산액: {formatWon(status.accounting.settledMilliWon)}</p>
-          <p>처리 중 / 확인 필요 금액: {formatWon(status.reservedMilliWon)}</p>
-          <p>추가 사용 가능액: <strong>{formatWon(Math.max(0, status.balanceMilliWon))}</strong></p>
-          {status.balanceMilliWon < 0 && <p role="alert">예약액을 초과한 사용 비용: {formatWon(-status.balanceMilliWon)}. 추가 모델 호출은 중단됩니다.</p>}
-          <p className="text-sm text-slate-600">정산 시작: {new Date(status.accounting.startedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}. 기존 이월 예산 {formatWon(status.accounting.carryoverMilliWon)}을 포함하며, 이전 사용 비용은 재계산하지 않습니다.</p>
-          {status.reservedMilliWon > 0 && <p className="text-sm text-slate-600">사용량이 확인되지 않은 호출은 예약금을 유지합니다.</p>}
-        </section>
+    <PageShell>
+      {header}
+      <div className="ops-status-line">
+        <span>한국 시간 기준 / 오늘은 집계 중</span>
+        <Badge tone={status ? "success" : "neutral"}>
+          {status && updatedAt
+            ? `${updatedAt.toLocaleTimeString("ko-KR", { hour12: false, timeZone: "Asia/Seoul" })} 갱신`
+            : "불러오는 중"}
+        </Badge>
+      </div>
+      {error && (
+        <Notice tone="danger" title="정보를 확인하지 못했어요">
+          {error}
+        </Notice>
       )}
       {status && !status.notificationReady && (
-        <p role="alert" className="text-red-700">
-          예산 알림 메일 설정이 필요해요.
-        </p>
+        <Notice tone="warning" title="예산 알림 미설정">
+          한도 도달 전에 메일로 안내받으려면 알림 설정을 확인하세요.
+        </Notice>
       )}
-      {error && (
-        <p role="alert" className="text-red-700">
-          {error}
-        </p>
-      )}
+      <section
+        className="ops-overview"
+        id="overview"
+        aria-label="오늘 대화 이용량"
+      >
+        <h2>오늘 요약</h2>
+        <dl className="ops-metrics">
+          <MetricCard
+            label="상담 요청"
+            value={formatCount(
+              today?.requests?.requests ?? status?.todayUsage?.countedTurns,
+            )}
+            note={today?.requests ? "처리 전 거절 포함" : "한도에 반영된 요청"}
+            icon={<MessageSquare size={15} aria-hidden="true" />}
+          />
+          <MetricCard
+            label="상담 시작 성공"
+            value={formatCount(today?.requests?.starts)}
+            note="첫 문맥 요청의 정상 완료"
+            icon={<ArrowUpRight size={15} aria-hidden="true" />}
+          />
+          <MetricCard
+            label="성공 응답"
+            value={formatCount(today?.requests?.successes)}
+            note="서버에서 정상 완료"
+            icon={<CheckCircle2 size={15} aria-hidden="true" />}
+          />
+          <MetricCard
+            label="오늘 계산 비용"
+            value={formatWon(today?.model?.settledMilliWon)}
+            note="제공자 토큰의 정산 기준"
+            icon={<Coins size={15} aria-hidden="true" />}
+          />
+        </dl>
+      </section>
+      <div className="ops-grid">
+        <div className="ops-main">
+          {status?.usageHistory ? (
+            <UsageHistoryPanel history={status.usageHistory} />
+          ) : (
+            <Panel>
+              <PanelHeader title="상담 이용 추이" />
+              {status?.usageHistoryUnavailable ? (
+                <div className="ui-panel-body">
+                  <Notice tone="warning">
+                    일별 집계를 불러오지 못했어요. 예산 정보와 승인은 계속
+                    사용할 수 있습니다.
+                  </Notice>
+                </div>
+              ) : (
+                <EmptyState
+                  title={
+                    status
+                      ? "일별 집계를 준비하고 있어요"
+                      : "운영 정보를 불러오고 있어요"
+                  }
+                >
+                  {status
+                    ? "API 업데이트 후 발생하는 요청부터 확인할 수 있어요."
+                    : "연결 상태와 관리자 권한을 확인합니다."}
+                </EmptyState>
+              )}
+            </Panel>
+          )}
+          {status && (
+            <Panel aria-label="이용 계정과 접속망">
+              <PanelHeader
+                title="오늘 이용 범위"
+                description="한도 집계 기준. 실제 사람 수와는 다릅니다."
+              />
+              <div className="ui-panel-body">
+                <dl className="ui-kv">
+                  <div>
+                    <dt>로그인 이용 계정</dt>
+                    <dd>
+                      {formatCount(status.todayUsage?.signedInAccounts)}개
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>비로그인 접속망</dt>
+                    <dd>{formatCount(status.todayUsage?.guestNetworks)}개</dd>
+                  </div>
+                </dl>
+              </div>
+            </Panel>
+          )}
+        </div>
+        {status && (
+          <Panel className="ops-budget" id="budget" aria-label="AI 운영 예산">
+            <PanelHeader
+              title="AI 비용 관리"
+              actions={
+                <Badge
+                  tone={status.balanceMilliWon <= 0 ? "danger" : "success"}
+                >
+                  {status.balanceMilliWon <= 0 ? "한도 확인 필요" : "수동 승인"}
+                </Badge>
+              }
+            />
+            <div className="ui-panel-body">
+              <p className="ops-budget-label">추가 사용 가능액</p>
+              <p className="ops-budget-balance">
+                {formatWon(Math.max(0, status.balanceMilliWon))}
+              </p>
+              <dl className="ui-kv">
+                <div>
+                  <dt>총 운영 한도:</dt>
+                  <dd>{formatWon(totalBudget)}</dd>
+                </div>
+                <div>
+                  <dt>사용량 기준 계산액</dt>
+                  <dd>{formatWon(status.accounting.settledMilliWon)}</dd>
+                </div>
+                <div>
+                  <dt>처리 중 / 확인 필요 금액:</dt>
+                  <dd>{formatWon(status.reservedMilliWon)}</dd>
+                </div>
+              </dl>
+              <div
+                className="ops-budget-progress"
+                role="img"
+                aria-label={`운영 한도 중 정산 ${usedPercent.toFixed(1)}%, 예약 ${reservedPercent.toFixed(1)}%`}
+              >
+                <span style={{ width: `${usedPercent}%` }} />
+                <span
+                  className="reserved"
+                  style={{ width: `${reservedPercent}%` }}
+                />
+              </div>
+              <p className="ops-budget-caption">
+                초록: 계산 비용 / 노랑: 미정산 예약금
+              </p>
+              {status.balanceMilliWon < 0 && (
+                <Notice tone="danger">
+                  예약액 초과 {formatWon(-status.balanceMilliWon)}. 추가 모델
+                  호출은 중단됩니다.
+                </Notice>
+              )}
+              <details className="ops-definition">
+                <summary>계산 기준 확인</summary>
+                <p>
+                  제공자의 토큰, 적용 단가와 환율로 계산하며 최종 청구액과 다를
+                  수 있습니다.
+                </p>
+                <p>
+                  정산 시작:{" "}
+                  {new Date(status.accounting.startedAt).toLocaleString(
+                    "ko-KR",
+                    { timeZone: "Asia/Seoul" },
+                  )}
+                  . 기존 이월 예산{" "}
+                  {formatWon(status.accounting.carryoverMilliWon)}. 과거 비용은
+                  재계산하지 않습니다.
+                </p>
+                <p>사용량을 확인하지 못한 호출은 예약금을 유지합니다.</p>
+              </details>
+            </div>
+            <form onSubmit={submit} className="ops-approval">
+              <h3>운영 한도 추가</h3>
+              {pending ? (
+                <Notice title="이전 승인 결과를 다시 확인합니다">
+                  같은 요청은 중복 반영하지 않습니다.
+                </Notice>
+              ) : (
+                <dl className="ui-kv">
+                  <div>
+                    <dt>이번 승인</dt>
+                    <dd>+10,000원</dd>
+                  </div>
+                  <div>
+                    <dt>승인 후 총 한도</dt>
+                    <dd>{formatWon(totalBudget + 10_000_000)}</dd>
+                  </div>
+                </dl>
+              )}
+              <Button disabled={busy} aria-busy={busy}>
+                {busy
+                  ? "확인 중"
+                  : pending
+                    ? "같은 승인 요청 다시 확인"
+                    : "한도 10,000원 추가 승인"}
+              </Button>
+              <p className="ops-approval-note">
+                운영자만 승인 / 자동 증액 없음 / 실제 결제 아님
+              </p>
+            </form>
+          </Panel>
+        )}
+      </div>
       {status && (
-        <form onSubmit={submit} className="space-y-3">
-          {pending ? <p>이전 승인 요청의 결과를 다시 확인합니다. 동일한 요청은 중복 반영하지 않습니다.</p> : <>
-            <p>이번 승인으로 운영 한도에 <strong>10,000원</strong>을 추가합니다.</p>
-            <p>승인 후 총 운영 한도: <strong>{formatWon(status.accounting.carryoverMilliWon + status.accounting.approvedMilliWon + 10_000_000)}</strong></p>
-          </>}
-          <p className="text-sm text-slate-600">운영자 계정에서만 승인할 수 있으며, 한도 증가는 결제가 아닙니다.</p>
-          <button disabled={busy} className="budget-button">
-            {busy ? "확인 중" : pending ? "같은 승인 요청 다시 확인" : "한도 10,000원 추가 승인"}
-          </button>
-        </form>
-      )}
-      {status && (
-        <section>
-          <h2 className="font-semibold">최근 한도 증가 내역</h2>
+        <Panel
+          className="ops-credits"
+          id="approvals"
+          aria-label="한도 증가 내역"
+        >
+          <PanelHeader
+            title="한도 증가 내역"
+            description="최근 20건의 승인 기록"
+          />
           {status.credits.length ? (
-            <ul className="mt-2 space-y-1">
+            <ul className="ui-panel-body">
               {status.credits.map((item, index) => (
-                <li key={`${item.at}-${index}`}>
-                  {new Date(item.at).toLocaleString("ko-KR", {
-                    timeZone: "Asia/Seoul",
-                  })}{" "}
-                  /{" "}
-                  {item.kind === "initial"
-                    ? "초기"
-                    : item.kind === "automatic"
-                      ? "자동"
-                      : "수동"}{" "}
-                  증가 / {formatWon(item.amountMilliWon)} / {item.actor}
+                <li key={`${item.at}-${index}`} className="ops-credit-row">
+                  <div>
+                    <p className="ops-credit-date">
+                      {new Date(item.at).toLocaleString("ko-KR", {
+                        timeZone: "Asia/Seoul",
+                      })}
+                    </p>
+                    <p className="ops-credit-actor">
+                      {item.actor === "system" ? "시스템" : "운영자 승인"}
+                    </p>
+                  </div>
+                  <Badge>
+                    {item.kind === "initial"
+                      ? "초기"
+                      : item.kind === "automatic"
+                        ? "자동"
+                        : "수동"}
+                  </Badge>
+                  <span className="ops-credit-amount">
+                    +{formatWon(item.amountMilliWon)}
+                  </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-2">승인 내역이 없어요.</p>
+            <EmptyState compact title="승인 내역이 없어요">
+              한도를 추가하면 승인 시각과 금액이 기록됩니다.
+            </EmptyState>
           )}
-        </section>
+        </Panel>
       )}
-    </div></main>
+    </PageShell>
   );
 }

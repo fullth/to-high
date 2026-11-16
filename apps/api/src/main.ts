@@ -1,5 +1,6 @@
 import { PrivacyExceptionFilter } from './common/privacy-exception.filter';
 import './instrument';
+import { DailyUsageService } from './app/usage/daily-usage.service';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -34,7 +35,7 @@ async function bootstrap() {
   app.use(helmet());
 
   app.useGlobalFilters(
-    new PrivacyExceptionFilter(undefined, app.get(IncidentService)),
+    new PrivacyExceptionFilter(undefined, app.get(IncidentService), app.get(DailyUsageService)),
   );
 
   app.useGlobalPipes(new ValidationPipe({ transform: true }));

@@ -1,3 +1,5 @@
+import { DailyUsageRepository } from '../persistence/usage/daily-usage.repository';
+import { DailyUsageService } from '../app/usage/daily-usage.service';
 import { Module } from '@nestjs/common';
 import { BudgetWalletRepository } from './budget-wallet.repository';
 import { ModelBudgetService } from './model-budget.service';
@@ -9,6 +11,8 @@ import { BudgetAdminService } from '../app/admin/budget-admin.service';
 
 @Module({
   providers: [
+    DailyUsageRepository,
+    DailyUsageService,
     BudgetAdminService,
     BudgetWalletRepository,
     ModelBudgetService,
@@ -18,6 +22,7 @@ import { BudgetAdminService } from '../app/admin/budget-admin.service';
     IncidentService,
   ],
   exports: [
+    DailyUsageService,
     BudgetAdminService,
     BudgetWalletRepository,
     ModelBudgetService,

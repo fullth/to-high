@@ -1,3 +1,4 @@
+import type { DailyUsageService } from '../app/usage/daily-usage.service';
 import {
   ArgumentsHost,
   Catch,
@@ -16,6 +17,7 @@ export class PrivacyExceptionFilter implements ExceptionFilter {
     private readonly frontendUrl = process.env.FRONTEND_URL ||
       'http://localhost:3001',
     private readonly incidents?: IncidentService,
+    private readonly usage?: DailyUsageService,
   ) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
@@ -41,8 +43,11 @@ export class PrivacyExceptionFilter implements ExceptionFilter {
       response.redirect(new URL('/problem', this.frontendUrl).toString());
       return;
     }
-    if (request?.path === '/ephemeral/respond' && !request.chatMetricsRecorded)
+    if (request?.method === 'POST' && request.path?.toLowerCase().replace(/\/+$/, '') === '/ephemeral/respond' && !request.chatMetricsRecorded) {
       recordRejected(chatErrorCode(exception));
+      request.chatMetricsRecorded = true;
+      void this.usage?.record({ outcome: chatErrorCode(exception), rejected: true });
+    }
     const messages: Record<number, string> = {
       400: '입력 형식이나 길이를 확인해 주세요.',
       401: '로그인이 필요하거나 만료됐어요.',

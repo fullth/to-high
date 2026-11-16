@@ -1,3 +1,4 @@
+import { DailyUsageService } from '../../app/usage/daily-usage.service';
 import {
   Body,
   Controller,
@@ -32,6 +33,7 @@ export class EphemeralController {
     private readonly budget: EphemeralBudgetService,
     private readonly turns: DailyTurnLimitService,
     @Optional() private readonly incidents?: IncidentService,
+    @Optional() private readonly usage?: DailyUsageService,
   ) {}
 
   @Post('respond')
@@ -41,9 +43,11 @@ export class EphemeralController {
     @Req() request: AuthRequest,
     @Res() response: Response,
   ) {
+    const startedAt = new Date();
     const started = performance.now();
     let firstToken: number | undefined;
     let outcome = 'ok';
+    let dispatched = false;
     let release: (() => void) | undefined;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     const streaming = request.headers?.accept?.includes('text/event-stream');
@@ -72,6 +76,7 @@ export class EphemeralController {
           if (!controller.signal.aborted) response.write(': keepalive\n\n');
         }, 10_000);
       }
+      dispatched = true;
       const result = await this.service.respond(
         body,
         request.user?.userId,
@@ -118,6 +123,12 @@ export class EphemeralController {
         performance.now() - started,
         firstToken,
       );
+      await this.usage?.record({
+        startedAt, outcome: controller.signal.aborted ? 'cancelled' : outcome,
+        rejected: !dispatched && !controller.signal.aborted,
+        firstTurn: body.messages.length === 1 && !body.summary,
+        userId: request.user?.userId, ip: request.ip || request.socket?.remoteAddress,
+      });
     }
   }
 }

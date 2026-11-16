@@ -1,18 +1,25 @@
-import * as React from "react"
+// Source: https://ui.shadcn.com/r/styles/new-york-v4/card.json
+// MIT license: see LICENSE.shadcn.
+import * as React from "react";
+import { Slot } from "radix-ui";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
-
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({
+  className,
+  asChild = false,
+  ...props
+}: React.ComponentProps<"div"> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot.Root : "div";
   return (
-    <div
+    <Comp
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-2xl border border-border p-6 shadow-lg shadow-black/20",
-        className
+        "flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
@@ -20,32 +27,32 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-3 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
-        className
+        "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("text-lg leading-tight font-bold tracking-tight", className)}
+      className={cn("leading-none font-semibold", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-muted-foreground text-base leading-relaxed", className)}
+      className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<"div">) {
@@ -54,21 +61,21 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="card-action"
       className={cn(
         "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-content"
-      className={cn("", className)}
+      className={cn("px-6", className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -78,7 +85,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -89,4 +96,4 @@ export {
   CardAction,
   CardDescription,
   CardContent,
-}
+};

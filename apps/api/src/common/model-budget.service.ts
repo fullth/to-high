@@ -1,3 +1,4 @@
+import { koreanDay } from '../app/usage/daily-usage';
 import {
   HttpStatus,
   Injectable,
@@ -30,8 +31,15 @@ const prices: Record<string, ModelPrice> = {
   },
 };
 
-export type ModelBudgetReservation = { id: string; price: ModelPrice; rate: number };
-type ReportedUsage = Pick<OpenAI.Completions.CompletionUsage, 'prompt_tokens' | 'completion_tokens' | 'prompt_tokens_details'>;
+export type ModelBudgetReservation = {
+  id: string;
+  price: ModelPrice;
+  rate: number;
+};
+type ReportedUsage = Pick<
+  OpenAI.Completions.CompletionUsage,
+  'prompt_tokens' | 'completion_tokens' | 'prompt_tokens_details'
+>;
 
 @Injectable()
 export class ModelBudgetService {
@@ -57,8 +65,7 @@ export class ModelBudgetService {
     )
       throw new ServiceUnavailableException('예산 계산 설정을 확인해 주세요.');
     // Byte count plus protocol overhead is a conservative estimate, not a provider guarantee.
-    const input =
-      Buffer.byteLength(JSON.stringify(params), 'utf8') + 4096;
+    const input = Buffer.byteLength(JSON.stringify(params), 'utf8') + 4096;
     const amount = calculateUsageMilliWon(
       {
         inputTokens: input,
@@ -83,23 +90,36 @@ export class ModelBudgetService {
     return { id, price: { ...price }, rate };
   }
 
-  async settle(reservation: ModelBudgetReservation, usage?: ReportedUsage | null): Promise<void> {
+  async settle(
+    reservation: ModelBudgetReservation,
+    usage?: ReportedUsage | null,
+  ): Promise<void> {
     // A missing or malformed report is not evidence that a failed/cancelled call was free.
     if (!usage) return;
     let cost: number;
     try {
-      cost = calculateUsageMilliWon({
-        inputTokens: usage.prompt_tokens,
-        cachedInputTokens: usage.prompt_tokens_details?.cached_tokens ?? 0,
-        cacheWriteTokens: 0,
-        outputTokens: usage.completion_tokens,
-      }, reservation.price, reservation.rate);
+      cost = calculateUsageMilliWon(
+        {
+          inputTokens: usage.prompt_tokens,
+          cachedInputTokens: usage.prompt_tokens_details?.cached_tokens ?? 0,
+          cacheWriteTokens: 0,
+          outputTokens: usage.completion_tokens,
+        },
+        reservation.price,
+        reservation.rate,
+      );
     } catch {
       return;
     }
+    const day = koreanDay();
     await this.wallets.transition((wallet) =>
       Object.hasOwn(wallet.reservations, reservation.id)
-        ? settleBudget(wallet, reservation.id, cost)
+        ? settleBudget(wallet, reservation.id, cost, {
+            day,
+            inputTokens: usage.prompt_tokens,
+            outputTokens: usage.completion_tokens,
+            cachedInputTokens: usage.prompt_tokens_details?.cached_tokens ?? 0,
+          })
         : wallet,
     );
   }

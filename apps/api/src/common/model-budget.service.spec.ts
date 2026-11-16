@@ -38,10 +38,12 @@ describe('model budget boundary', () => {
     expect(wallet.balance).toBeLessThan(10_000_000);
     const usage = { prompt_tokens: 200, completion_tokens: 20, prompt_tokens_details: { cached_tokens: 128 } };
     await service.settle(reservation, usage);
+    expect(Object.values(wallet.dailyModelUsage ?? {})).toEqual([{ settledMilliWon: 268, reportedCalls: 1, inputTokens: 200, outputTokens: 20, cachedInputTokens: 128 }]);
     expect(wallet.reservations).toEqual({});
     expect(wallet.balance).toBe(10_000_000 - 268);
     await service.settle(reservation, usage);
     expect(wallet.balance).toBe(10_000_000 - 268);
+    expect(Object.values(wallet.dailyModelUsage ?? {})[0].reportedCalls).toBe(1);
   });
   it('retains uncertain reservations for missing or invalid usage', async () => {
     const reservation = await service.reserve(request);
