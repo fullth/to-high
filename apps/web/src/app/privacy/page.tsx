@@ -41,6 +41,11 @@ export default function PrivacyPage() {
           비로그인 한도를 함께 사용할 수 있어요.
         </p>
       </section>
+      <section id="service-metrics" className="space-y-3">
+        <h2 className="text-lg font-semibold">서비스 이용 통계</h2>
+        <p>서비스 운영을 위해 날짜별 상담 요청, 성공과 오류 횟수, 이용 계정과 접속망 수, 토큰과 계산 비용의 합계를 보관해요. 이 통계에는 상담 원문이나 요약을 저장하지 않아요.</p>
+        <p>같은 날의 이용을 중복 집계하지 않도록 계정과 IP를 날짜마다 다른 식별하기 어려운 값으로 변환해 사용해요. 이 값은 해당 날짜로부터 4일이 지나면 정기 정리 작업에서 삭제하며, 날짜별 합계는 추이 확인을 위해 계속 보관해요.</p>
+      </section>
       <section id="analytics" className="space-y-3">
         <h2 className="text-lg font-semibold">홈 방문 통계</h2>
         <p>

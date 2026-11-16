@@ -1,6 +1,8 @@
+import { DailyUsageService } from '../usage/daily-usage.service';
 import {
   ForbiddenException,
   Injectable,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +17,7 @@ export class BudgetAdminService {
     private readonly wallets: BudgetWalletRepository,
     private readonly config: ConfigService,
     private readonly usage: UsageOverviewService,
+    @Optional() private readonly dailyUsage?: DailyUsageService,
   ) {}
 
   private authorize(id: string): void {
@@ -32,7 +35,44 @@ export class BudgetAdminService {
     this.authorize(actor);
     const wallet = await this.wallets.transition((state) => state);
     if (!wallet || !wallet.accounting) throw new ServiceUnavailableException();
+    let history: Awaited<ReturnType<DailyUsageService['recent']>> | undefined;
+    let usageHistoryUnavailable = false;
+    if (this.dailyUsage) {
+      try {
+        history = await this.dailyUsage.recent();
+      } catch {
+        usageHistoryUnavailable = true;
+      }
+    }
+    const days = history
+      ? [
+          ...new Set([
+            ...history.days.map((d) => d.day),
+            ...Object.keys(wallet.dailyModelUsage ?? {}).filter(
+              (day) => day >= history.from && day <= history.to,
+            ),
+          ]),
+        ]
+          .sort()
+          .reverse()
+          .map((day) => ({
+            day,
+            requests: history.days.find((d) => d.day === day) ?? null,
+            model: wallet.dailyModelUsage?.[day] ?? null,
+          }))
+      : [];
     return {
+      usageHistoryUnavailable,
+      ...(history
+        ? {
+            usageHistory: {
+              from: history.from,
+              to: history.to,
+              firstRecordedAt: history.firstRecordedAt,
+              days,
+            },
+          }
+        : {}),
       balanceMilliWon: wallet.balance,
       accounting: wallet.accounting,
       todayUsage: await this.usage.todayUsage(),

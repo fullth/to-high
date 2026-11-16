@@ -1,3 +1,4 @@
+import { DailyUsageService } from '../../app/usage/daily-usage.service';
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
@@ -39,6 +40,7 @@ describe('budget HTTP authorization', () => {
       providers: [
         JwtStrategy,
         BudgetAdminService,
+        { provide: DailyUsageService, useValue: { recent: async () => ({ from: "2026-11-01", to: "2026-11-30", firstRecordedAt: null, days: [] }) } },
         { provide: ConfigService, useValue: config },
         { provide: BudgetWalletRepository, useValue: repository },
         { provide: UsageOverviewService, useValue: { todayUsage: async () => ({ countedTurns: 7, signedInAccounts: 2, guestNetworks: 1 }) } },
@@ -77,7 +79,7 @@ describe('budget HTTP authorization', () => {
         `Bearer ${jwt.sign({ sub: 'admin-id', email: 'admin@example.invalid' })}`,
       )
       .expect(200)
-      .expect(({ body }) => { expect(body.todayUsage).toEqual({ countedTurns: 7, signedInAccounts: 2, guestNetworks: 1 }); });
+      .expect(({ body }) => { expect(body.todayUsage).toEqual({ countedTurns: 7, signedInAccounts: 2, guestNetworks: 1 }); expect(body.usageHistory.days).toEqual([]); });
   });
   it('validates input and safely handles a repeated topup', async () => {
     const token = jwt.sign({ sub: 'admin-id', email: 'admin@example.invalid' });

@@ -13,10 +13,12 @@ describe('ephemeral request lifecycle', () => {
   function setup(respond: jest.Mock) {
     const release = jest.fn();
     const acquireOwner = jest.fn().mockReturnValue(release);
+    const record = jest.fn().mockResolvedValue(undefined);
     const controller = new EphemeralController(
       { respond } as unknown as EphemeralService,
       { acquireOwner } as unknown as EphemeralBudgetService,
       { consume: jest.fn().mockResolvedValue(undefined) } as never,
+      undefined, { record } as never,
     );
     const response = Object.assign(new EventEmitter(), {
       setHeader: jest.fn(),
@@ -35,8 +37,17 @@ describe('ephemeral request lifecycle', () => {
       user: { userId: 'verified-owner' },
       ip: '127.0.0.1',
     } as Request & { user: { userId: string } };
-    return { controller, response, request, release, acquireOwner };
+    return { controller, response, request, release, acquireOwner, record };
   }
+  it('counts success only after the response completes and never passes counseling content to metrics', async () => {
+    const { controller, response, request, record } = setup(jest.fn().mockResolvedValue({ reply: '합성 답변' }));
+    await controller.respond(body, request, response as unknown as Response);
+    expect(record).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'ok', firstTurn: true, rejected: false, userId: 'verified-owner' }));
+    expect(JSON.stringify(record.mock.calls)).not.toContain(body.messages[0].content);
+    record.mockClear();
+    await controller.respond({ ...body, summary: '합성 요약' }, request, response as unknown as Response);
+    expect(record).toHaveBeenCalledWith(expect.objectContaining({ firstTurn: false }));
+  });
   it('uses trusted identity, marks no-store and releases on errors', async () => {
     const { controller, response, request, release, acquireOwner } = setup(
       jest.fn().mockRejectedValue(new Error('safe failure')),

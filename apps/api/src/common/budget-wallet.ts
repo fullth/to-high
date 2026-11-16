@@ -1,3 +1,5 @@
+import type { DailyModelUsage } from '../app/usage/daily-usage';
+
 /** Integer milli-won; a negative balance records an overrun and blocks new reservations. */
 export type BudgetWallet = {
   version: number;
@@ -6,6 +8,7 @@ export type BudgetWallet = {
   evaluatedWeek: string;
   credits?: Record<string, { amount: number; actor: string; at: string }>;
   alertCycle?: number;
+  dailyModelUsage?: Record<string, DailyModelUsage>;
   accounting?: {
     startedAt: string;
     carryoverMilliWon: number;
@@ -39,6 +42,12 @@ export function settleBudget(
   wallet: BudgetWallet,
   id: string,
   cost: number | null,
+  metering?: {
+    day: string;
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens: number;
+  },
 ): BudgetWallet {
   if (!Object.hasOwn(wallet.reservations, id))
     throw new Error('Unknown reservation');
@@ -47,19 +56,50 @@ export function settleBudget(
   const reserved = wallet.reservations[id];
   if (!Number.isSafeInteger(wallet.balance + reserved - cost))
     throw new Error('Invalid settlement balance');
-  if (wallet.accounting && !Number.isSafeInteger(wallet.accounting.settledMilliWon + cost))
+  if (
+    wallet.accounting &&
+    !Number.isSafeInteger(wallet.accounting.settledMilliWon + cost)
+  )
     throw new Error('Invalid settled total');
+  let dailyModelUsage = wallet.dailyModelUsage;
+  if (metering) {
+    const { day, inputTokens, outputTokens, cachedInputTokens } = metering;
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
+      ![inputTokens, outputTokens, cachedInputTokens].every(
+        (n) => Number.isSafeInteger(n) && n >= 0,
+      ) ||
+      cachedInputTokens > inputTokens
+    )
+      throw new Error('Invalid usage metering');
+    const before = dailyModelUsage?.[day];
+    const after: DailyModelUsage = {
+      settledMilliWon: (before?.settledMilliWon ?? 0) + cost,
+      reportedCalls: (before?.reportedCalls ?? 0) + 1,
+      inputTokens: (before?.inputTokens ?? 0) + inputTokens,
+      outputTokens: (before?.outputTokens ?? 0) + outputTokens,
+      cachedInputTokens: (before?.cachedInputTokens ?? 0) + cachedInputTokens,
+    };
+    if (!Object.values(after).every((n) => Number.isSafeInteger(n) && n >= 0))
+      throw new Error('Invalid daily usage total');
+    dailyModelUsage = { ...dailyModelUsage, [day]: after };
+  }
   const reservations = { ...wallet.reservations };
   delete reservations[id];
   return {
     ...wallet,
     version: wallet.version + 1,
     balance: wallet.balance + reserved - cost,
+    ...(dailyModelUsage ? { dailyModelUsage } : {}),
     reservations,
-    ...(wallet.accounting ? { accounting: {
-      ...wallet.accounting,
-      settledMilliWon: wallet.accounting.settledMilliWon + cost,
-    } } : {}),
+    ...(wallet.accounting
+      ? {
+          accounting: {
+            ...wallet.accounting,
+            settledMilliWon: wallet.accounting.settledMilliWon + cost,
+          },
+        }
+      : {}),
   };
 }
 
@@ -70,7 +110,10 @@ export function chargeBudget(
 ): BudgetWallet {
   if (!validAmount(amount) || !Number.isSafeInteger(wallet.balance + amount))
     throw new Error('Invalid charge');
-  if (wallet.accounting && !Number.isSafeInteger(wallet.accounting.approvedMilliWon + amount))
+  if (
+    wallet.accounting &&
+    !Number.isSafeInteger(wallet.accounting.approvedMilliWon + amount)
+  )
     throw new Error('Invalid approved total');
   if (audit) {
     if (
@@ -92,10 +135,14 @@ export function chargeBudget(
     ...wallet,
     version: wallet.version + 1,
     balance: wallet.balance + amount,
-    ...(wallet.accounting ? { accounting: {
-      ...wallet.accounting,
-      approvedMilliWon: wallet.accounting.approvedMilliWon + amount,
-    } } : {}),
+    ...(wallet.accounting
+      ? {
+          accounting: {
+            ...wallet.accounting,
+            approvedMilliWon: wallet.accounting.approvedMilliWon + amount,
+          },
+        }
+      : {}),
     alertCycle: (wallet.alertCycle ?? 0) + 1,
     ...(audit
       ? {

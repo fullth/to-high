@@ -1,3 +1,5 @@
+import { DailyUsageRepository } from '../src/persistence/usage/daily-usage.repository';
+import { requestCounters } from '../src/app/usage/daily-usage';
 import { randomUUID } from 'node:crypto';
 import mongoose, { Connection } from 'mongoose';
 import { BudgetWalletRepository } from '../src/common/budget-wallet.repository';
@@ -29,6 +31,23 @@ run('shared budget wallet in isolated MongoDB', () => {
         serverSelectionTimeoutMS: 5000,
       })
       .asPromise();
+  });
+  it('atomically deduplicates daily identities and preserves counters after identity cleanup', async () => {
+    const repository = new DailyUsageRepository(connection);
+    const day = '2026-11-16';
+    await Promise.all(Array.from({ length: 30 }, () => repository.record(day, requestCounters('ok', true, false), { kind: 'user', hash: 'a'.repeat(64) })));
+    await repository.record(day, requestCounters('TIMEOUT', false, false));
+    await repository.record(day, requestCounters('ok', false, false), { kind: 'ip', hash: 'b'.repeat(64) });
+    const rows = await repository.recent(day, day);
+    expect(rows[0]).toMatchObject({ requests: 32, successes: 31, starts: 30, signedInAccounts: 1, guestNetworks: 1, failures: 1, outcomes: { ok: 31, TIMEOUT: 1 } });
+    expect(rows[0]).not.toHaveProperty('identities');
+    const collection = connection.db!.collection('daily_usage_metrics');
+    expect((await collection.findOne({ _id: day as never }))?.identities).toBeDefined();
+    await repository.removeExpiredIdentities(new Date('2026-11-21T00:00:00Z'));
+    expect((await collection.findOne({ _id: day as never }))?.identities).toBeUndefined();
+    expect((await repository.recent(day, day))[0].requests).toBe(32);
+    await repository.record('2026-11-17', requestCounters('ok', false, false), { kind: 'user', hash: 'c'.repeat(64) });
+    expect((await repository.recent('2026-11-17', '2026-11-17'))[0].signedInAccounts).toBe(1);
   });
   it('keeps explicitly saved conversations isolated by account and supports deletion', async () => {
     const agent = { generateSavedSessionTitle: jest.fn().mockResolvedValue('일과 관계 고민') };
@@ -136,13 +155,14 @@ run('shared budget wallet in isolated MongoDB', () => {
     await Promise.all(
       Array.from({ length: 10 }, (_, i) =>
         repositories[i % 2].transition((wallet) =>
-          settleBudget(wallet, `call-${i}`, 500_000),
+          settleBudget(wallet, `call-${i}`, 500_000, { day: '2026-11-16', inputTokens: 100, outputTokens: 20, cachedInputTokens: 50 }),
         ),
       ),
     );
     const final = await repositories[0].read();
     expect(final.balance).toBe(5_000_000);
     expect(final.reservations).toEqual({});
+    expect(final.dailyModelUsage?.['2026-11-16']).toEqual({ settledMilliWon: 5_000_000, reportedCalls: 10, inputTokens: 1000, outputTokens: 200, cachedInputTokens: 500 });
   });
   it('sends a low-balance alert once across two workers and retains failed alerts for retry', async () => {
     const repository = new BudgetWalletRepository(connection);
@@ -173,21 +193,22 @@ run('shared budget wallet in isolated MongoDB', () => {
       expect(sendMail).toHaveBeenCalledTimes(1);
       expect(sendMail.mock.calls[0][0].to).toBe('admin@example.invalid');
       sendMail.mockRejectedValueOnce(new Error('mock error'));
-      await workers[0].blocked(0);
+      const cycle = (await repository.read()).alertCycle ?? 0;
+      await workers[0].blocked(cycle);
       await workers[0].tick();
       const pending = await connection
         .db!.collection('ai_budget_alert_outbox')
-        .findOne({ _id: 'blocked-0' } as never);
+        .findOne({ _id: `blocked-${cycle}` } as never);
       expect(pending?.state).toBe('pending');
       await connection
         .db!.collection('ai_budget_alert_outbox')
-        .updateOne({ _id: 'blocked-0' } as never, {
+        .updateOne({ _id: `blocked-${cycle}` } as never, {
           $set: { leaseUntil: new Date(0) },
         });
       await workers[1].tick();
       const retried = await connection
         .db!.collection('ai_budget_alert_outbox')
-        .findOne({ _id: 'blocked-0' } as never);
+        .findOne({ _id: `blocked-${cycle}` } as never);
       expect(retried?.state).toBe('sent');
       expect(sendMail).toHaveBeenCalledTimes(3);
       await Promise.all(

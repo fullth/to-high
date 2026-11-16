@@ -1,0 +1,60 @@
+/* shadcn/ui semantic tokens. Scoped to admin so approved public screens keep their theme. */
+.admin-theme {
+  --radius: 0.5rem;
+  --background: #ffffff;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --primary: #217653;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #52525b;
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #b42318;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #217653;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #18181b;
+  --sidebar-primary: #217653;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9f2ed;
+  --sidebar-accent-foreground: #155c3e;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #217653;
+  --ui-accent: var(--primary);
+  --ui-chart-request: #7d9487;
+  font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+  background: var(--sidebar);
+}
+.admin-theme [id] {
+  scroll-margin-top: 24px;
+}
+.admin-theme [data-slot="card"] {
+  min-width: 0;
+}
+.admin-theme :is(button, a, summary):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+@media (max-width: 767px) {
+  .admin-theme [data-slot="button"],
+  .admin-theme [data-slot="toggle-group-item"] {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-theme *,
+  .admin-theme *::before,
+  .admin-theme *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
