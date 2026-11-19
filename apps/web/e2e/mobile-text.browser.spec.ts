@@ -187,9 +187,7 @@ test("long chat replies, options and enlarged text stay inside a narrow screen",
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/talk");
   await ready(page);
-  await page
-    .getByRole("button", { name: "일 때문에 힘들어요", exact: true })
-    .click();
+  await page.locator(".ch-options button").first().click();
   await expect(page.locator(".ch-bubble.ai").last()).toContainText(
     "합성 검증 문장",
   );

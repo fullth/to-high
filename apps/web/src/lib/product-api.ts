@@ -348,3 +348,10 @@ export const deleteCharacter = (id: string, token: string) =>
       method: "DELETE",
     },
   );
+
+
+export async function generateStartOptions(context: "general" | "ticketing", previous: string[], token: string | null, signal: AbortSignal): Promise<string[]> {
+  const result: unknown = await request<unknown>("/ephemeral/start-options",token,{method:"POST",signal,body:JSON.stringify({context,previous})});
+  if (!result || typeof result !== "object" || !("options" in result) || !Array.isArray(result.options) || result.options.length !== 4 || !result.options.every((option:unknown) => typeof option === "string" && option.trim().length >= 2 && option.length <= 24 && !/[\r\n<>?？]/u.test(option)) || new Set(result.options).size !== 4) throw new Error("Invalid start options");
+  return result.options as string[];
+}

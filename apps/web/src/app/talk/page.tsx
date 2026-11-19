@@ -1,5 +1,8 @@
 "use client";
 
+import { useStartOptions } from "@/hooks/use-start-options";
+import { useEntryContext } from "@/hooks/use-entry-context";
+import { DEFAULT_ENTRY, TICKETING_ENTRY, OTHER_TOPIC } from "@/lib/entry-context";
 import { ChatMessageContent } from "@/components/chat/chat-message-content";
 import { TurnLimitDialog } from "@/components/talk/turn-limit-dialog";
 import { ConfirmSavedAction, EndConversationDialog } from "@/components/talk/end-conversation-dialog";
@@ -42,13 +45,6 @@ const styles: Array<[CounselorType, string]> = [
   ["reaction", "짧은 반응"],
   ["listening", "경청"],
 ];
-const initialOptions = [
-  "일 때문에 힘들어요",
-  "관계가 어려워요",
-  "마음이 불안해요",
-  "말로 표현하기 어려워요",
-  "정리해주세요",
-];
 const pendingSaveKey = "pendingExplicitConversationSave";
 function recentContext(messages: TalkMessage[]): TalkMessage[] {
   const recent = messages.slice(-18);
@@ -59,6 +55,10 @@ function recentContext(messages: TalkMessage[]): TalkMessage[] {
 function TalkContent() {
   const { token, isLoading: authLoading, login, logout } = useAuth();
   const params = useSearchParams();
+  const entryContext = useEntryContext();
+  const [entryDismissed, setEntryDismissed] = useState(false);
+  const activeEntry = entryDismissed ? undefined : entryContext;
+  const entry = activeEntry === "ticketing" ? TICKETING_ENTRY : DEFAULT_ENTRY;
   const characterId = CHARACTER_MEMORY_AVAILABLE
     ? params.get("characterId") || undefined
     : undefined;
@@ -72,7 +72,7 @@ function TalkContent() {
   const identityRevision = useRef(0);
   const [identityRetry, setIdentityRetry] = useState(0);
   const [messages, setMessages] = useState<TalkMessage[]>([]);
-  const [options, setOptions] = useState<string[]>(initialOptions);
+  const [options, setOptions] = useState<string[] | null>(null);
   const [input, setInput] = useState("");
   const [inputOpen, setInputOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -115,6 +115,7 @@ function TalkContent() {
     const pane = messagesPane.current;
     if (pane) pane.scrollTop = pane.scrollHeight;
   }, [messages, busy, error, ended]);
+  const { options: startOptions, restart: restartOptions, loading: startLoading, fallback: startFallback } = useStartOptions(activeEntry, token, !authLoading && !ended && messages.length === 0 && !busy);
   const history = useRef<TalkMessage[]>([]);
   const summary = useRef("");
   const transcript = useRef<TalkMessage[]>([]);
@@ -522,7 +523,8 @@ function TalkContent() {
                 className="ch-primary"
                 onClick={() => {
                   setEnded(false);
-                  setOptions(initialOptions);
+                  restartOptions();
+                  setOptions(null);
                 }}
               >
                 새 상담 시작
@@ -541,8 +543,7 @@ function TalkContent() {
                 {!messages.length && !busy && (
                   <div className="ch-row">
                     <div className="ch-bubble ai">
-                      어디서부터 말해야 할지 몰라도 괜찮아요. 선택지만 눌러도
-                      괜찮아요.
+                      {entry.greeting}
                     </div>
                   </div>
                 )}
@@ -598,7 +599,8 @@ function TalkContent() {
                         if (errorCode === "AUTH_REQUIRED") logout();
                         clear();
                         setEnded(false);
-                        setOptions(initialOptions);
+                        restartOptions();
+                        setOptions(null);
                       }}
                     >
                       {errorCode === "AUTH_REQUIRED"
@@ -628,8 +630,14 @@ function TalkContent() {
               <p className="ch-choice-guide">
                 지금 마음과 가까운 답을 골라주세요
               </p>
+              {!messages.length && options === null && startLoading && (
+                <p role="status" className="ch-choice-guide">이야기를 시작할 선택지를 준비하고 있어요.</p>
+              )}
+              {!messages.length && options === null && startFallback && (
+                <p role="status" className="ch-choice-guide">기본 선택지로도 편하게 시작할 수 있어요.</p>
+              )}
               <div aria-label="답변 선택지" className="ch-options">
-                {options.map((option) => (
+                {(options ?? (startLoading ? [] : startOptions)).map((option) => (
                   <button
                     key={option}
                     className="ch-option"
@@ -639,7 +647,13 @@ function TalkContent() {
                       !characterReady ||
                       (!!characterId && !token)
                     }
-                    onClick={() => void sendText(option)}
+                    onClick={() => {
+                      if (!messages.length && options === null && option === OTHER_TOPIC) {
+                        setEntryDismissed(true);
+                        return;
+                      }
+                      void sendText(option);
+                    }}
                   >
                     {option}
                   </button>

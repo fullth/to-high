@@ -1,3 +1,5 @@
+import type { StartOptionsContext } from '../../types/start-options';
+import { parseStartOptionsOutput } from './start-options-output';
 import {
   Injectable,
   Optional,
@@ -26,6 +28,7 @@ import {
   GENERATE_OPTIONS_SYSTEM_PROMPT,
   GENERATE_RESPONSE_SYSTEM_PROMPT,
   REPLY_OPTIONS_SYSTEM_PROMPT,
+  START_OPTIONS_SYSTEM_PROMPT,
   EMPATHY_COMMENT_PROMPT,
   CONTEXT_SUMMARY_PROMPT,
   SESSION_SUMMARY_PROMPT,
@@ -539,6 +542,38 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
       { signal },
     );
     return response.choices[0].message.content || '';
+  }
+
+  async generateStartOptions(
+    context: StartOptionsContext,
+    previous: string[],
+    signal: AbortSignal,
+  ): Promise<string[]> {
+    const response = await this.completion(
+      'options',
+      {
+        store: false,
+        model: PROMPT_CONFIG.MODELS.UTILITY,
+        reasoning_effort: PROMPT_CONFIG.REASONING_EFFORT.UTILITY,
+        messages: [
+          { role: 'system', content: START_OPTIONS_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: wrapUntrustedPromptData(
+              'start_options_context',
+              JSON.stringify({ context, previous }),
+            ),
+          },
+        ],
+        response_format: { type: 'json_object' },
+        max_completion_tokens: PROMPT_CONFIG.MAX_OUTPUT_TOKENS.REPLY_OPTIONS,
+      },
+      { signal },
+    );
+    return parseStartOptionsOutput(
+      response.choices[0]?.message.content || '{}',
+      previous,
+    );
   }
 
   /** Suggest user replies to the finished answer without writing another answer. */

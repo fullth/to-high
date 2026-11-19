@@ -1,3 +1,4 @@
+import { StartOptionsController } from './ephemeral/start-options.controller';
 import { PersistenceModule } from '../persistence/persistence.module';
 import { EphemeralModule } from '../app/ephemeral/ephemeral.module';
 import { CharacterModule } from '../app/character/character.module';
@@ -38,6 +39,7 @@ const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
     ...(paymentServiceEnabled ? [PaymentModule] : []),
   ],
   controllers: [
+    StartOptionsController,
     AuthController,
     EphemeralController,
     CharacterController,

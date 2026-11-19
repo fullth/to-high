@@ -2,7 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: ["mobile-text.browser.spec.ts", "budget.browser.spec.ts"],
+  testMatch: [
+    "mobile-text.browser.spec.ts",
+    "budget.browser.spec.ts",
+    "entry-context.browser.spec.ts",
+  ],
   workers: 1,
   reporter: "list",
   use: { baseURL: "http://127.0.0.1:3103" },

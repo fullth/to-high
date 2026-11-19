@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { FullPageLink } from "@/components/full-page-link";
+import { useEntryContext } from "@/hooks/use-entry-context";
+import { talkEntryHref } from "@/lib/entry-context";
 import { trackTalkStart } from "@/components/home-analytics";
 import { useAuth } from "@/contexts/auth-context";
 import "./landing.css";
@@ -51,6 +53,8 @@ const ArrowIcon = ({
 
 export function WirocareLanding() {
   const { token, login } = useAuth();
+  const entryContext = useEntryContext();
+  const talkHref = talkEntryHref(entryContext);
   const [leviReady, setLeviReady] = useState(false);
   return (
     <div className="wirocare-landing">
@@ -70,7 +74,7 @@ export function WirocareLanding() {
                 로그인
               </button>
             )}
-            <FullPageLink className="btn btn-soft btn-sm" href="/talk" onClick={trackTalkStart}>
+            <FullPageLink className="btn btn-soft btn-sm" href={talkHref} onClick={trackTalkStart}>
               대화 시작 <ArrowIcon size={12} />
             </FullPageLink>
           </nav>
@@ -119,7 +123,7 @@ export function WirocareLanding() {
                   <span className="hero-ai-note">레비는 AI 에이전트이며, 의료인이 아닙니다. 의료 상담이 필요한 경우 의료 전문가와 상담해 주세요.</span>
                 </p>
                 <div className="hero-cta">
-                  <FullPageLink className="btn btn-primary btn-chat" href="/talk" onClick={trackTalkStart}>
+                  <FullPageLink className="btn btn-primary btn-chat" href={talkHref} onClick={trackTalkStart}>
                     <MessageCircle size={20} aria-hidden="true" />
                     <span>레비와 대화 시작하기</span> <ArrowIcon size={18} />
                   </FullPageLink>
@@ -211,7 +215,7 @@ export function WirocareLanding() {
                 지금 어떤 마음인지 들려주실래요?
               </p>
             </div>
-            <FullPageLink className="btn btn-primary btn-chat" href="/talk" onClick={trackTalkStart}>
+            <FullPageLink className="btn btn-primary btn-chat" href={talkHref} onClick={trackTalkStart}>
               <MessageCircle size={20} aria-hidden="true" />
               <span>레비와 대화 시작하기</span> <ArrowIcon size={18} />
             </FullPageLink>
