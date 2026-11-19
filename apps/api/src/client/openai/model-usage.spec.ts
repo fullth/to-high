@@ -49,6 +49,15 @@ describe('model usage accounting', () => {
     );
   });
 
+  it('reserves and settles a billed initial options generation with server context', async () => {
+    const options=['놓친 티켓이 계속 생각나요','잠깐 쉬어가고 싶어요','다음 티켓팅이 걱정돼요','좋아하는 공연 얘기를 하고 싶어요'];
+    create.mockResolvedValue({usage,choices:[{message:{content:JSON.stringify({options})}}]});
+    await expect(agent.generateStartOptions({topic:'티켓팅',greeting:'속상하셨나요?'},[],new AbortController().signal)).resolves.toEqual(options);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(create.mock.calls[0][0]).toMatchObject({model:'gpt-6-luna',store:false});
+    expect(modelBudgetMock.reserve).toHaveBeenCalledTimes(1);
+    expect(modelBudgetMock.settle).toHaveBeenCalledWith({id:'test'},usage);
+  });
   it('requests stream usage and records an incomplete stream as cancelled', async () => {
     create.mockResolvedValue(
       (async function* () {

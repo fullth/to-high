@@ -26,6 +26,27 @@ describe('body-free ephemeral budget', () => {
     budget.acquireOwner(undefined, '127.0.0.1')();
     expect(() => budget.acquireOwner(undefined, '127.0.0.2')).toThrow();
   });
+  it('allows one preview alongside chat but bounds preview quota independently', () => {
+    process.env.TO_HIGH_LLM_DAILY_REQUEST_LIMIT = '20';
+    const budget = new EphemeralBudgetService();
+    const chat = budget.acquireOwner(undefined, '127.0.0.1');
+    const preview = budget.acquireOwner(
+      undefined,
+      '127.0.0.1',
+      'start-options',
+    );
+    expect(() =>
+      budget.acquireOwner(undefined, '127.0.0.1', 'start-options'),
+    ).toThrow();
+    preview();
+    for (let count = 1; count < 5; count++)
+      budget.acquireOwner(undefined, '127.0.0.1', 'start-options')();
+    expect(() =>
+      budget.acquireOwner(undefined, '127.0.0.1', 'start-options'),
+    ).toThrow();
+    chat();
+    expect(() => budget.acquireOwner(undefined, '127.0.0.1')).not.toThrow();
+  });
   it('fails closed in production without a reviewed limit', () => {
     process.env.NODE_ENV = 'production';
     delete process.env.TO_HIGH_LLM_DAILY_REQUEST_LIMIT;

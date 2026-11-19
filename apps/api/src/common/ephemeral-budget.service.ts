@@ -12,8 +12,13 @@ export class EphemeralBudgetService {
   private readonly active = new Set<string>();
   private day = '';
   private requests = 0;
+  private readonly starts = new Map<string, number>();
 
-  acquireOwner(userId: string | undefined, address: string): () => void {
+  acquireOwner(
+    userId: string | undefined,
+    address: string,
+    scope: 'chat' | 'start-options' = 'chat',
+  ): () => void {
     const configured = process.env.TO_HIGH_LLM_DAILY_REQUEST_LIMIT;
     const limit =
       configured === undefined
@@ -28,7 +33,7 @@ export class EphemeralBudgetService {
     }
     const key = createHash('sha256')
       .update(
-        userId && userId !== 'anonymous' ? `user:${userId}` : `ip:${address}`,
+        `${scope}:${userId && userId !== 'anonymous' ? `user:${userId}` : `ip:${address}`}`,
       )
       .digest('hex');
     if (this.active.has(key)) {
@@ -38,9 +43,16 @@ export class EphemeralBudgetService {
     if (today !== this.day) {
       this.day = today;
       this.requests = 0;
+      this.starts.clear();
     }
     if (this.requests >= limit) {
       throw new ChatFailure('RATE_LIMITED', HttpStatus.TOO_MANY_REQUESTS);
+    }
+    if (scope === 'start-options') {
+      const limit = userId && userId !== 'anonymous' ? 10 : 5;
+      if ((this.starts.get(key) ?? 0) >= limit)
+        throw new ChatFailure('RATE_LIMITED', HttpStatus.TOO_MANY_REQUESTS);
+      this.starts.set(key, (this.starts.get(key) ?? 0) + 1);
     }
     // Reserve before provider calls; failed/aborted requests still consume quota.
     this.requests += 1;

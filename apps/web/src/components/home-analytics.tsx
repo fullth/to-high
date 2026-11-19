@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { MouseEvent } from "react";
+import { resolveEntryContext, talkEntryHref } from "@/lib/entry-context";
 
 const MEASUREMENT_ID = "G-KWL1FM3MFW";
 const AD_CAMPAIGN = {
@@ -18,7 +19,8 @@ function measuredHomeLocation(): string | null {
   const params = new URLSearchParams(search);
   const campaign = params.get("utm_campaign");
   if (
-    [...params].length !== 3 ||
+    [...params].length !== (params.has("entry") ? 4 : 3) ||
+    (params.has("entry") && (params.getAll("entry").length !== 1 || params.get("entry") !== "ticketing")) ||
     params.get("utm_source") !== AD_CAMPAIGN.utm_source ||
     params.get("utm_medium") !== AD_CAMPAIGN.utm_medium ||
     !campaign
@@ -31,6 +33,8 @@ function measuredHomeLocation(): string | null {
 }
 
 export function trackTalkStart(event: MouseEvent<HTMLAnchorElement>) {
+  const href = talkEntryHref(resolveEntryContext(new URLSearchParams(window.location.search), document.referrer));
+  event.currentTarget.href = href;
   const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
   if (!gtag) return;
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -44,7 +48,7 @@ export function trackTalkStart(event: MouseEvent<HTMLAnchorElement>) {
     if (navigated) return;
     navigated = true;
     // Counseling uses a fresh document so home-only third-party scripts do not remain active.
-    window.location.assign(new URL("/talk", window.location.origin).toString());
+    window.location.assign(new URL(href, window.location.origin).toString());
   };
   window.setTimeout(navigate, 800);
   gtag("event", "talk_start_click", {
