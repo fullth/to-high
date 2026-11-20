@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TicketingScenarioSchema } from './ticketing-scenario.request';
 
 export const EphemeralRequestSchema = z
   .object({
@@ -26,6 +27,7 @@ export const EphemeralRequestSchema = z
       .default('conversation'),
     style: z.enum(['T', 'F', 'reaction', 'listening']).default('F'),
     summary: z.string().trim().max(2000).optional(),
+    scenario: TicketingScenarioSchema.optional(),
     characterId: z
       .string()
       .regex(/^[a-f\d]{24}$/i)
@@ -33,6 +35,16 @@ export const EphemeralRequestSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (
+      value.scenario &&
+      (value.characterId || value.mode !== 'conversation')
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scenario'],
+        message: '시나리오와 상담 캐릭터/모드를 함께 사용할 수 없습니다.',
+      });
+    }
     const last = value.messages.at(-1)!;
     if (last.role !== 'user' || last.content.length > 500) {
       ctx.addIssue({

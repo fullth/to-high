@@ -22,7 +22,7 @@ test("explicitly saves, lists, reopens and deletes a conversation", async ({ pag
   });
   await page.setViewportSize({ width: 1280, height: 844 });
   await page.goto("/talk");
-  await page.getByRole("button", { name: "일 때문에 힘들어요" }).click();
+  await page.locator(".ch-options button").first().click();
   await expect(page.getByText("조금 더 이야기해 주세요.")).toBeVisible();
   expect(saves).toBe(0);
   await page.getByRole("button", { name: "상담 종료", exact: true }).click();
@@ -45,7 +45,7 @@ test("guest can erase a conversation without saving it", async ({ page }) => {
     return route.fulfill({ headers, json: { reply: "잘 들었어요.", options: ["더 이야기할게요"] } });
   });
   await page.goto("/talk");
-  await page.getByRole("button", { name: "일 때문에 힘들어요" }).click();
+  await page.locator(".ch-options button").first().click();
   await expect(page.getByText("잘 들었어요.")).toBeVisible();
   await page.getByRole("button", { name: "상담 종료", exact: true }).click();
   await page.getByRole("button", { name: "대화 내용 지우기" }).click();
@@ -59,14 +59,17 @@ test("guest can confirm saving after returning from login", async ({ page }) => 
     const headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization,content-type,x-browser-id", "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS" };
     if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers });
     const url = new URL(route.request().url());
-    if (url.pathname === "/auth/google") return route.fulfill({ status: 302, headers: { Location: `http://127.0.0.1:3101/auth/callback#token=synthetic-token&state=${url.searchParams.get("state")}` } });
+    if (url.pathname === "/auth/google") {
+      const callback = `${new URL(page.url()).origin}/auth/callback#token=synthetic-token&state=${url.searchParams.get("state")}`;
+      return route.fulfill({ contentType: "text/html", body: `<!doctype html><script>location.replace(${JSON.stringify(callback)})</script>` });
+    }
     if (url.pathname === "/auth/me") return route.fulfill({ headers, json: { userId: "synthetic-user", email: "test@example.invalid" } });
     if (url.pathname === "/saved-sessions" && route.request().method() === "GET") return route.fulfill({ headers, json: { sessions: [] } });
     if (url.pathname === "/saved-sessions" && route.request().method() === "POST") { saves++; return route.fulfill({ headers, json: { id: route.request().postDataJSON().id, title: "상담 제목" } }); }
     return route.fulfill({ headers, json: { reply: "잘 들었어요.", options: ["더 이야기할게요"] } });
   });
   await page.goto("/talk");
-  await page.getByRole("button", { name: "일 때문에 힘들어요" }).click();
+  await page.locator(".ch-options button").first().click();
   await expect(page.getByText("잘 들었어요.")).toBeVisible();
   await page.getByRole("button", { name: "상담 종료", exact: true }).click();
   await page.getByRole("button", { name: "저장하기", exact: true }).click();

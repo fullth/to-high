@@ -234,7 +234,7 @@ test("home and privacy use separate documents in both directions", async ({
   const privacyDocument = await documentId(page);
   expect(privacyDocument).not.toBe(homeDocument);
   await expectNoWidgets(page);
-  await page.getByRole("link", { name: "위로", exact: true }).click();
+  await page.getByRole("link", { name: "위로 TO HIGH", exact: true }).click();
   await expect(page.getByRole("button", { name: "문의하기" })).toBeVisible();
   expect(await documentId(page)).not.toBe(privacyDocument);
   await page.goBack();

@@ -1,3 +1,4 @@
+import { ticketingScenarioPrompt } from '../../prompts/ticketing-scenario';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { OpenAIAgent } from '../../client/openai/openai.agent';
 import { wrapUntrustedPromptData } from '../../prompts';
@@ -43,7 +44,17 @@ export class EphemeralService {
         (message) =>
           `${message.role === 'user' ? '나' : '상담사'}: ${message.content}`,
       );
-    if (input.characterId) {
+    if (input.scenario) {
+      context.unshift(
+        wrapUntrustedPromptData(
+          'character_identity',
+          JSON.stringify({
+            displayName: input.scenario.name,
+            identity: 'AI가 연기하는 가상의 뮤지션',
+          }),
+        ),
+      );
+    } else if (input.characterId) {
       if (!userId || userId === 'anonymous') throw new UnauthorizedException();
       const character = await this.characters.getContext(
         userId,
@@ -138,6 +149,7 @@ export class EphemeralService {
           last.content,
           style,
           controller.signal,
+          ...(input.scenario ? [ticketingScenarioPrompt(input.scenario)] : []),
         )) {
           if (controller.signal.aborted) throw new Error('cancelled');
           const bounded = chunk.slice(0, 2000 - reply.length);
@@ -152,6 +164,7 @@ export class EphemeralService {
           last.content,
           style,
           controller.signal,
+          ...(input.scenario ? [ticketingScenarioPrompt(input.scenario)] : []),
         );
       }
       if (controller.signal.aborted) throw new Error('cancelled');
@@ -174,6 +187,7 @@ export class EphemeralService {
           [...context, `나: ${last.content}`, `상담사: ${finalReply}`],
           input.mode,
           controller.signal,
+          ...(input.scenario ? [true] : []),
         );
         if (!controller.signal.aborted) {
           options = generated;

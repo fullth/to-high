@@ -1,5 +1,8 @@
 "use client";
 
+import { ProfessionalHelpNotice } from "@/components/professional-help-notice";
+
+import { TicketingScenarioExperience } from "@/components/talk/ticketing-scenario";
 import { useStartOptions } from "@/hooks/use-start-options";
 import { useEntryContext } from "@/hooks/use-entry-context";
 import { DEFAULT_ENTRY, TICKETING_ENTRY, OTHER_TOPIC } from "@/lib/entry-context";
@@ -10,7 +13,7 @@ import { SavedSessionList } from "@/components/talk/saved-session-list";
 import Image from "next/image";
 import { FullPageLink } from "@/components/full-page-link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import {
   respondEphemeral,
@@ -731,6 +734,10 @@ function TalkContent() {
           <p className="ch-talk-disclaimer">
             이름, 연락처, 주소나 건강 정보처럼 민감한 내용은 입력하지 않아도 돼요.
           </p>
+          <details className="ch-privacy-details ch-help-details">
+            <summary>24시간 전문가 상담 안내</summary>
+            <ProfessionalHelpNotice />
+          </details>
           <details className="ch-privacy-details">
             <summary>대화 저장과 이용 안내</summary>
             <p>
@@ -749,10 +756,26 @@ function TalkContent() {
   );
 }
 
+const subscribeEntry = () => () => {};
+const clientReady = () => true;
+const serverPending = () => false;
+function TalkEntry() {
+  const ready = useSyncExternalStore(subscribeEntry, clientReady, serverPending);
+  const entry = useEntryContext();
+  const params = useSearchParams();
+  const scenarios = params.getAll("scenario");
+  const scenarioSelected = scenarios.length === 1 && scenarios[0] === "ticketing";
+  const [counseling, setCounseling] = useState(false);
+  if (!ready) return <p>불러오는 중...</p>;
+  if ((entry === "ticketing" || scenarioSelected) && !counseling)
+    return <TicketingScenarioExperience source={entry === "ticketing" ? "practicket" : "lobby"} onCounseling={() => setCounseling(true)} />;
+  return <TalkContent />;
+}
+
 export default function TalkPage() {
   return (
     <Suspense fallback={<p>불러오는 중...</p>}>
-      <TalkContent />
+      <TalkEntry />
     </Suspense>
   );
 }

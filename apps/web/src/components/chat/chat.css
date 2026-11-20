@@ -1,5 +1,5 @@
 /* 위로 (To High) chat — light sage theme (랜딩 single-open-light와 동일 팔레트) */
-.ch-frame, .ch-shell {
+.ch-frame, .ch-shell, .ch-theme {
   --page: #f5fbf7;
   --page-2: #eaf4ed;
   --soft: #eef3ec;

@@ -1,0 +1,11 @@
+.notice {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.notice a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

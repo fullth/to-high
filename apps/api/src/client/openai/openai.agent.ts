@@ -1,3 +1,4 @@
+import { TICKETING_REPLY_OPTIONS_SYSTEM_PROMPT } from '../../prompts/ticketing-scenario';
 import type { StartOptionsContext } from '../../types/start-options';
 import { parseStartOptionsOutput } from './start-options-output';
 import {
@@ -501,6 +502,7 @@ ${wrapUntrustedPromptData('generated_question', question)}
     userMessage?: string,
     counselorType?: CounselorType,
     signal?: AbortSignal,
+    scenarioPrompt?: string,
   ): Promise<string> {
     if (!this.hasApiKey) {
       return RESPONSE_MODE_FALLBACKS[mode];
@@ -514,7 +516,9 @@ ${
     : ''
 }`;
 
-    const systemPrompt = `${GENERATE_RESPONSE_SYSTEM_PROMPT}
+    const systemPrompt =
+      scenarioPrompt ??
+      `${GENERATE_RESPONSE_SYSTEM_PROMPT}
 
 ${stylePrompt}`;
 
@@ -581,6 +585,7 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
     context: string[],
     mode: ResponseMode,
     signal?: AbortSignal,
+    scenario = false,
   ): Promise<string[]> {
     if (!this.hasApiKey) {
       return ['직접 이야기할게요', '다른 이야기예요', '정리해주세요'];
@@ -594,7 +599,9 @@ ${userMessage ? wrapUntrustedPromptData('user_message', userMessage) : '첫 응�
         messages: [
           {
             role: 'system',
-            content: `${REPLY_OPTIONS_SYSTEM_PROMPT}\n\n${RESPONSE_MODE_PROMPTS[mode]}\n\n${RESPONSE_MODE_OPTIONS_BOUNDARY_PROMPT}`,
+            content: scenario
+              ? TICKETING_REPLY_OPTIONS_SYSTEM_PROMPT
+              : `${REPLY_OPTIONS_SYSTEM_PROMPT}\n\n${RESPONSE_MODE_PROMPTS[mode]}\n\n${RESPONSE_MODE_OPTIONS_BOUNDARY_PROMPT}`,
           },
           {
             role: 'user',
@@ -859,6 +866,7 @@ ${wrapUntrustedPromptData('selected_option', selectedOption)}
     userMessage?: string,
     counselorType?: CounselorType,
     signal?: AbortSignal,
+    scenarioPrompt?: string,
   ): AsyncGenerator<string, void, unknown> {
     if (!this.hasApiKey) {
       const fallback = RESPONSE_MODE_FALLBACKS[mode];
@@ -874,7 +882,9 @@ ${
     : ''
 }`;
 
-    const systemPrompt = `${GENERATE_RESPONSE_SYSTEM_PROMPT}
+    const systemPrompt =
+      scenarioPrompt ??
+      `${GENERATE_RESPONSE_SYSTEM_PROMPT}
 
 ${stylePrompt}`;
 

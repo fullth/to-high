@@ -126,6 +126,7 @@ describe('initial options HTTP contract', () => {
       'ticketing',
       [],
       expect.any(AbortSignal),
+      undefined,
     );
   });
   it('rejects arbitrary advertisement and URL input before model dispatch', async () => {
