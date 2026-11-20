@@ -49,6 +49,7 @@ export class StartOptionsController {
         body.context,
         body.previous,
         controller.signal,
+        body.scenario,
       );
       if (!controller.signal.aborted) response.json(result);
     } finally {

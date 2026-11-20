@@ -1,5 +1,7 @@
 "use client";
 
+import { SCENARIO_FALLBACK_OPTIONS, type TicketingScenario } from "@/lib/ticketing-scenario";
+
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { EntryContext } from "@/lib/entry-context";
 import { generateStartOptions } from "@/lib/product-api";
@@ -19,6 +21,7 @@ export function useStartOptions(
   context: EntryContext | undefined,
   token: string | null,
   active: boolean,
+  scenario?: TicketingScenario,
 ) {
   const seed = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
   const [generation, setGeneration] = useState<{
@@ -27,14 +30,14 @@ export function useStartOptions(
   }>({ round: 0, previous: [] });
   const fallback = useMemo(
     () =>
-      createStartOptions({
+      scenario ? SCENARIO_FALLBACK_OPTIONS : createStartOptions({
         context,
         seed: seed + generation.round,
         previous: generation.previous,
       }),
-    [context, seed, generation],
+    [context, seed, generation, scenario],
   );
-  const key = `${context ?? "general"}:${generation.round}`;
+  const key = `${context ?? "general"}:${generation.round}:${scenario?.gender ?? ""}:${scenario?.name ?? ""}`;
   const [result, setResult] = useState<{
     key: string;
     options: string[];
@@ -54,6 +57,7 @@ export function useStartOptions(
         generation.previous,
         token,
         controller.signal,
+        scenario,
       )
         .then((options) => {
           if (options.includes(OTHER_TOPIC))
@@ -62,7 +66,7 @@ export function useStartOptions(
             setResult({
               key,
               options:
-                context === "ticketing" ? [...options, OTHER_TOPIC] : options,
+                context === "ticketing" && !scenario ? [...options, OTHER_TOPIC] : options,
               status: "ready",
             });
         })
@@ -79,7 +83,7 @@ export function useStartOptions(
       if (deadline) clearTimeout(deadline);
       controller.abort();
     };
-  }, [context, key, generation.previous, token, active]);
+  }, [context, key, generation.previous, token, active, scenario]);
   const status = result?.key === key ? result.status : "loading";
   const options =
     result?.key === key && result.status === "ready"

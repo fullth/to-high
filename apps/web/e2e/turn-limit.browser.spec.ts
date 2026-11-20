@@ -15,7 +15,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 
       return route.fulfill({ status: 404, headers });
     });
     await page.goto("/talk");
-    await page.getByRole("button", { name: "일 때문에 힘들어요", exact: true }).click();
+    await page.locator(".ch-options button").first().click();
     const dialog = page.getByRole("dialog", { name: "무료 대화 한도에 도달했어요" });
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("로그인하면 새 대화를 시작할 수 있어요");

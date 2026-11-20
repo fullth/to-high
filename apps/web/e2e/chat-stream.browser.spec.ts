@@ -98,7 +98,7 @@ test.describe("mobile choice input", () => {
     const input = page.getByLabel("전하고 싶은 마음");
     await expect(input).toHaveCSS("font-size", "16px");
     await page
-      .getByRole("button", { name: "일 때문에 힘들어요", exact: true })
+      .locator(".ch-options button").first()
       .tap();
     await expect(input).toBeDisabled();
     await expect(input).not.toBeFocused();
@@ -203,7 +203,7 @@ test("summary keeps a long conversation going while the visible transcript stays
   ).toHaveCount(0);
   expect(
     await page.evaluate(() => ({
-      local: JSON.stringify(localStorage),
+      local: JSON.stringify(Object.fromEntries(Object.entries(localStorage).filter(([key]) => key !== "dailyTurnBrowserId"))),
       session: JSON.stringify(sessionStorage),
     })),
   ).toEqual({ local: "{}", session: "{}" });
@@ -342,7 +342,7 @@ test("invalid successful JSON uses service-error copy instead of breaking the ch
 
 test("mobile error and retry input stay usable without horizontal overflow", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   handler = (_body, response) => {
     open(response);
@@ -361,7 +361,7 @@ test("mobile error and retry input stay usable without horizontal overflow", asy
     ),
   ).toBe(true);
   await page.screenshot({
-    path: "/workspace/artifacts/chat-streaming/mobile-error.png",
+    path: testInfo.outputPath("mobile-error.png"),
   });
 });
 

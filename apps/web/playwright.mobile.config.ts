@@ -6,6 +6,7 @@ export default defineConfig({
     "mobile-text.browser.spec.ts",
     "budget.browser.spec.ts",
     "entry-context.browser.spec.ts",
+    "ticketing-scenario.browser.spec.ts",
   ],
   workers: 1,
   reporter: "list",

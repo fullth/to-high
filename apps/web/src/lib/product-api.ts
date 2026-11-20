@@ -1,3 +1,4 @@
+import type { TicketingScenario } from "./ticketing-scenario";
 import type { CounselorType } from "./api";
 import {
   CHAT_ERROR_COPY,
@@ -98,6 +99,7 @@ export async function respondEphemeral(
   mode?: ResponseMode,
   summary?: string,
   onText?: (text: string) => void,
+  scenario?: TicketingScenario,
 ): Promise<TalkResult> {
   const controller = new AbortController();
   const cancel = () => controller.abort();
@@ -133,6 +135,7 @@ export async function respondEphemeral(
         messages,
         style,
         ...(summary ? { summary } : {}),
+        ...(scenario ? { scenario } : {}),
         ...(mode ? { mode } : {}),
         ...(characterId ? { characterId } : {}),
       }),
@@ -350,8 +353,8 @@ export const deleteCharacter = (id: string, token: string) =>
   );
 
 
-export async function generateStartOptions(context: "general" | "ticketing", previous: string[], token: string | null, signal: AbortSignal): Promise<string[]> {
-  const result: unknown = await request<unknown>("/ephemeral/start-options",token,{method:"POST",signal,body:JSON.stringify({context,previous})});
+export async function generateStartOptions(context: "general" | "ticketing", previous: string[], token: string | null, signal: AbortSignal, scenario?: TicketingScenario): Promise<string[]> {
+  const result: unknown = await request<unknown>("/ephemeral/start-options",token,{method:"POST",signal,body:JSON.stringify({context,previous,...(scenario ? {scenario} : {})})});
   if (!result || typeof result !== "object" || !("options" in result) || !Array.isArray(result.options) || result.options.length !== 4 || !result.options.every((option:unknown) => typeof option === "string" && option.trim().length >= 2 && option.length <= 24 && !/[\r\n<>?？]/u.test(option)) || new Set(result.options).size !== 4) throw new Error("Invalid start options");
   return result.options as string[];
 }

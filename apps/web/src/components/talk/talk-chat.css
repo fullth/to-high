@@ -211,6 +211,10 @@
   max-height: 100px;
   overflow: auto;
 }
+.ch-ephemeral .ch-help-details p {
+  max-height: none;
+  overflow: visible;
+}
 .ch-ephemeral .ch-talk-error {
   color: var(--ink);
   padding: 12px 16px;
@@ -219,6 +223,9 @@
 }
 .ch-limit-dialog {
   width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  font-family: inherit;
   margin: auto;
   padding: 0;
   border: 1px solid var(--line);
@@ -233,7 +240,8 @@
 .ch-limit-dialog h2 { margin: 8px 0 12px; font-size: 21px; font-weight: 700; }
 .ch-limit-dialog p { line-height: 1.7; word-break: keep-all; overflow-wrap: break-word; }
 .ch-limit-dialog-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
-.ch-limit-dialog-primary { background: var(--brand); color: var(--brand-ink); border-radius: 12px; padding: 11px 16px; font-weight: 700; }
+.ch-limit-dialog-actions button { min-height: 44px; word-break: keep-all; overflow-wrap: anywhere; cursor: pointer; }
+.ch-limit-dialog-primary { border: 0; font: inherit; background: var(--brand); color: var(--brand-ink); border-radius: 12px; padding: 11px 16px; font-weight: 700; }
 .ch-ephemeral .ch-info-levi {
   object-fit: contain;
   flex-shrink: 0;

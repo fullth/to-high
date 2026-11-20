@@ -1,5 +1,7 @@
 "use client";
 
+import { ProfessionalHelpNotice } from "@/components/professional-help-notice";
+
 import Image from "next/image";
 import { useState } from "react";
 import { MessageCircle } from "lucide-react";
@@ -55,6 +57,7 @@ export function WirocareLanding() {
   const { token, login } = useAuth();
   const entryContext = useEntryContext();
   const talkHref = talkEntryHref(entryContext);
+  const scenarioHref = entryContext === "ticketing" ? "/talk?scenario=ticketing&entry=ticketing" : "/talk?scenario=ticketing";
   const [leviReady, setLeviReady] = useState(false);
   return (
     <div className="wirocare-landing">
@@ -126,6 +129,11 @@ export function WirocareLanding() {
                   <FullPageLink className="btn btn-primary btn-chat" href={talkHref} onClick={trackTalkStart}>
                     <MessageCircle size={20} aria-hidden="true" />
                     <span>레비와 대화 시작하기</span> <ArrowIcon size={18} />
+                  </FullPageLink>
+                  <FullPageLink className="btn btn-scenario" href={scenarioHref}>
+                    <span>시나리오 모드</span>
+                    <span className="scenario-new">New</span>
+                    <ArrowIcon size={16} />
                   </FullPageLink>
                 </div>
                 <div className="trust">
@@ -239,6 +247,7 @@ export function WirocareLanding() {
             사용자가 저장을 선택한 상담은 계정에 보관하며 제공자 측 보관은 해당
             정책과 설정에 따라요.
           </p>
+          <ProfessionalHelpNotice className="privacy-note professional-help-notice" />
           <div style={{ marginTop: 24, fontSize: 12, color: "var(--ink-4)" }}>
             © 2026 위로. 이 서비스는 정신건강 진단이나 치료를 대체하지 않습니다.
           </div>
