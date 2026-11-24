@@ -41,6 +41,13 @@ suite('journey persistence with isolated MongoDB', () => {
     ).asPromise();
     repository = new JourneyRepository(connection);
     await repository.onModuleInit();
+    const indexes = await connection
+      .db!.collection('journey_metrics')
+      .indexes();
+    expect(indexes.map((index) => index.name).sort()).toEqual([
+      '_id_',
+      'expiresAt_1',
+    ]);
   }, 20000);
   afterAll(async () => {
     await connection?.close();

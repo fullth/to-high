@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
+import { JOURNEY_RETENTION_MS } from '../../app/journey/journey';
 import type { JourneyContext, JourneyStage } from '../../app/journey/journey';
 
 type StoredJourney = {
@@ -32,7 +33,6 @@ export class JourneyRepository implements OnModuleInit {
         { expiresAt: 1 },
         { expireAfterSeconds: 0 },
       );
-      await this.collection.createIndex({ startedAt: 1 });
       this.ready = true;
     } catch {
       this.logger.warn('Journey indexes unavailable');
@@ -62,7 +62,10 @@ export class JourneyRepository implements OnModuleInit {
         $set: {
           startedAt: { $ifNull: ['$startedAt', now] },
           expiresAt: {
-            $ifNull: ['$expiresAt', new Date(now.valueOf() + 31 * 86400000)],
+            $ifNull: [
+              '$expiresAt',
+              new Date(now.valueOf() + JOURNEY_RETENTION_MS),
+            ],
           },
           source: { $ifNull: ['$source', context.source] },
           entry: {
@@ -160,7 +163,15 @@ export class JourneyRepository implements OnModuleInit {
         } & Record<JourneyStage, number>
       >(
         [
-          { $match: { startedAt: { $gte: from, $lt: to } } },
+          // Expiry and creation differ by a fixed duration, so the TTL index also bounds this query.
+          {
+            $match: {
+              expiresAt: {
+                $gte: new Date(from.valueOf() + JOURNEY_RETENTION_MS),
+                $lt: new Date(to.valueOf() + JOURNEY_RETENTION_MS),
+              },
+            },
+          },
           {
             $group: {
               _id: {

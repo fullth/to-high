@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const JOURNEY_RETENTION_MS = 31 * 86400000;
+
 export const journeySources = ['practicket', 'other'] as const;
 export const journeyEntries = [
   'unselected',
