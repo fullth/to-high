@@ -1,5 +1,8 @@
 "use client";
 
+import { recordJourney } from "@/lib/journey";
+import { useJourney } from "@/hooks/use-journey";
+import type { JourneyContext } from "@/lib/journey";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
@@ -24,6 +27,7 @@ import styles from "./ticketing-scenario.module.css";
 type Props = { source: TicketingScenario["source"]; onCounseling: () => void };
 
 export function TicketingScenarioExperience({ source, onCounseling }: Props) {
+  const journey = useJourney(source === "practicket" ? "ad_ticketing" : "lobby_ticketing");
   const [gender, setGender] = useState<TicketingScenario["gender"] | null>(
     null,
   );
@@ -53,6 +57,7 @@ export function TicketingScenarioExperience({ source, onCounseling }: Props) {
     stageHeading.current?.focus();
   }, [gender, profile]);
   const reset = () => {
+    journey.restart();
     setProfile(null);
     setGender(null);
     setName("");
@@ -131,6 +136,7 @@ export function TicketingScenarioExperience({ source, onCounseling }: Props) {
                     );
                     return;
                   }
+                  recordJourney(journey.current(), "character_selected");
                   setProfile({
                   source,
                     kind: "ticketing",
@@ -190,6 +196,7 @@ export function TicketingScenarioExperience({ source, onCounseling }: Props) {
           <ScenarioConversation
             key={`${profile.gender}:${profile.name}`}
             profile={profile}
+            journey={journey.current}
             onReset={reset}
             onCounseling={onCounseling}
           />
@@ -201,10 +208,12 @@ export function TicketingScenarioExperience({ source, onCounseling }: Props) {
 
 function ScenarioConversation({
   profile,
+  journey,
   onReset,
   onCounseling,
 }: {
   profile: TicketingScenario;
+  journey: () => JourneyContext;
   onReset: () => void;
   onCounseling: () => void;
 }) {
@@ -300,6 +309,7 @@ function ScenarioConversation({
             setMessages([...visible, { role: "assistant", content: reply }]);
         },
         profile,
+        journey(),
       );
       if (controller.signal.aborted) return;
       const reply: TalkMessage = { role: "assistant", content: result.reply };

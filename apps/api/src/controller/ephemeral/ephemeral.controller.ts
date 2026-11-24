@@ -1,3 +1,4 @@
+import { JourneyService } from '../../app/journey/journey.service';
 import { DailyUsageService } from '../../app/usage/daily-usage.service';
 import {
   Body,
@@ -34,6 +35,7 @@ export class EphemeralController {
     private readonly turns: DailyTurnLimitService,
     @Optional() private readonly incidents?: IncidentService,
     @Optional() private readonly usage?: DailyUsageService,
+    @Optional() private readonly journeys?: JourneyService,
   ) {}
 
   @Post('respond')
@@ -77,6 +79,13 @@ export class EphemeralController {
         }, 10_000);
       }
       dispatched = true;
+      if (body.journey) {
+        void this.journeys?.record(body.journey, [
+          'selected',
+          'first_message',
+          ...(body.scenario ? ['character_selected' as const] : []),
+        ]);
+      }
       const result = await this.service.respond(
         body,
         request.user?.userId,
@@ -123,6 +132,13 @@ export class EphemeralController {
         performance.now() - started,
         firstToken,
       );
+      if (body.journey && dispatched && outcome === 'ok' && !controller.signal.aborted) {
+        await this.journeys?.record(
+          body.journey,
+          ['selected', 'first_message', 'first_response', ...(body.scenario ? ['character_selected' as const] : [])],
+          body.journey.turnId,
+        );
+      }
       await this.usage?.record({
         startedAt, outcome: controller.signal.aborted ? 'cancelled' : outcome,
         rejected: !dispatched && !controller.signal.aborted,

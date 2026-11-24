@@ -1,3 +1,4 @@
+import type { JourneyContext } from "./journey";
 import type { TicketingScenario } from "./ticketing-scenario";
 import type { CounselorType } from "./api";
 import {
@@ -100,6 +101,7 @@ export async function respondEphemeral(
   summary?: string,
   onText?: (text: string) => void,
   scenario?: TicketingScenario,
+  journey?: JourneyContext,
 ): Promise<TalkResult> {
   const controller = new AbortController();
   const cancel = () => controller.abort();
@@ -136,6 +138,7 @@ export async function respondEphemeral(
         style,
         ...(summary ? { summary } : {}),
         ...(scenario ? { scenario } : {}),
+        ...(journey ? { journey: { ...journey, turnId: crypto.randomUUID().replaceAll("-", "") } } : {}),
         ...(mode ? { mode } : {}),
         ...(characterId ? { characterId } : {}),
       }),

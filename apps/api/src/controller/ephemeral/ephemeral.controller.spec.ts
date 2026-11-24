@@ -14,11 +14,12 @@ describe('ephemeral request lifecycle', () => {
     const release = jest.fn();
     const acquireOwner = jest.fn().mockReturnValue(release);
     const record = jest.fn().mockResolvedValue(undefined);
+    const journeyRecord = jest.fn().mockResolvedValue(undefined);
     const controller = new EphemeralController(
       { respond } as unknown as EphemeralService,
       { acquireOwner } as unknown as EphemeralBudgetService,
       { consume: jest.fn().mockResolvedValue(undefined) } as never,
-      undefined, { record } as never,
+      undefined, { record } as never, { record: journeyRecord } as never,
     );
     const response = Object.assign(new EventEmitter(), {
       setHeader: jest.fn(),
@@ -37,7 +38,7 @@ describe('ephemeral request lifecycle', () => {
       user: { userId: 'verified-owner' },
       ip: '127.0.0.1',
     } as Request & { user: { userId: string } };
-    return { controller, response, request, release, acquireOwner, record };
+    return { controller, response, request, release, acquireOwner, record, journeyRecord };
   }
   it('counts success only after the response completes and never passes counseling content to metrics', async () => {
     const { controller, response, request, record } = setup(jest.fn().mockResolvedValue({ reply: '합성 답변' }));
@@ -47,6 +48,18 @@ describe('ephemeral request lifecycle', () => {
     record.mockClear();
     await controller.respond({ ...body, summary: '합성 요약' }, request, response as unknown as Response);
     expect(record).toHaveBeenCalledWith(expect.objectContaining({ firstTurn: false }));
+  });
+  it('records a first message on dispatch but counts a response only after successful completion', async () => {
+    const journey = { id: 'a'.repeat(32), source: 'practicket' as const, entry: 'levi' as const, turnId: 'b'.repeat(32) };
+    const ok = setup(jest.fn().mockResolvedValue({ reply: '합성 답변' }));
+    await ok.controller.respond({ ...body, journey }, ok.request, ok.response as unknown as Response);
+    expect(ok.journeyRecord).toHaveBeenCalledWith(journey, ['selected', 'first_message']);
+    expect(ok.journeyRecord).toHaveBeenCalledWith(journey, ['selected', 'first_message', 'first_response'], journey.turnId);
+    expect(JSON.stringify(ok.journeyRecord.mock.calls)).not.toContain(body.messages[0].content);
+    const failed = setup(jest.fn().mockRejectedValue(new Error('synthetic failure')));
+    await expect(failed.controller.respond({ ...body, journey }, failed.request, failed.response as unknown as Response)).rejects.toThrow();
+    expect(failed.journeyRecord).toHaveBeenCalledTimes(1);
+    expect(failed.journeyRecord).toHaveBeenCalledWith(journey, ['selected', 'first_message']);
   });
   it('uses trusted identity, marks no-store and releases on errors', async () => {
     const { controller, response, request, release, acquireOwner } = setup(

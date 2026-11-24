@@ -257,3 +257,22 @@
     padding-inline: 6px;
   }
 }
+
+.journey-funnel { display: grid; gap: 1rem; min-width: 0; }
+.journey-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.journey-entry { white-space: normal; min-width: 4rem; word-break: keep-all; overflow-wrap: anywhere; }
+.journey-rate { display: block; color: var(--muted-foreground); font-size: 0.75rem; }
+.journey-funnel td details { white-space: normal; min-width: 3rem; }
+.journey-funnel td details[open] { min-width: 9rem; }
+
+.journey-metric-heading { white-space: normal; word-break: keep-all; }
+@media (max-width: 480px) {
+  .journey-funnel th, .journey-funnel td { padding-left: 0.375rem; padding-right: 0.375rem; }
+  .journey-metric-heading { max-width: 4rem; }
+}
+
+.journey-mobile-only { display: none; }
+@media (max-width: 767px) {
+  .journey-desktop-only { display: none; }
+  .journey-mobile-only { display: table-cell; }
+}
