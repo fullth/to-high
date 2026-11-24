@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/page";
 import { formatCount, formatMilliWon as formatWon } from "@/lib/format";
 import "./budget.css";
+import { JourneyFunnelPanel } from "./journey-funnel";
 import { UsageHistoryPanel } from "./usage-history";
 
 type Pending = { amount: number; id: string };
@@ -268,6 +269,7 @@ export default function BudgetAdminPage() {
           />
         </dl>
       </section>
+      {status && <JourneyFunnelPanel history={status.journeyHistory} unavailable={status.journeyHistoryUnavailable} />}
       <div className="ops-grid">
         <div className="ops-main">
           {status?.usageHistory ? (

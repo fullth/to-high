@@ -1,3 +1,4 @@
+import { JourneyService } from '../journey/journey.service';
 import { DailyUsageService } from '../usage/daily-usage.service';
 import {
   ForbiddenException,
@@ -18,6 +19,7 @@ export class BudgetAdminService {
     private readonly config: ConfigService,
     private readonly usage: UsageOverviewService,
     @Optional() private readonly dailyUsage?: DailyUsageService,
+    @Optional() private readonly journeys?: JourneyService,
   ) {}
 
   private authorize(id: string): void {
@@ -44,6 +46,15 @@ export class BudgetAdminService {
         usageHistoryUnavailable = true;
       }
     }
+    let journeyHistory: Awaited<ReturnType<JourneyService['recent']>> | undefined;
+    let journeyHistoryUnavailable = false;
+    if (this.journeys) {
+      try {
+        journeyHistory = await this.journeys.recent();
+      } catch {
+        journeyHistoryUnavailable = true;
+      }
+    }
     const days = history
       ? [
           ...new Set([
@@ -62,6 +73,8 @@ export class BudgetAdminService {
           }))
       : [];
     return {
+      journeyHistoryUnavailable,
+      ...(journeyHistory ? { journeyHistory } : {}),
       usageHistoryUnavailable,
       ...(history
         ? {

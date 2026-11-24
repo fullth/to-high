@@ -139,3 +139,15 @@ npm run quality:eval
 - 코드 푸시와 운영 배포 완료는 다릅니다. 배포 로그와 운영 화면에서 해당 버전의 반영을 확인하세요.
 
 현재 제한과 데이터 처리 범위는 [구조 문서](./architecture.md), Sentry 설정은 [지표 문서](./chat-streaming-and-metrics.md)를 확인하세요.
+
+## 경로별 전환 검증
+
+`/admin/budget`에서 출처와 시작 경로를 나눠 최근 7일/28일의 익명 흐름을 확인합니다. 상세 정의와 개인정보 경계는 [대화 처리와 지표](chat-streaming-and-metrics.md#유입-경로별-대화-전환)를 따릅니다. API를 먼저 배포해야 새 웹의 `journey` 요청을 수락합니다. 운영 과거 데이터는 복원하지 않습니다.
+
+격리 MongoDB 저장 검증은 설치된 로컬 mongod 실행 경로를 명시할 때만 실행합니다. 테스트가 임시 DB와 loopback 프로세스를 만들고 끝난 뒤 정리합니다. 경로가 없으면 해당 저장 테스트는 skip됩니다.
+
+```sh
+TO_HIGH_TEST_MONGOD=/absolute/path/to/mongod npm test --workspace=@to-high/api -- --runInBand journey
+```
+
+`apps/web/e2e/journey-funnel.browser.spec.ts`는 광고에서 바로 시작, 광고 방문 후 로비 선택, 일반 로비 선택의 분리와 어드민 모바일 표시를 모의 API로 검증합니다. 제공자 호출이나 운영 통계 수신을 증명하는 테스트는 아닙니다.

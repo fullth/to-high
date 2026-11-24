@@ -8,6 +8,7 @@ import { MessageCircle } from "lucide-react";
 import { FullPageLink } from "@/components/full-page-link";
 import { useEntryContext } from "@/hooks/use-entry-context";
 import { talkEntryHref } from "@/lib/entry-context";
+import { prepareTalkJourney } from "@/lib/journey";
 import { trackTalkStart } from "@/components/home-analytics";
 import { useAuth } from "@/contexts/auth-context";
 import "./landing.css";
@@ -130,7 +131,7 @@ export function WirocareLanding() {
                     <MessageCircle size={20} aria-hidden="true" />
                     <span>레비와 대화 시작하기</span> <ArrowIcon size={18} />
                   </FullPageLink>
-                  <FullPageLink className="btn btn-scenario" href={scenarioHref}>
+                  <FullPageLink className="btn btn-scenario" href={scenarioHref} onClick={(event) => prepareTalkJourney(event, true)}>
                     <span>시나리오 모드</span>
                     <span className="scenario-new">New</span>
                     <ArrowIcon size={16} />

@@ -3,6 +3,7 @@
 import { ProfessionalHelpNotice } from "@/components/professional-help-notice";
 
 import { TicketingScenarioExperience } from "@/components/talk/ticketing-scenario";
+import { useJourney } from "@/hooks/use-journey";
 import { useStartOptions } from "@/hooks/use-start-options";
 import { useEntryContext } from "@/hooks/use-entry-context";
 import { DEFAULT_ENTRY, TICKETING_ENTRY, OTHER_TOPIC } from "@/lib/entry-context";
@@ -56,6 +57,7 @@ function recentContext(messages: TalkMessage[]): TalkMessage[] {
   return recent;
 }
 function TalkContent() {
+  const { current: currentJourney, restart: restartJourney } = useJourney("levi");
   const { token, isLoading: authLoading, login, logout } = useAuth();
   const params = useSearchParams();
   const entryContext = useEntryContext();
@@ -139,6 +141,7 @@ function TalkContent() {
   }, [token]);
   useEffect(() => { void refreshSaved(); }, [refreshSaved]);
   const clear = useCallback(() => {
+    restartJourney();
     setArrival(false);
     restoreInputFocus.current = false;
     version.current.value++;
@@ -157,7 +160,7 @@ function TalkContent() {
     setStreaming(false);
     setBusy(false);
     setEnded(true);
-  }, []);
+  }, [restartJourney]);
   useEffect(() => {
     const lifecycle = version.current;
     const hide = () => clear();
@@ -388,6 +391,8 @@ function TalkContent() {
           setArrival(true);
           setMessages([...visibleNext, { role: "assistant", content: text }]);
         },
+        undefined,
+        characterId ? undefined : currentJourney(),
       );
       if (controller.signal.aborted || current !== version.current.value)
         return;
@@ -768,7 +773,7 @@ function TalkEntry() {
   const [counseling, setCounseling] = useState(false);
   if (!ready) return <p>불러오는 중...</p>;
   if ((entry === "ticketing" || scenarioSelected) && !counseling)
-    return <TicketingScenarioExperience source={entry === "ticketing" ? "practicket" : "lobby"} onCounseling={() => setCounseling(true)} />;
+    return <TicketingScenarioExperience source={scenarioSelected ? "lobby" : "practicket"} onCounseling={() => setCounseling(true)} />;
   return <TalkContent />;
 }
 

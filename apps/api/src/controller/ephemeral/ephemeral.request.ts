@@ -1,3 +1,7 @@
+import {
+  JourneyContextSchema,
+  journeyMatchesScenario,
+} from '../../app/journey/journey';
 import { z } from 'zod';
 import { TicketingScenarioSchema } from './ticketing-scenario.request';
 
@@ -28,6 +32,9 @@ export const EphemeralRequestSchema = z
     style: z.enum(['T', 'F', 'reaction', 'listening']).default('F'),
     summary: z.string().trim().max(2000).optional(),
     scenario: TicketingScenarioSchema.optional(),
+    journey: JourneyContextSchema.extend({
+      turnId: z.string().regex(/^[a-f0-9]{32}$/),
+    }).optional(),
     characterId: z
       .string()
       .regex(/^[a-f\d]{24}$/i)
@@ -43,6 +50,13 @@ export const EphemeralRequestSchema = z
         code: 'custom',
         path: ['scenario'],
         message: '시나리오와 상담 캐릭터/모드를 함께 사용할 수 없습니다.',
+      });
+    }
+    if (value.journey && !journeyMatchesScenario(value.journey, value.scenario)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['journey'],
+        message: '대화 진입 경로가 일치하지 않습니다.',
       });
     }
     const last = value.messages.at(-1)!;

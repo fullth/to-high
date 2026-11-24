@@ -1,3 +1,4 @@
+import { JourneyModule } from '../app/journey/journey.module';
 import { DailyUsageRepository } from '../persistence/usage/daily-usage.repository';
 import { DailyUsageService } from '../app/usage/daily-usage.service';
 import { Module } from '@nestjs/common';
@@ -10,6 +11,7 @@ import { IncidentService } from './incident.service';
 import { BudgetAdminService } from '../app/admin/budget-admin.service';
 
 @Module({
+  imports: [JourneyModule],
   providers: [
     DailyUsageRepository,
     DailyUsageService,

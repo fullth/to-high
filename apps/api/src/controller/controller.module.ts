@@ -1,3 +1,5 @@
+import { JourneyController } from './journey/journey.controller';
+import { JourneyModule } from '../app/journey/journey.module';
 import { StartOptionsController } from './ephemeral/start-options.controller';
 import { PersistenceModule } from '../persistence/persistence.module';
 import { EphemeralModule } from '../app/ephemeral/ephemeral.module';
@@ -28,6 +30,7 @@ const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
 @Module({
   imports: [
     AuthModule,
+    JourneyModule,
     BudgetModule,
     SavedSessionsModule,
     PersistenceModule,
@@ -39,6 +42,7 @@ const paymentServiceEnabled = isServiceEnabled('ENABLE_PAYMENT_SERVICE');
     ...(paymentServiceEnabled ? [PaymentModule] : []),
   ],
   controllers: [
+    JourneyController,
     StartOptionsController,
     AuthController,
     EphemeralController,

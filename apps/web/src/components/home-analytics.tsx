@@ -1,5 +1,6 @@
 "use client";
 
+import { forgetHomeJourney, prepareTalkJourney, trackHomeJourney } from "@/lib/journey";
 import { useEffect, useRef } from "react";
 import type { MouseEvent } from "react";
 import { resolveEntryContext, talkEntryHref } from "@/lib/entry-context";
@@ -35,6 +36,7 @@ function measuredHomeLocation(): string | null {
 export function trackTalkStart(event: MouseEvent<HTMLAnchorElement>) {
   const href = talkEntryHref(resolveEntryContext(new URLSearchParams(window.location.search), document.referrer));
   event.currentTarget.href = href;
+  prepareTalkJourney(event);
   const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
   if (!gtag) return;
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -60,6 +62,13 @@ export function trackTalkStart(event: MouseEvent<HTMLAnchorElement>) {
 export function HomeAnalytics() {
   const started = useRef(false);
   useEffect(() => {
+    const restore = (event: PageTransitionEvent) => { if (event.persisted) trackHomeJourney(); };
+    window.addEventListener("pagehide", forgetHomeJourney);
+    window.addEventListener("pageshow", restore);
+    return () => { window.removeEventListener("pagehide", forgetHomeJourney); window.removeEventListener("pageshow", restore); };
+  }, []);
+  useEffect(() => {
+    trackHomeJourney();
     if (started.current) return;
     // Only the approved ad campaign may expose query values to analytics.
     const location = measuredHomeLocation();

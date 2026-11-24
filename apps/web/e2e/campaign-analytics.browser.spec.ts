@@ -21,7 +21,7 @@ test("the Practicket ranking ad is measured without forwarding its campaign name
         .find((args) => args[0] === "event" && args[1] === "page_view"),
     );
     expect(pageView?.[2]).toMatchObject({
-      page_location: "http://localhost:3001/?utm_source=practicket&utm_medium=banner&utm_campaign=%EC%9C%84%EB%A1%9C",
+      page_location: `${new URL(page.url()).origin}/?utm_source=practicket&utm_medium=banner&utm_campaign=%EC%9C%84%EB%A1%9C`,
       page_referrer: "",
     });
   }

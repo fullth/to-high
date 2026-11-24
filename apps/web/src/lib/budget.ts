@@ -1,3 +1,4 @@
+import { isJourneyHistory, type JourneyHistory } from "./journey-history";
 import { isUsageHistory } from "./usage-history";
 import type { UsageHistory } from "./usage-history";
 
@@ -12,6 +13,8 @@ export type BudgetStatus = {
   };
   notificationReady: boolean;
   usageHistory?: UsageHistory;
+  journeyHistory?: JourneyHistory;
+  journeyHistoryUnavailable?: boolean;
   usageHistoryUnavailable?: boolean;
   todayUsage?: {
     countedTurns: number;
@@ -57,6 +60,8 @@ function isBudgetStatus(value: unknown): value is BudgetStatus {
         isAmount(todayUsage.signedInAccounts) &&
         isAmount(todayUsage.guestNetworks))) &&
     (value.usageHistoryUnavailable === undefined || typeof value.usageHistoryUnavailable === "boolean") &&
+    (value.journeyHistoryUnavailable === undefined || typeof value.journeyHistoryUnavailable === "boolean") &&
+    (value.journeyHistory === undefined || isJourneyHistory(value.journeyHistory)) &&
     (value.usageHistory === undefined || isUsageHistory(value.usageHistory)) &&
     Array.isArray(credits) &&
     credits.every(
